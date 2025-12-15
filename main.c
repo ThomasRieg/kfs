@@ -10,13 +10,25 @@ struct multiboot_header {
 
 struct multiboot_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
-	.checksum = 0
+	.hdr_len = 20,
+	.checksum = 397258538 - 20
 };
 
+int vga_text_location = 0;
+
+unsigned char * const vga_text_buf = (unsigned char *)0xb8000;
+
+void write(const char *str) {
+	while (*str) {
+		vga_text_buf[vga_text_location] = *str;
+		vga_text_buf[vga_text_location + 1] = VGA_WHITE;
+		vga_text_location += 2;
+		str++;
+	}
+}
+
 void kernel_main(void) {
-	unsigned char *vga_text_buf = (unsigned char *)0xb8000;
-	vga_text_buf[0] = '4';
-	vga_text_buf[1] = VGA_WHITE;
-	vga_text_buf[2] = '2';
-	vga_text_buf[3] = VGA_WHITE;
+	write("Hello world! KFS @ 42");
+
+	while (1) {}
 }

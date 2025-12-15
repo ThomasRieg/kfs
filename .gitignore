@@ -1,2 +1,4 @@
-kernel
+kfs.elf
+kfs.iso
 *.o
+iso

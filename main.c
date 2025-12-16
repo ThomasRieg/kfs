@@ -1,7 +1,11 @@
-#define VGA_WHITE 15
+enum vga_color {
+	VGA_WHITE = 15
+};
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
+
+#define IDT_PRESENT_AND_GATE_32_INT 0x8e
 
 struct multiboot_header {
 	int magic;
@@ -10,16 +14,6 @@ struct multiboot_header {
 	int checksum;
 	int flags;
 };
-
-struct idt_entry_32 {
-	short offset_1;
-	short selector;
-	unsigned char zero;
-	unsigned char type_attributes;
-	short offset_2;
-};
-
-struct idt_entry_32 idt[256];
 
 struct multiboot_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
@@ -55,27 +49,52 @@ void write(const char *str) {
 	update_cursor(vga_text_location / 2);
 }
 
-void double_fault_handler(void) {
+struct idt_entry_32 {
+	short offset_1;
+	short selector;
+	unsigned char zero;
+	unsigned char type_attributes;
+	short offset_2;
+};
+
+struct idt_entry_32 idt[256];
+
+__attribute__((interrupt)) void double_fault_handler(void *interrupt_frame, unsigned int error_code) {
 	write("double fault");
+
+	while (1);
 }
 
-void breakpoint_handler(void) {
+__attribute__((interrupt)) void breakpoint_handler(void *interrupt_frame) {
 	write("breakpoint");
 }
 
 void kernel_main(void) {
-	idt[8] = (struct idt_entry_32){
-		.offset_1 = ((unsigned int) &double_fault_handler) & 0xFFFF,
-		.offset_2 = ((unsigned int) &double_fault_handler) >> 2,
-	};
 	idt[3] = (struct idt_entry_32){
+		.selector = 16,
+		.type_attributes = IDT_PRESENT_AND_GATE_32_INT,
 		.offset_1 = ((unsigned int) &breakpoint_handler) & 0xFFFF,
-		.offset_2 = ((unsigned int) &breakpoint_handler) >> 2,
+		.offset_2 = ((unsigned int) &breakpoint_handler) >> 16,
 	};
-	asm("lidt %0" : : "m" (idt));
+	idt[8] = (struct idt_entry_32){
+		.selector = 16,
+		.type_attributes = IDT_PRESENT_AND_GATE_32_INT,
+		.offset_1 = ((unsigned int) &double_fault_handler) & 0xFFFF,
+		.offset_2 = ((unsigned int) &double_fault_handler) >> 16,
+	};
+	struct descriptor_table_pointer {
+		unsigned short limit;
+		unsigned int base;
+	} __attribute__((packed)) idt_pointer = {
+		.limit = sizeof(idt) - 1,
+		.base = (unsigned int)&idt[0],
+	};
+	asm("lidt %0" : : "m" (idt_pointer));
+	asm("sti"); // enable interrupts
 	write("Hello world! KFS @ 42");
-	//asm("int3");
-	*((unsigned char *)6)=5;
+	asm("int3"); // breakpoint
+	*((unsigned char *)16000000000)=5; // double fault
 
-	while (1) {}
+	while (1)
+		asm("hlt");
 }

@@ -8,6 +8,10 @@ ELF := kfs.elf
 qemu: $(ISO)
 	qemu-system-i386 -cdrom $(ISO)
 
+debug: $(ISO)
+	qemu-system-i386 -s -S -cdrom $(ISO) &
+	gdb -ix .gdb_init
+
 $(ELF): $(SRCS)
 	$(LD) -o $@ $(LDFLAGS) $(SRCS)
 
@@ -16,3 +20,5 @@ $(ISO): $(ELF) grub.cfg
 	cp $(ELF) iso/boot
 	cp grub.cfg iso/boot/grub
 	grub-mkrescue -o $@ iso
+
+.PHONY: qemu debug

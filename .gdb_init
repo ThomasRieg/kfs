@@ -1,0 +1,4 @@
+target remote localhost:1234
+symbol-file kfs.elf
+b kernel_main
+c

@@ -9,4 +9,5 @@ stack_top:
 .section .text
 _start:
 	mov $stack_top, %esp
+	push %ebx
 	call kernel_main

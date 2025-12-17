@@ -17,8 +17,13 @@ struct multiboot_header {
 
 struct multiboot_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
-	.hdr_len = 20,
-	.checksum = 397258538 - 20
+	.hdr_len = sizeof(struct multiboot_header),
+	.checksum = 397258538 - sizeof(struct multiboot_header)
+};
+
+struct multiboot_info {
+	unsigned int total_size;
+	unsigned int reserved;
 };
 
 void outb(unsigned short port, unsigned char value) {
@@ -49,6 +54,37 @@ void write(const char *str) {
 	update_cursor(vga_text_location / 2);
 }
 
+void int32_str_10(char out[12], int n) {
+	unsigned int u = n < 0 ? -n : n;
+	unsigned int i = 1;
+	do {
+		i++;
+	} while (u /= 10);
+	if (n < 0)
+		i++;
+	u = n < 0 ? -n : n;
+	out[--i] = 0;
+	while (u) {
+		out[--i] = u % 10 + '0';
+		u /= 10;
+	}
+	if (n < 0)
+		out[--i] = '-';
+}
+
+void uint32_str_10(char out[11], unsigned int n) {
+	unsigned int i = 1;
+	unsigned int u = n;
+	do {
+		i++;
+	} while (u /= 10);
+	out[--i] = 0;
+	while (n) {
+		out[--i] = n % 10 + '0';
+		n /= 10;
+	}
+}
+
 struct idt_entry_32 {
 	short offset_1;
 	short selector;
@@ -69,7 +105,22 @@ __attribute__((interrupt)) void breakpoint_handler(void *interrupt_frame) {
 	write("breakpoint");
 }
 
-void kernel_main(void) {
+void kernel_main(struct multiboot_info *multi) {
+	char buf[11];
+	write("multiboot size: ");
+	uint32_str_10(buf, multi->total_size);
+	write(buf);
+	write(" ");
+	unsigned int *flag = (unsigned int *)(multi + 1);
+	while (*flag) {
+		write("type: ");
+		uint32_str_10(buf, *flag);
+		write(buf);
+		write(" ");
+		flag++;
+		flag = (unsigned int *)((unsigned char *)flag + *flag + 4);
+	}
+
 	idt[3] = (struct idt_entry_32){
 		.selector = 16,
 		.type_attributes = IDT_PRESENT_AND_GATE_32_INT,

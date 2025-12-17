@@ -95,13 +95,29 @@ struct idt_entry_32 {
 
 struct idt_entry_32 idt[256];
 
-__attribute__((interrupt)) void double_fault_handler(void *interrupt_frame, unsigned int error_code) {
-	write("double fault");
+struct interrupt_stack_frame {
+	void *instruction_pointer;
+	short cs_selector;
+	char _reserved1[6];
+	unsigned int flags;
+	void *stack_pointer;
+	short ss_selector;
+	char _reserved2[6];
+} __attribute__((packed));
+
+__attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
+	char buf[11];
+	write("double fault at ");
+	uint32_str_10(buf, (unsigned int)interrupt_frame->instruction_pointer);
+	write(buf);
+	write(" cs sel: ");
+	uint32_str_10(buf, (unsigned int)interrupt_frame->cs_selector);
+	write(buf);
 
 	while (1);
 }
 
-__attribute__((interrupt)) void breakpoint_handler(void *interrupt_frame) {
+__attribute__((interrupt)) void breakpoint_handler(struct interrupt_stack_frame *interrupt_frame) {
 	write("breakpoint");
 }
 

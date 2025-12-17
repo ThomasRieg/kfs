@@ -1,7 +1,7 @@
 CFLAGS := -m32
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-SRCS := main.o entry.o
+SRCS := main.o entry.o pic.o
 ISO := kfs.iso
 ELF := kfs.elf
 
@@ -12,6 +12,8 @@ debug: $(ISO)
 	qemu-system-i386 -s -S -cdrom $(ISO) &
 	gdb -ix .gdb_init
 
+all: $(ISO)
+
 $(ELF): $(SRCS)
 	$(LD) -o $@ $(LDFLAGS) $(SRCS)
 
@@ -21,4 +23,12 @@ $(ISO): $(ELF) grub.cfg
 	cp grub.cfg iso/boot/grub
 	grub-mkrescue -o $@ iso
 
-.PHONY: qemu debug
+clean:
+	rm -f $(SRCS)
+
+fclean: clean
+	rm -f $(ELF) $(ISO)
+
+re: fclean all
+
+.PHONY: all clean fclean re qemu debug

@@ -1,5 +1,14 @@
+#include "io.h"
+
 enum vga_color {
 	VGA_WHITE = 15
+};
+
+enum interrupt {
+	INT_BREAKPOINT = 3,
+	INT_DOUBLE_FAULT = 8,
+	INT_TIMER = 32,
+	INT_KEYBOARD
 };
 
 #define VGA_WIDTH 80
@@ -26,18 +35,12 @@ struct multiboot_info {
 	unsigned int reserved;
 };
 
-void outb(unsigned short port, unsigned char value) {
-	asm("mov %0, %%dx\n"
-		"mov %1, %%al\n"
-		"outb %%al, %%dx\n": : "r" (port), "r" (value));
-}
-
 void update_cursor(int pos)
 {
-	outb(0x3D4, 0x0F);
-	outb(0x3D5, (unsigned char) (pos & 0xFF));
-	outb(0x3D4, 0x0E);
-	outb(0x3D5, (unsigned char) ((pos >> 8) & 0xFF));
+	outb(PORT_VGA_INDEX, 0x0F);
+	outb(PORT_VGA_INDEXED, (unsigned char) (pos & 0xFF));
+	outb(PORT_VGA_INDEX, 0x0E);
+	outb(PORT_VGA_INDEXED, (unsigned char) ((pos >> 8) & 0xFF));
 }
 
 int vga_text_location = 0;
@@ -95,6 +98,8 @@ struct idt_entry_32 {
 
 struct idt_entry_32 idt[256];
 
+// This is wrong
+// TODO: fix
 struct interrupt_stack_frame {
 	void *instruction_pointer;
 	short cs_selector;
@@ -107,7 +112,10 @@ struct interrupt_stack_frame {
 
 __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
 	char buf[11];
-	write("double fault at ");
+	write("interrupt frame at ");
+	uint32_str_10(buf, (unsigned int)interrupt_frame);
+	write(buf);
+	write(" double fault at ");
 	uint32_str_10(buf, (unsigned int)interrupt_frame->instruction_pointer);
 	write(buf);
 	write(" cs sel: ");
@@ -120,6 +128,30 @@ __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_fram
 __attribute__((interrupt)) void breakpoint_handler(struct interrupt_stack_frame *interrupt_frame) {
 	write("breakpoint");
 }
+
+void pic_eoi(unsigned char irq);
+void setup_pics(void);
+
+__attribute__((interrupt)) void timer_handler(struct interrupt_stack_frame *interrupt_frame) {
+	write(".");
+	pic_eoi(INT_TIMER);
+}
+
+__attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *interrupt_frame) {
+	unsigned char scancode = inb(PORT_PS2_DATA);
+	char buf[11];
+	uint32_str_10(buf, scancode);
+	write("key event: ");
+	write(buf);
+	pic_eoi(INT_KEYBOARD);
+}
+
+#define DEF_INTERRUPT(handler) (struct idt_entry_32){\
+		.selector = 16,\
+		.type_attributes = IDT_PRESENT_AND_GATE_32_INT,\
+		.offset_1 = ((unsigned int) &handler) & 0xFFFF,\
+		.offset_2 = ((unsigned int) &handler) >> 16,\
+	}
 
 void kernel_main(struct multiboot_info *multi) {
 	char buf[11];
@@ -137,18 +169,10 @@ void kernel_main(struct multiboot_info *multi) {
 		flag = (unsigned int *)((unsigned char *)flag + *flag + 4);
 	}
 
-	idt[3] = (struct idt_entry_32){
-		.selector = 16,
-		.type_attributes = IDT_PRESENT_AND_GATE_32_INT,
-		.offset_1 = ((unsigned int) &breakpoint_handler) & 0xFFFF,
-		.offset_2 = ((unsigned int) &breakpoint_handler) >> 16,
-	};
-	idt[8] = (struct idt_entry_32){
-		.selector = 16,
-		.type_attributes = IDT_PRESENT_AND_GATE_32_INT,
-		.offset_1 = ((unsigned int) &double_fault_handler) & 0xFFFF,
-		.offset_2 = ((unsigned int) &double_fault_handler) >> 16,
-	};
+	idt[INT_BREAKPOINT] = DEF_INTERRUPT(breakpoint_handler);
+	idt[INT_DOUBLE_FAULT] = DEF_INTERRUPT(double_fault_handler);
+	idt[INT_TIMER] = DEF_INTERRUPT(timer_handler);
+	idt[INT_KEYBOARD] = DEF_INTERRUPT(keyboard_handler);
 	struct descriptor_table_pointer {
 		unsigned short limit;
 		unsigned int base;
@@ -156,12 +180,13 @@ void kernel_main(struct multiboot_info *multi) {
 		.limit = sizeof(idt) - 1,
 		.base = (unsigned int)&idt[0],
 	};
-	asm("lidt %0" : : "m" (idt_pointer));
-	asm("sti"); // enable interrupts
+	asm volatile("lidt %0" : : "m" (idt_pointer));
+	setup_pics();
+	asm volatile("sti"); // enable interrupts
 	write("Hello world! KFS @ 42");
-	asm("int3"); // breakpoint
-	*((unsigned char *)16000000000)=5; // double fault
+	asm volatile("int3"); // breakpoint
+	*((unsigned char *)3115098112)=5; // no double fault, hmm
 
 	while (1)
-		asm("hlt");
+		asm volatile("hlt");
 }

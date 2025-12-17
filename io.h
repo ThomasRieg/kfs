@@ -1,0 +1,28 @@
+enum port {
+	PORT_VGA_INDEX = 0x3d4,
+	PORT_VGA_INDEXED = 0x3d5,
+	PORT_PS2_DATA = 0x60,
+	PORT_PIC_PRIMARY_CMD = 0x20,
+	PORT_PIC_PRIMARY_DATA = 0x21,
+	PORT_PIC_SECONDARY_CMD = 0xA0,
+	PORT_PIC_SECONDARY_DATA = 0xA1
+};
+
+static inline void outb(unsigned short port, unsigned char value) {
+	asm volatile("outb %b0, %w1": : "a" (value), "Nd"(port) : "memory");
+}
+
+static inline unsigned char inb(unsigned short port)
+{
+    unsigned char ret;
+    __asm__ volatile ( "inb %w1, %b0"
+                   : "=a"(ret)
+                   : "Nd"(port)
+                   : "memory");
+    return ret;
+}
+
+static inline void io_wait(void)
+{
+	outb(0x80, 0);
+}

@@ -13,6 +13,7 @@ enum interrupt {
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
+#define VGA_SIZE (VGA_WIDTH * VGA_HEIGHT * 2)
 
 #define IDT_PRESENT_AND_GATE_32_INT 0x8e
 
@@ -43,15 +44,43 @@ void update_cursor(int pos)
 	outb(PORT_VGA_INDEXED, (unsigned char) ((pos >> 8) & 0xFF));
 }
 
-int vga_text_location = 0;
+size_t vga_text_location = 0;
 
 unsigned char * const vga_text_buf = (unsigned char *)0xb8000;
 
+static void clear_last_line(void)
+{
+    size_t start = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
+    for (size_t i = 0; i < VGA_WIDTH; i++) {
+        vga_text_buf[start + i * 2] = ' ';
+        vga_text_buf[start + i * 2 + 1] = VGA_WHITE;
+    }
+}
+
+void scroll_down()
+{
+	for (size_t i = VGA_WIDTH * 2; i < VGA_SIZE; i++)
+	{
+		vga_text_buf[i - VGA_WIDTH * 2] = vga_text_buf[i];
+	}
+	clear_last_line();
+	vga_text_location = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
+}
+
 void write(const char *str) {
+	if (vga_text_location + 1 >= VGA_SIZE)
+		scroll_down();
 	while (*str) {
-		vga_text_buf[vga_text_location] = *str;
-		vga_text_buf[vga_text_location + 1] = VGA_WHITE;
-		vga_text_location += 2;
+		if (*str == '\n')
+			vga_text_location += (VGA_WIDTH * 2) - (vga_text_location % (VGA_WIDTH * 2));
+		else
+		{
+			vga_text_buf[vga_text_location] = *str;
+			vga_text_buf[vga_text_location + 1] = VGA_WHITE;
+			vga_text_location += 2;
+		}
+		if (vga_text_location + 1 >= VGA_SIZE)
+			scroll_down();
 		str++;
 	}
 	update_cursor(vga_text_location / 2);
@@ -86,6 +115,19 @@ void uint32_str_10(char out[11], unsigned int n) {
 		out[--i] = n % 10 + '0';
 		n /= 10;
 	} while(n);
+}
+
+static void u32_to_hex(char out[9], unsigned int x, int upper)
+{
+    static const char *lo = "0123456789abcdef";
+    static const char *hi = "0123456789ABCDEF";
+    const char *digits = upper ? hi : lo;
+
+    for (int i = 7; i >= 0; --i) {
+        out[i] = digits[x & 0xF];
+        x >>= 4;
+    }
+    out[8] = 0;
 }
 
 struct idt_entry_32 {

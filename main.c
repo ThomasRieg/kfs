@@ -64,10 +64,10 @@ void int32_str_10(char out[12], int n) {
 		i++;
 	u = n < 0 ? -n : n;
 	out[--i] = 0;
-	while (u) {
+	do {
 		out[--i] = u % 10 + '0';
 		u /= 10;
-	}
+	} while(u);
 	if (n < 0)
 		out[--i] = '-';
 }
@@ -79,10 +79,10 @@ void uint32_str_10(char out[11], unsigned int n) {
 		i++;
 	} while (u /= 10);
 	out[--i] = 0;
-	while (n) {
+	do {
 		out[--i] = n % 10 + '0';
 		n /= 10;
-	}
+	} while(n);
 }
 
 struct idt_entry_32 {

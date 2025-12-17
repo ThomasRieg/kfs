@@ -44,14 +44,14 @@ void update_cursor(int pos)
 	outb(PORT_VGA_INDEXED, (unsigned char) ((pos >> 8) & 0xFF));
 }
 
-size_t vga_text_location = 0;
+unsigned int vga_text_location = 0;
 
 unsigned char * const vga_text_buf = (unsigned char *)0xb8000;
 
 static void clear_last_line(void)
 {
-    size_t start = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
-    for (size_t i = 0; i < VGA_WIDTH; i++) {
+    unsigned int start = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
+    for (unsigned int i = 0; i < VGA_WIDTH; i++) {
         vga_text_buf[start + i * 2] = ' ';
         vga_text_buf[start + i * 2 + 1] = VGA_WHITE;
     }
@@ -59,7 +59,7 @@ static void clear_last_line(void)
 
 void scroll_down()
 {
-	for (size_t i = VGA_WIDTH * 2; i < VGA_SIZE; i++)
+	for (unsigned int i = VGA_WIDTH * 2; i < VGA_SIZE; i++)
 	{
 		vga_text_buf[i - VGA_WIDTH * 2] = vga_text_buf[i];
 	}

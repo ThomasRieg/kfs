@@ -1,4 +1,6 @@
 #include "io.h"
+#include "scancode.h"
+#include "common.h"
 
 enum vga_color {
 	VGA_WHITE = 15
@@ -179,12 +181,43 @@ __attribute__((interrupt)) void timer_handler(struct interrupt_stack_frame *inte
 	pic_eoi(INT_TIMER);
 }
 
+char toupper(char c) {
+	if (c >= 'a' && c <= 'z')
+		c -= ('a' - 'A');
+	else if (c >= 'A' && c <= 'Z')
+		c += ('a' - 'A');
+	return c;
+}
+
+bool shift_held = false;
+bool caps_lock = false;
+
 __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *interrupt_frame) {
 	unsigned char scancode = inb(PORT_PS2_DATA);
 	char buf[11];
-	uint32_str_10(buf, scancode);
-	write("key event: ");
-	write(buf);
+	if (!(scancode >> 7)) { // if not a release event
+		char c = scan_code_set_1_qwerty[scancode];
+		if (c) {
+			if (shift_held || caps_lock)
+				c = toupper(c);
+			buf[0] = c;
+			buf[1] = 0;
+			write(buf);
+		} else if (scancode == SET1_QW_CAPLOCK) {
+			caps_lock = !caps_lock;
+		} else if (scancode == SET1_QW_SHIFT) {
+			shift_held = true;
+		} else {
+			uint32_str_10(buf, scancode);
+			write("key event: ");
+			write(buf);
+		}
+	} else { // if release
+		scancode &= 0x7F;
+		if (scancode == SET1_QW_SHIFT) {
+			shift_held = false;
+		}
+	}
 	pic_eoi(INT_KEYBOARD);
 }
 

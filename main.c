@@ -8,7 +8,7 @@
 enum interrupt {
 	INT_BREAKPOINT = 3,
 	INT_DOUBLE_FAULT = 8,
-	INT_TIMER = 32,
+	INT_TIMER = PIC_OFFSET,
 	INT_KEYBOARD
 };
 

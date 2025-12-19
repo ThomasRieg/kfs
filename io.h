@@ -1,3 +1,5 @@
+#define PIC_OFFSET 32
+
 enum port {
 	PORT_CMOS_INDEX = 0x70,
 	PORT_CMOS_DATA = 0x71,

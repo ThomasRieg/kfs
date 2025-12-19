@@ -1,12 +1,30 @@
 #include "io.h"
 
+// 8259 PIC
+// Diagrams stolen from https://os.phil-opp.com/hardware-interrupts/
+//                                    ____________             _____
+//               Timer ------------> |            |           |     |
+//               Keyboard ---------> | Interrupt  |---------> | CPU |
+//               Other Hardware ---> | Controller |           |_____|
+//               Etc. -------------> |____________|
+//
+//                      ____________                          ____________
+// Real Time Clock --> |            |   Timer -------------> |            |
+// ACPI -------------> |            |   Keyboard-----------> |            |      _____
+// Available --------> | Secondary  |----------------------> | Primary    |     |     |
+// Available --------> | Interrupt  |   Serial Port 2 -----> | Interrupt  |---> | CPU |
+// Mouse ------------> | Controller |   Serial Port 1 -----> | Controller |     |_____|
+// Co-Processor -----> |            |   Parallel Port 2/3 -> |            |
+// Primary ATA ------> |            |   Floppy disk -------> |            |
+// Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
+
 enum pic_command {
 	PIC_CMD_INIT = 0x11,
 	PIC_CMD_END_OF_INTERRUPT = 0x20
 };
 
 void pic_eoi(unsigned char irq) {
-	if (irq >= 8)
+	if (irq >= PIC_OFFSET + 8)
 		outb(PORT_PIC_SECONDARY_CMD, PIC_CMD_END_OF_INTERRUPT);
 	outb(PORT_PIC_PRIMARY_CMD, PIC_CMD_END_OF_INTERRUPT);
 }
@@ -27,7 +45,7 @@ void pic_eoi(unsigned char irq) {
 #define CASCADE_IRQ 2
 
 void setup_pics(void) {
-	int offset1 = 32;
+	int offset1 = PIC_OFFSET;
 	int offset2 = offset1 + 8;
 	outb(PORT_PIC_PRIMARY_CMD, ICW1_INIT | ICW1_ICW4);  // starts the initialization sequence (in cascade mode)
 	io_wait();

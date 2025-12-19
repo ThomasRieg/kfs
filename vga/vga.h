@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:29:07 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 03:39:57 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/19 13:56:35 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,8 @@ enum vga_color {
 extern unsigned int g_vga_text_location;
 
 extern unsigned char * const g_vga_text_buf;
+
+void update_cursor(int pos);
 
 void scroll_down();
 

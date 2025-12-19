@@ -77,8 +77,6 @@ __attribute__((interrupt)) void timer_handler(struct interrupt_stack_frame *inte
 char toupper(char c) {
 	if (c >= 'a' && c <= 'z')
 		c -= ('a' - 'A');
-	else if (c >= 'A' && c <= 'Z')
-		c += ('a' - 'A');
 	return c;
 }
 
@@ -99,7 +97,7 @@ __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *i
 		} else if (c) {
 			if (shift_held || caps_lock)
 				c = toupper(c);
-			write(&c, 1);
+			tty_add_input(c);
 		} else if (scancode == SET1_QW_CAPLOCK) {
 			caps_lock = !caps_lock;
 		} else if (scancode == SET1_QW_SHIFT) {

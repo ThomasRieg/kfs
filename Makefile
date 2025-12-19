@@ -24,7 +24,7 @@ $(ISO): $(ELF) grub.cfg
 	grub-mkrescue -o $@ iso
 
 clean:
-	rm -f $(SRCS) *.d
+	rm -f $(SRCS) **/*.d
 
 fclean: clean
 	rm -f $(ELF) $(ISO)

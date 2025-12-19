@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 01:56:38 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 03:39:19 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/19 13:57:27 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,6 +46,27 @@ void next_tty()
     }
     g_current_tty++;
     load_tty();
+}
+
+void tty_add_input(char c) {
+	// echo mode
+	if (c == '\r')
+		write(&(char){'\n'}, 1);
+	else
+		write(&c, 1);
+
+	t_tty *curr = &g_ttys[g_current_tty];
+	if (c == '\r') {
+		if (curr->cmd_len != 0) {
+			if (curr->cmd_len == 4 && memcmp(curr->cmd, "stop", 4) == 0)
+				writes("stopping...\n");
+			else
+				writes("command not found!\n");
+			curr->cmd_len = 0;
+		}
+	}
+	else if (curr->cmd_len != sizeof(curr->cmd))
+		curr->cmd[curr->cmd_len++] = c;
 }
 
 //silently does nothing if you are on the first tty, just stay on the first one

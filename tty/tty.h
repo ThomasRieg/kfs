@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:10:42 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 03:39:14 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/19 13:47:35 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,8 @@
 typedef struct s_tty {
     unsigned char buf[VGA_SIZE + 1];   // full screen snapshot, TODO make this infinitely growing after kfs-3
     unsigned int cursor;            // = vga_text_location (treat it as nb chars in buf)
+	unsigned char cmd[100];
+	unsigned char cmd_len;
     unsigned char attr;             // for futur use maybe
 }   t_tty;
 
@@ -34,5 +36,6 @@ void save_tty();
 void next_tty();
 //silently does nothing if you are on the first tty, just stay on the first one
 void prev_tty();
+void tty_add_input(char c);
 
 #endif

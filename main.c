@@ -33,14 +33,6 @@ struct multiboot_info {
 	unsigned int reserved;
 };
 
-void update_cursor(int pos)
-{
-	outb(PORT_VGA_INDEX, 0x0F);
-	outb(PORT_VGA_INDEXED, (unsigned char) (pos & 0xFF));
-	outb(PORT_VGA_INDEX, 0x0E);
-	outb(PORT_VGA_INDEXED, (unsigned char) ((pos >> 8) & 0xFF));
-}
-
 struct idt_entry_32 {
 	short offset_1;
 	short selector;

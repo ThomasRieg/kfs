@@ -6,15 +6,24 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:33:35 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 03:19:32 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/19 11:58:52 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "../io.h"
 #include "vga.h"
 #include "../libk/libk.h"
 
 unsigned int g_vga_text_location = 0;
 unsigned char * const g_vga_text_buf = (unsigned char *)0xb8000;
+
+void update_cursor(int pos)
+{
+	outb(PORT_VGA_INDEX, 0x0F);
+	outb(PORT_VGA_INDEXED, (unsigned char) (pos & 0xFF));
+	outb(PORT_VGA_INDEX, 0x0E);
+	outb(PORT_VGA_INDEXED, (unsigned char) ((pos >> 8) & 0xFF));
+}
 
 static void clear_last_line(void)
 {

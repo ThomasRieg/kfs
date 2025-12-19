@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:58:49 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 04:25:49 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/19 12:00:24 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,14 +18,14 @@
 char	*strchr(const char *s, int c)
 {
 	if ((char)c == '\0')
-		return ((char *)(s + ft_strlen(s)));
+		return ((char *)(s + strlen(s)));
 	while (*s)
 	{
 		if (*s == (char)c)
 			return ((char *) s);
 		s++;
 	}
-	return (NULL);
+	return (0);
 }
 
 //returns the index of the first character that ISN'T c

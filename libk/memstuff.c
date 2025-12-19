@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:50:39 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 05:17:45 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/19 11:59:47 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@ void	*memchr(const void *s, int c, unsigned int n)
 			return ((void *)str);
 		str++;
 	}
-	return (NULL);
+	return (0);
 }
 
 int	memcmp(const void *s1, const void *s2, unsigned int n)
@@ -72,7 +72,7 @@ void	*memset(void *dest, int c, unsigned int bytes)
 	char				*str;
 	unsigned long		*str_packed;
 	unsigned long		cccc;
-	size_t				i;
+	unsigned long long				i;
 
 	str = (char *)dest;
 	while (bytes % sizeof(unsigned long))
@@ -127,7 +127,7 @@ void	*memmove(void *dest, const void *src, unsigned int bytes)
 	const char	*str_src;
 
 	if (!dest && !src)
-		return (NULL);
+		return (0);
 	str = (char *)dest;
 	str_src = (const char *)src;
 	if (str > str_src)
@@ -139,7 +139,7 @@ void	*memmove(void *dest, const void *src, unsigned int bytes)
 	}
 	else
 	{
-		ft_memcpy(dest, src, bytes);
+		memcpy(dest, src, bytes);
 	}
 	return (dest);
 }

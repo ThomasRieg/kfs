@@ -1,7 +1,7 @@
 CFLAGS := -m32 -MMD -ffreestanding
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-SRCS := main.o entry.o pic.o
+SRCS := main.o entry.o pic.o tty/tty.0 vga/vga.o libk/memstuff.o
 ISO := kfs.iso
 ELF := kfs.elf
 

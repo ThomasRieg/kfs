@@ -16,6 +16,10 @@ static inline void outb(unsigned short port, unsigned char value) {
 	asm volatile("outb %b0, %w1": : "a" (value), "Nd"(port) : "memory");
 }
 
+static inline void outw(unsigned short port, unsigned short value) {
+	asm volatile("outw %w0, %w1": : "a" (value), "Nd"(port) : "memory");
+}
+
 static inline unsigned char inb(unsigned short port)
 {
     unsigned char ret;

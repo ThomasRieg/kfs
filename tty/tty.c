@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 01:56:38 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 13:57:27 by alier            ###   ########.fr       */
+/*   Updated: 2025/12/19 15:08:28 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,24 +48,29 @@ void next_tty()
     load_tty();
 }
 
+void handle_command(unsigned char len, const unsigned char *cmd);
+
 void tty_add_input(char c) {
+	t_tty *curr = &g_ttys[g_current_tty];
+
 	// echo mode
 	if (c == '\r')
 		write(&(char){'\n'}, 1);
-	else
+	else if (c == '\b') {
+		if (curr->cmd_len != 0) {
+			curr->cmd_len--;
+			g_vga_text_location -= 2;
+			g_vga_text_buf[g_vga_text_location] = 0;
+			update_cursor(g_vga_text_location / 2);
+		}
+	} else
 		write(&c, 1);
 
-	t_tty *curr = &g_ttys[g_current_tty];
 	if (c == '\r') {
-		if (curr->cmd_len != 0) {
-			if (curr->cmd_len == 4 && memcmp(curr->cmd, "stop", 4) == 0)
-				writes("stopping...\n");
-			else
-				writes("command not found!\n");
-			curr->cmd_len = 0;
-		}
+		handle_command(curr->cmd_len, curr->cmd);
+		curr->cmd_len = 0;
 	}
-	else if (curr->cmd_len != sizeof(curr->cmd))
+	else if (c != '\b' && curr->cmd_len != sizeof(curr->cmd))
 		curr->cmd[curr->cmd_len++] = c;
 }
 

@@ -63,14 +63,14 @@ __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_fram
 }
 
 __attribute__((interrupt)) void breakpoint_handler(struct interrupt_stack_frame *interrupt_frame) {
-	writes("breakpoint");
+	writes("breakpoint\n");
 }
 
 void pic_eoi(unsigned char irq);
 void setup_pics(void);
 
 __attribute__((interrupt)) void timer_handler(struct interrupt_stack_frame *interrupt_frame) {
-	writes(".");
+	//writes(".");
 	pic_eoi(INT_TIMER);
 }
 
@@ -187,8 +187,9 @@ void kernel_main(struct multiboot_info *multi) {
 	asm volatile("lidt %0" : : "m" (idt_pointer));
 	setup_pics();
 	asm volatile("sti"); // enable interrupts
-	writes("Hello world! KFS @ 42");
+	writes("Hello world! KFS @ 42\n");
 	asm volatile("int3"); // breakpoint
+	writes("> ");
 	*((unsigned char *)3115098112)=5; // no double fault, hmm
 
 	while (1)

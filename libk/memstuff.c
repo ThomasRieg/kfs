@@ -6,11 +6,11 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:50:39 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 03:08:01 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/19 05:17:45 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-void	*ft_memchr(const void *s, int c, unsigned int n)
+void	*memchr(const void *s, int c, unsigned int n)
 {
 	const char	*str;
 
@@ -67,11 +67,11 @@ void	*memcpy(void *dest, const void *src, unsigned int bytes)
 }
 
 
-void	*memset(void *dest, const char c, unsigned int bytes)
+void	*memset(void *dest, int c, unsigned int bytes)
 {
 	char				*str;
-	unsigned long	*str_packed;
-	unsigned long	cccc;
+	unsigned long		*str_packed;
+	unsigned long		cccc;
 	size_t				i;
 
 	str = (char *)dest;

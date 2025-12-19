@@ -3,6 +3,7 @@
 #include "common.h"
 #include "tty/tty.h"
 #include "vga/vga.h"
+#include "libk/libk.h"
 
 enum interrupt {
 	INT_BREAKPOINT = 3,
@@ -40,50 +41,6 @@ void update_cursor(int pos)
 	outb(PORT_VGA_INDEXED, (unsigned char) ((pos >> 8) & 0xFF));
 }
 
-void int32_str_10(char out[12], int n) {
-	unsigned int u = n < 0 ? -n : n;
-	unsigned int i = 1;
-	do {
-		i++;
-	} while (u /= 10);
-	if (n < 0)
-		i++;
-	u = n < 0 ? -n : n;
-	out[--i] = 0;
-	do {
-		out[--i] = u % 10 + '0';
-		u /= 10;
-	} while(u);
-	if (n < 0)
-		out[--i] = '-';
-}
-
-void uint32_str_10(char out[11], unsigned int n) {
-	unsigned int i = 1;
-	unsigned int u = n;
-	do {
-		i++;
-	} while (u /= 10);
-	out[--i] = 0;
-	do {
-		out[--i] = n % 10 + '0';
-		n /= 10;
-	} while(n);
-}
-
-static void u32_to_hex(char out[9], unsigned int x, int upper)
-{
-    static const char *lo = "0123456789abcdef";
-    static const char *hi = "0123456789ABCDEF";
-    const char *digits = upper ? hi : lo;
-
-    for (int i = 7; i >= 0; --i) {
-        out[i] = digits[x & 0xF];
-        x >>= 4;
-    }
-    out[8] = 0;
-}
-
 struct idt_entry_32 {
 	short offset_1;
 	short selector;
@@ -107,17 +64,9 @@ struct interrupt_stack_frame {
 } __attribute__((packed));
 
 __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
-	char buf[11];
-	writes("interrupt frame at ");
-	uint32_str_10(buf, (unsigned int)interrupt_frame);
-	writes(buf);
-	writes(" double fault at ");
-	uint32_str_10(buf, (unsigned int)interrupt_frame->instruction_pointer);
-	writes(buf);
-	writes(" cs sel: ");
-	uint32_str_10(buf, (unsigned int)interrupt_frame->cs_selector);
-	writes(buf);
-
+	printk("interrupt frame at %p\n", interrupt_frame);
+	printk("double fault at %p\n", interrupt_frame->instruction_pointer);
+	printk("cs sel: %u\n", (unsigned int)(unsigned short)interrupt_frame->cs_selector);
 	while (1);
 }
 
@@ -147,7 +96,6 @@ bool lctrl_held = false;
 
 __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *interrupt_frame) {
 	unsigned char scancode = inb(PORT_PS2_DATA);
-	char buf[11];
 	if (!(scancode >> 7)) { // if not a release event
 		char c = scan_code_set_1_qwerty[scancode];
 		if (lctrl_held && c == '+') {
@@ -159,9 +107,7 @@ __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *i
 		} else if (c) {
 			if (shift_held || caps_lock)
 				c = toupper(c);
-			buf[0] = c;
-			buf[1] = 0;
-			writes(buf);
+			write(&c, 1);
 		} else if (scancode == SET1_QW_CAPLOCK) {
 			caps_lock = !caps_lock;
 		} else if (scancode == SET1_QW_SHIFT) {
@@ -169,9 +115,7 @@ __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *i
 		} else if (scancode == SET1_QW_LCTRL){
 			lctrl_held = true;
 		} else {
-			uint32_str_10(buf, scancode);
-			writes("key event: ");
-			writes(buf);
+			printk("key event: %u\n", scancode);
 		}
 	} else { // if release
 		scancode &= 0x7F;
@@ -215,8 +159,6 @@ unsigned char from_cmos(enum cmos_register reg) {
 
 // print clock from CMOS
 void print_clock(void) {
-	char buf[11];
-
 	unsigned int century = from_cmos(RTC_USUAL_CENTURY);
 	unsigned int year = from_cmos(RTC_YEAR);
 	unsigned int month = from_cmos(RTC_MONTH);
@@ -225,38 +167,15 @@ void print_clock(void) {
 	unsigned int minute = from_cmos(RTC_MINUTE);
 	unsigned int second = from_cmos(RTC_SECOND);
 
-	writes("date is ");
-	uint32_str_10(buf, hour);
-	writes(buf);
-	writes(":");
-	uint32_str_10(buf, minute);
-	writes(buf);
-	writes(":");
-	uint32_str_10(buf, second);
-	writes(buf);
-	writes(" ");
-	uint32_str_10(buf, day);
-	writes(buf);
-	writes("/");
-	uint32_str_10(buf, month);
-	writes(buf);
-	writes("/");
-	uint32_str_10(buf, century * 100 + year);
-	writes(buf);
-	writes("\n");
+	printk("date is %u:%u:%u %u/%u/%u\n", hour, minute, second, day, month, century * 100 + year);
 }
 
 void kernel_main(struct multiboot_info *multi) {
-	char buf[11];
-	writes("multiboot size: ");
-	uint32_str_10(buf, multi->total_size);
-	writes(buf);
+	printk("multiboot size: %u", multi->total_size);
 	writes(" ");
 	unsigned int *flag = (unsigned int *)(multi + 1);
 	while (*flag) {
-		writes("type: ");
-		uint32_str_10(buf, *flag);
-		writes(buf);
+		printk("type: %u", *flag);
 		writes(" ");
 		flag++;
 		flag = (unsigned int *)((unsigned char *)flag + *flag + 4);

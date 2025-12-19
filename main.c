@@ -1,10 +1,8 @@
 #include "io.h"
 #include "scancode.h"
 #include "common.h"
-
-enum vga_color {
-	VGA_WHITE = 15
-};
+#include "tty/tty.h"
+#include "vga/vga.h"
 
 enum interrupt {
 	INT_BREAKPOINT = 3,
@@ -12,10 +10,6 @@ enum interrupt {
 	INT_TIMER = 32,
 	INT_KEYBOARD
 };
-
-#define VGA_WIDTH 80
-#define VGA_HEIGHT 25
-#define VGA_SIZE (VGA_WIDTH * VGA_HEIGHT * 2)
 
 #define IDT_PRESENT_AND_GATE_32_INT 0x8e
 
@@ -44,48 +38,6 @@ void update_cursor(int pos)
 	outb(PORT_VGA_INDEXED, (unsigned char) (pos & 0xFF));
 	outb(PORT_VGA_INDEX, 0x0E);
 	outb(PORT_VGA_INDEXED, (unsigned char) ((pos >> 8) & 0xFF));
-}
-
-unsigned int vga_text_location = 0;
-
-unsigned char * const vga_text_buf = (unsigned char *)0xb8000;
-
-static void clear_last_line(void)
-{
-    unsigned int start = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
-    for (unsigned int i = 0; i < VGA_WIDTH; i++) {
-        vga_text_buf[start + i * 2] = ' ';
-        vga_text_buf[start + i * 2 + 1] = VGA_WHITE;
-    }
-}
-
-void scroll_down()
-{
-	for (unsigned int i = VGA_WIDTH * 2; i < VGA_SIZE; i++)
-	{
-		vga_text_buf[i - VGA_WIDTH * 2] = vga_text_buf[i];
-	}
-	clear_last_line();
-	vga_text_location = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
-}
-
-void write(const char *str) {
-	if (vga_text_location + 1 >= VGA_SIZE)
-		scroll_down();
-	while (*str) {
-		if (*str == '\n')
-			vga_text_location += (VGA_WIDTH * 2) - (vga_text_location % (VGA_WIDTH * 2));
-		else
-		{
-			vga_text_buf[vga_text_location] = *str;
-			vga_text_buf[vga_text_location + 1] = VGA_WHITE;
-			vga_text_location += 2;
-		}
-		if (vga_text_location + 1 >= VGA_SIZE)
-			scroll_down();
-		str++;
-	}
-	update_cursor(vga_text_location / 2);
 }
 
 void int32_str_10(char out[12], int n) {
@@ -156,28 +108,28 @@ struct interrupt_stack_frame {
 
 __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
 	char buf[11];
-	write("interrupt frame at ");
+	writes("interrupt frame at ");
 	uint32_str_10(buf, (unsigned int)interrupt_frame);
-	write(buf);
-	write(" double fault at ");
+	writes(buf);
+	writes(" double fault at ");
 	uint32_str_10(buf, (unsigned int)interrupt_frame->instruction_pointer);
-	write(buf);
-	write(" cs sel: ");
+	writes(buf);
+	writes(" cs sel: ");
 	uint32_str_10(buf, (unsigned int)interrupt_frame->cs_selector);
-	write(buf);
+	writes(buf);
 
 	while (1);
 }
 
 __attribute__((interrupt)) void breakpoint_handler(struct interrupt_stack_frame *interrupt_frame) {
-	write("breakpoint");
+	writes("breakpoint");
 }
 
 void pic_eoi(unsigned char irq);
 void setup_pics(void);
 
 __attribute__((interrupt)) void timer_handler(struct interrupt_stack_frame *interrupt_frame) {
-	write(".");
+	writes(".");
 	pic_eoi(INT_TIMER);
 }
 
@@ -191,31 +143,43 @@ char toupper(char c) {
 
 bool shift_held = false;
 bool caps_lock = false;
+bool lctrl_held = false;
 
 __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *interrupt_frame) {
 	unsigned char scancode = inb(PORT_PS2_DATA);
 	char buf[11];
 	if (!(scancode >> 7)) { // if not a release event
 		char c = scan_code_set_1_qwerty[scancode];
-		if (c) {
+		if (lctrl_held && c == '+') {
+			save_tty();
+			next_tty();
+		} else if (lctrl_held && c == '-') {
+			save_tty();
+			prev_tty();
+		} else if (c) {
 			if (shift_held || caps_lock)
 				c = toupper(c);
 			buf[0] = c;
 			buf[1] = 0;
-			write(buf);
+			writes(buf);
 		} else if (scancode == SET1_QW_CAPLOCK) {
 			caps_lock = !caps_lock;
 		} else if (scancode == SET1_QW_SHIFT) {
 			shift_held = true;
+		} else if (scancode == SET1_QW_LCTRL){
+			lctrl_held = true;
 		} else {
 			uint32_str_10(buf, scancode);
-			write("key event: ");
-			write(buf);
+			writes("key event: ");
+			writes(buf);
 		}
 	} else { // if release
 		scancode &= 0x7F;
 		if (scancode == SET1_QW_SHIFT) {
 			shift_held = false;
+		}
+		else if (scancode == SET1_QW_LCTRL){
+			lctrl_held = false;
 		}
 	}
 	pic_eoi(INT_KEYBOARD);
@@ -261,43 +225,43 @@ void print_clock(void) {
 	unsigned int minute = from_cmos(RTC_MINUTE);
 	unsigned int second = from_cmos(RTC_SECOND);
 
-	write("date is ");
+	writes("date is ");
 	uint32_str_10(buf, hour);
-	write(buf);
-	write(":");
+	writes(buf);
+	writes(":");
 	uint32_str_10(buf, minute);
-	write(buf);
-	write(":");
+	writes(buf);
+	writes(":");
 	uint32_str_10(buf, second);
-	write(buf);
-	write(" ");
+	writes(buf);
+	writes(" ");
 	uint32_str_10(buf, day);
-	write(buf);
-	write("/");
+	writes(buf);
+	writes("/");
 	uint32_str_10(buf, month);
-	write(buf);
-	write("/");
+	writes(buf);
+	writes("/");
 	uint32_str_10(buf, century * 100 + year);
-	write(buf);
-	write("\n");
+	writes(buf);
+	writes("\n");
 }
 
 void kernel_main(struct multiboot_info *multi) {
 	char buf[11];
-	write("multiboot size: ");
+	writes("multiboot size: ");
 	uint32_str_10(buf, multi->total_size);
-	write(buf);
-	write(" ");
+	writes(buf);
+	writes(" ");
 	unsigned int *flag = (unsigned int *)(multi + 1);
 	while (*flag) {
-		write("type: ");
+		writes("type: ");
 		uint32_str_10(buf, *flag);
-		write(buf);
-		write(" ");
+		writes(buf);
+		writes(" ");
 		flag++;
 		flag = (unsigned int *)((unsigned char *)flag + *flag + 4);
 	}
-	write("\n");
+	writes("\n");
 	print_clock();
 
 	idt[INT_BREAKPOINT] = DEF_INTERRUPT(breakpoint_handler);
@@ -314,7 +278,7 @@ void kernel_main(struct multiboot_info *multi) {
 	asm volatile("lidt %0" : : "m" (idt_pointer));
 	setup_pics();
 	asm volatile("sti"); // enable interrupts
-	write("Hello world! KFS @ 42");
+	writes("Hello world! KFS @ 42");
 	asm volatile("int3"); // breakpoint
 	*((unsigned char *)3115098112)=5; // no double fault, hmm
 

@@ -4,6 +4,7 @@
 #include "tty/tty.h"
 #include "vga/vga.h"
 #include "libk/libk.h"
+#include "gdt/gdt.h"
 
 enum interrupt {
 	INT_BREAKPOINT = 3,
@@ -119,6 +120,7 @@ __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *i
 	pic_eoi(INT_KEYBOARD);
 }
 
+//selector 16 = kernel code in GDT
 #define DEF_INTERRUPT(handler) (struct idt_entry_32){\
 		.selector = 16,\
 		.type_attributes = IDT_PRESENT_AND_GATE_32_INT,\
@@ -161,6 +163,7 @@ void print_clock(void) {
 }
 
 void kernel_main(struct multiboot_info *multi) {
+	gdt_install_basic();
 	printk("multiboot size: %u", multi->total_size);
 	writes(" ");
 	unsigned int *flag = (unsigned int *)(multi + 1);

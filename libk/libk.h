@@ -6,12 +6,14 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:48:14 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 05:21:07 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/24 00:22:39 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef LIBK_H
 #define LIBK_H
+
+#include <stdint.h>
 
 void    *memset(void *dest, int c, unsigned int bytes);
 void    *memcpy(void *dest, const void *src, unsigned int bytes);
@@ -32,5 +34,9 @@ void    u32_to_hex(char out[9], unsigned int x, int upper);
 
 
 int	printk(const char *str, ...);
+
+//print stack
+void stack_dump_words(uint32_t words);
+void stack_trace_ebp(uint32_t max_frames);
 
 #endif

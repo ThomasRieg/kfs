@@ -23,6 +23,14 @@ void handle_command(unsigned char len, const char *cmd) {
 		} else
 			found = false;
 		break;
+	case 11:
+		if (memcmp(cmd, "print stack", 11) == 0) {
+			stack_dump_words(32);
+		}
+		else if (memcmp(cmd, "print trace", 11) == 0) {
+			stack_trace_ebp(32);
+		}
+		break;
 	default:
 		found = false;
 	}

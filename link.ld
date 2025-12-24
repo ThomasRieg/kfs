@@ -19,5 +19,10 @@ SECTIONS
 	.bss BLOCK(4K) : ALIGN(4K) {
 		*(COMMON)
 		*(.bss)
+
+		. = ALIGN(16);
+		__kstack_bottom = .;
+		. = . + 16384;
+		__kstack_top = .;
 	}
 }

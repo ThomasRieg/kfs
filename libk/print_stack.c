@@ -6,12 +6,17 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 00:19:03 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/24 00:32:30 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/24 05:49:06 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <stddef.h>
 #include "libk.h"
+#include "../vga/vga.h"
+
+extern char __kstack_bottom; //defined in link.ld
+extern char __kstack_top; //defined in link.ld
+
 
 static inline uint32_t read_esp(void)
 {
@@ -41,24 +46,45 @@ static inline uint32_t read_eip_approx(void)
 	return eip;
 }
 
-void stack_dump_words(uint32_t words)
+static void print_hex(uint8_t byte)
+{
+    char buf[2];
+    if ((byte / 16) < 10)
+        buf[0] = (byte / 16) + '0';
+    else
+        buf[0] = (byte / 16) - 10 + 'a';
+    if ((byte % 16) < 10)
+        buf[1] = (byte % 16) + '0';
+    else
+        buf[1] = (byte % 16) - 10 + 'a';
+    write(buf, 2);
+}
+
+void stack_dump_words(uint32_t bytes)
 {
 	uint32_t esp = read_esp();
 	uint32_t ebp = read_ebp();
 	uint32_t eip = read_eip_approx();
+    if (bytes == 0)
+        bytes = ((uint32_t)&__kstack_top - (uint32_t)esp);
 
 	printk("=== kernel stack dump ===\n");
 	printk("eip~=%p  ebp=%p  esp=%p\n", (void*)eip, (void*)ebp, (void*)esp);
+    printk("stack top=%p  stack bottom=%p  used=%u bytes (%u%%)\n", (void*)&__kstack_top, (void*)&__kstack_bottom, (uint32_t)&__kstack_top - esp, (((uint32_t)&__kstack_top - esp) * 100) / ((uint32_t)&__kstack_top - (uint32_t)&__kstack_bottom));
 
-	uint32_t *p = (uint32_t *)esp;
+	uint8_t *p = (uint8_t *)&__kstack_top;
 
-	// Print 4 words per line for readability
-	for (uint32_t i = 0; i < words; i += 4)
+	// Print 8 bytes per line
+	for (uint32_t i = 0; i < bytes; i += 8)
 	{
-		printk("%p: ", (void*)(p + i));
-		for (uint32_t j = 0; j < 4 && (i + j) < words; ++j)
-			printk("%p ", p[i + j]);
-		printk("\n");
+		printk("%p: ", (void*)(p - i)); //substracts because stacks grows from top to bot (careful gank 3:30)
+		for (uint32_t j = 0; j < 8 && (i + j) < bytes; ++j)
+        {
+            print_hex(*(p - i - j));
+            if (j < 7)
+                write(" ", 1);
+        }
+		write("\n", 1);
 	}
 	printk("=========================\n");
 }

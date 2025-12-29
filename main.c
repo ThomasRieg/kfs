@@ -159,7 +159,12 @@ void print_clock(void) {
 	unsigned int minute = from_cmos(RTC_MINUTE);
 	unsigned int second = from_cmos(RTC_SECOND);
 
+	uint8_t orig_background;
+	uint8_t orig_foreground;
+	vga_get_color(&orig_foreground, &orig_background);
+	vga_set_color(VGA_CYAN, VGA_YELLOW);
 	printk("date is %u:%u:%u %u/%u/%u\n", hour, minute, second, day, month, century * 100 + year);
+	vga_set_color(orig_foreground, orig_background);
 }
 
 void kernel_main(struct multiboot_info *multi) {

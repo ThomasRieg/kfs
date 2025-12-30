@@ -88,7 +88,11 @@ bool lctrl_held = false;
 __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *interrupt_frame) {
 	unsigned char scancode = inb(PORT_PS2_DATA);
 	if (!(scancode >> 7)) { // if not a release event
-		char c = scan_code_set_1_qwerty[scancode];
+		char c;
+		if (shift_held || caps_lock) 
+			c = scan_code_set_1_qwerty_shifted[scancode];
+		else
+			c = scan_code_set_1_qwerty[scancode];
 		if (lctrl_held && c == '+') {
 			save_tty();
 			next_tty();
@@ -96,8 +100,6 @@ __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *i
 			save_tty();
 			prev_tty();
 		} else if (c) {
-			if (shift_held || caps_lock)
-				c = toupper(c);
 			tty_add_input(c);
 		} else if (scancode == SET1_QW_CAPLOCK) {
 			caps_lock = !caps_lock;

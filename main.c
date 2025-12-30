@@ -75,12 +75,6 @@ __attribute__((interrupt)) void timer_handler(struct interrupt_stack_frame *inte
 	pic_eoi(INT_TIMER);
 }
 
-char toupper(char c) {
-	if (c >= 'a' && c <= 'z')
-		c -= ('a' - 'A');
-	return c;
-}
-
 bool shift_held = false;
 bool caps_lock = false;
 bool lctrl_held = false;
@@ -89,10 +83,12 @@ __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *i
 	unsigned char scancode = inb(PORT_PS2_DATA);
 	if (!(scancode >> 7)) { // if not a release event
 		char c;
-		if (shift_held || caps_lock) 
+		if (shift_held) 
 			c = scan_code_set_1_qwerty_shifted[scancode];
 		else
 			c = scan_code_set_1_qwerty[scancode];
+		if (caps_lock)
+			c = invert_caps(c);
 		if (lctrl_held && c == '+') {
 			save_tty();
 			next_tty();

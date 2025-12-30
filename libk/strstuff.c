@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:58:49 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 12:00:24 by alier            ###   ########.fr       */
+/*   Updated: 2025/12/30 13:16:10 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,5 +51,13 @@ unsigned int	strlen(const char *s)
 	while (s[i])
 		i++;
 	return (i);
+}
+
+char invert_caps(char c) {
+	if (c >= 'a' && c <= 'z')
+		c -= ('a' - 'A');
+	else if (c >= 'A' && c <= 'Z')
+		c += ('a' - 'A');
+	return c;
 }
 

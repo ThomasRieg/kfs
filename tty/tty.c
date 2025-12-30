@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 01:56:38 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 15:08:28 by alier            ###   ########.fr       */
+/*   Updated: 2025/12/30 13:37:42 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,12 +40,17 @@ void next_tty()
     {
         return; //last tty, can't create another one
     }
-    else if (g_current_tty >= g_active_tty - 1)
+    g_current_tty++;
+    if (g_current_tty < g_active_tty)
+    {
+        load_tty();
+    }
+    else
     {
         g_active_tty++;
+        clear_vga_screen();
+        writes("> ");
     }
-    g_current_tty++;
-    load_tty();
 }
 
 void handle_command(unsigned char len, const unsigned char *cmd);

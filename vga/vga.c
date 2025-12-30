@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:33:35 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/29 23:42:16 by thrieg           ###   ########.fr       */
+/*   Updated: 2025/12/30 13:58:03 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,5 +95,10 @@ void writes(const char *str) {
 
 void clear_vga_screen()
 {
-    memset(g_vga_text_buf, 0, VGA_SIZE);
+	for (unsigned int i = 0; i < VGA_SIZE - 1; i += 2)
+	{
+		g_vga_text_buf[i] = 0;
+		g_vga_text_buf[i + 1] = VGA_WHITE; //white foreground for cursor
+	}
+	g_vga_text_location = 0;
 }

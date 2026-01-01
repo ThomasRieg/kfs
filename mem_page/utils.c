@@ -1,0 +1,54 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   utils.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/12/31 20:24:25 by thrieg            #+#    #+#             */
+/*   Updated: 2026/01/01 01:56:48 by thrieg           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include <stdint.h>
+#include "mem_paging.h"
+#include "mem_defines.h"
+
+uint32_t    *get_pte(void *va)
+{
+    uint32_t *table = (uint32_t *)(PT_BASE_VA + (PDE_INDEX(va) * 0x1000u));
+    return &table[PTE_INDEX(va)];
+}
+
+void    invalidate_cache(void *va)
+{
+    asm volatile("invlpg (%0)" :: "r"(va) : "memory");
+}
+
+void    map_page(uint32_t physical_address, void *pte, uint32_t flags)
+{
+    *(uint32_t *)pte = (physical_address & 0xFFFFF000u) | (flags & 0xFFFu);
+}
+
+void    unmap_page(void *ptr, void *pte)
+{
+    *(uint32_t *)pte &= ~PTE_P;
+    invalidate_cache(ptr);
+}
+
+void write_cr3(uint32_t phys)
+{
+    asm volatile("mov %0, %%cr3" :: "r"(phys) : "memory");
+}
+
+uint32_t read_cr0(void)
+{
+    uint32_t v;
+    asm volatile("mov %%cr0, %0" : "=r"(v));
+    return v;
+}
+
+void write_cr0(uint32_t v)
+{
+    asm volatile("mov %0, %%cr0" :: "r"(v) : "memory");
+}

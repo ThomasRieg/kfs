@@ -5,6 +5,7 @@
 #include "vga/vga.h"
 #include "libk/libk.h"
 #include "gdt/gdt.h"
+#include "mem_page/mem_paging.h"
 
 enum interrupt {
 	INT_BREAKPOINT = 3,
@@ -167,15 +168,7 @@ void print_clock(void) {
 
 void kernel_main(struct multiboot_info *multi) {
 	gdt_install_basic();
-	printk("multiboot size: %u", multi->total_size);
-	writes(" ");
-	unsigned int *flag = (unsigned int *)(multi + 1);
-	while (*flag) {
-		printk("type: %u", *flag);
-		writes(" ");
-		flag++;
-		flag = (unsigned int *)((unsigned char *)flag + *flag + 4);
-	}
+	paging_init(multi);
 	writes("\n");
 	print_clock();
 
@@ -196,7 +189,6 @@ void kernel_main(struct multiboot_info *multi) {
 	writes("Hello world! KFS @ 42\n");
 	asm volatile("int3"); // breakpoint
 	writes("> ");
-	*((unsigned char *)3115098112)=5; // no double fault, hmm
 
 	while (1)
 		asm volatile("hlt");

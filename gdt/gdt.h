@@ -6,12 +6,15 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 00:04:29 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/24 00:15:02 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/01 00:38:36 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef GDT_H
 #define GDT_H
+
+#define GDT_START 0x800
+#define GDT_END GDT_START + (7 * sizeof(t_gdt_entry_32)) 
 
 // Selectors (index * 8):
 // 0x00 null

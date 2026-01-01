@@ -6,6 +6,7 @@ SECTIONS
 {
 	. = 2M;
 
+	__kernel_start = .;
 	.text BLOCK(4K) : ALIGN(4K) {
 		*(.multiboot)
 		*(.text)
@@ -20,9 +21,13 @@ SECTIONS
 		*(COMMON)
 		*(.bss)
 
-		. = ALIGN(16);
+		. = ALIGN(4K);
 		__kstack_bottom = .;
 		. = . + 16384;
 		__kstack_top = .;
 	}
+	.kmap BLOCK(4K) : ALIGN(4K) {
+		*(.kmap)
+	}
+	__kernel_end = .;
 }

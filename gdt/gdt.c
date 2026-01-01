@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 00:05:21 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/24 00:15:47 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/01 00:39:41 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,7 @@ static inline void gdt_flush(const t_gdt_ptr_32 *gp)
 void gdt_install_basic(void)
 {
 	// place the GDT at address 0x800 as subject asked
-	volatile t_gdt_entry_32 *gdt = (volatile t_gdt_entry_32 *)0x00000800;
+	volatile t_gdt_entry_32 *gdt = (volatile t_gdt_entry_32 *)GDT_START;
 	t_gdt_ptr_32 gp;
 
 	// 7 entries: null + (kdata,kcode,kstack, udata,ucode,ustack)

@@ -17,10 +17,23 @@ void handle_command(unsigned char len, const char *cmd) {
 		} else if (memcmp(cmd, "help", 4) == 0) {
 			writes("help:\n"
 				"- stop: power off the machine\n"
-				"- date: print RTC/wall-clock date and time\n");
+				"- date: print RTC/wall-clock date and time\n"
+				"- print stack: print the whole stack bye per byte in hexadecimal\n"
+				"- print trace: print call backtrace\n"
+				"- crash: crash the kernel by accessing unmapped memory\n"
+				"- clear: clear TTY\n"
+				);
 		} else if (memcmp(cmd, "date", 4) == 0) {
 			print_clock();
 		} else
+			found = false;
+		break;
+	case 5:
+		if (memcmp(cmd, "clear", 5) == 0)
+			clear_vga_screen();
+		else if (memcmp(cmd, "crash", 5) == 0)
+			*((unsigned char *)3115098112)=5;
+		else
 			found = false;
 		break;
 	case 11:
@@ -29,7 +42,8 @@ void handle_command(unsigned char len, const char *cmd) {
 		}
 		else if (memcmp(cmd, "print trace", 11) == 0) {
 			stack_trace_ebp(32);
-		}
+		} else
+			found = false;
 		break;
 	default:
 		found = false;

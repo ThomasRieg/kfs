@@ -6,12 +6,12 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:35:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/01 01:37:00 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/05 17:49:53 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pmm.h"
-#include "multiboot2.h"
+#include "../multiboot2.h"
 #include "../libk/libk.h"
 #include "../mem_page/mem_defines.h"
 #include "../vga/vga.h"
@@ -147,11 +147,14 @@ void pmm_init(void *multiboot2_info)
         const uint8_t *p = (const uint8_t *)mmap + sizeof(t_mb2_tag_mmap);
         const uint8_t *end = (const uint8_t *)mmap + mmap->size;
 
+		printk("available physical memory:\n");
         while (p + mmap->entry_size <= end) {
             const t_mb2_mmap_entry *e = (const t_mb2_mmap_entry *)p;
 
             if (e->type == MB2_MMAP_AVAILABLE) {
-                mark_free_range(e->addr, e->addr + e->len);
+				uint64_t end_pa = e->addr + e->len;
+				printk("0x%x 0x%x -> 0x%x 0x%x: 0x%x 0x%x bytes\n", (unsigned int)(e->addr >> 32), (unsigned int)(e->addr & 0xFFFFFFFF), (unsigned int)(end_pa >> 32), (unsigned int)(end_pa & 0xFFFFFFFF), (unsigned int)(e->len >> 32), (unsigned int)(e->len & 0xFFFFFFFF));
+                mark_free_range(e->addr, end_pa);
             }
             p += mmap->entry_size;
         }

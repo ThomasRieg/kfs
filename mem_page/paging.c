@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/01 01:14:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/01 02:03:16 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/05 17:38:52 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 #include "../pmm/pmm.h"
 #include "mem_defines.h"
 #include "mem_paging.h"
-#include "../pmm/multiboot2.h"
+#include "../multiboot2.h"
 #include "../libk/libk.h"
 #include "../vga/vga.h"
 

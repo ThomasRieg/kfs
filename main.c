@@ -6,6 +6,7 @@
 #include "libk/libk.h"
 #include "gdt/gdt.h"
 #include "mem_page/mem_paging.h"
+#include "multiboot2.h"
 
 enum interrupt {
 	INT_BREAKPOINT = 3,
@@ -16,23 +17,10 @@ enum interrupt {
 
 #define IDT_PRESENT_AND_GATE_32_INT 0x8e
 
-struct multiboot_header {
-	int magic;
-	int arch;
-	int hdr_len;
-	int checksum;
-	int flags;
-};
-
-struct multiboot_header __attribute__((section(".multiboot"))) multiboot = {
+struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
-	.hdr_len = sizeof(struct multiboot_header),
-	.checksum = 397258538 - sizeof(struct multiboot_header)
-};
-
-struct multiboot_info {
-	unsigned int total_size;
-	unsigned int reserved;
+	.hdr_len = sizeof(struct multiboot2_header),
+	.checksum = 397258538 - sizeof(struct multiboot2_header)
 };
 
 struct idt_entry_32 {
@@ -49,18 +37,27 @@ struct idt_entry_32 idt[256];
 // TODO: fix
 struct interrupt_stack_frame {
 	void *instruction_pointer;
-	short cs_selector;
+	unsigned short cs_selector;
 	char _reserved1[6];
 	unsigned int flags;
 	void *stack_pointer;
-	short ss_selector;
+	unsigned short ss_selector;
 	char _reserved2[6];
 } __attribute__((packed));
 
 __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
 	printk("interrupt frame at %p\n", interrupt_frame);
-	printk("double fault at %p\n", interrupt_frame->instruction_pointer);
-	printk("cs sel: %u\n", (unsigned int)(unsigned short)interrupt_frame->cs_selector);
+	printk("double fault at eip %p\n", interrupt_frame->instruction_pointer);
+	printk("flags ");
+	unsigned int f = interrupt_frame->flags;
+	for (int i = 0; i && i < 31; i++, f >>= 1) {
+		if (f & 1) {
+			printk("%d ", i);
+		}
+	}
+	printk("\n");
+	printk("stack pointer %p\n", interrupt_frame->stack_pointer);
+	printk("selectors: [cs] %u [ss] %u\n", (unsigned int)interrupt_frame->cs_selector, (unsigned int)interrupt_frame->ss_selector);
 	while (1);
 }
 
@@ -166,7 +163,8 @@ void print_clock(void) {
 	vga_set_color(orig_foreground, orig_background);
 }
 
-void kernel_main(struct multiboot_info *multi) {
+void kernel_main(struct s_mb2_info *multi) {
+	printk("Initializing...\n");
 	gdt_install_basic();
 	paging_init(multi);
 	writes("\n");

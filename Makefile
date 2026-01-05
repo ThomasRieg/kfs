@@ -1,15 +1,17 @@
-CFLAGS := -m32 -MMD -ffreestanding
+CFLAGS := -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
 SRCS := main.o shell.o entry.o pic.o tty/tty.o vga/vga.o libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o gdt/gdt.o mem_page/kmap.o mem_page/paging.o mem_page/utils.o pmm/pmm.o
 ISO := kfs.iso
 ELF := kfs.elf
 
+QEMU := qemu-system-i386 -cdrom $(ISO) -m 5G
+
 qemu: $(ISO)
-	qemu-system-i386 -cdrom $(ISO)
+	$(QEMU)
 
 debug: $(ISO)
-	qemu-system-i386 -s -S -cdrom $(ISO) &
+	$(QEMU) -s -S &
 	gdb -ix .gdb_init
 
 all: $(ISO)

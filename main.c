@@ -11,6 +11,7 @@
 enum interrupt {
 	INT_BREAKPOINT = 3,
 	INT_DOUBLE_FAULT = 8,
+	INT_PAGE_FAULT = 14,
 	INT_TIMER = PIC_OFFSET,
 	INT_KEYBOARD
 };
@@ -33,31 +34,76 @@ struct idt_entry_32 {
 
 struct idt_entry_32 idt[256];
 
-// This is wrong
-// TODO: fix
 struct interrupt_stack_frame {
 	void *instruction_pointer;
 	unsigned short cs_selector;
-	char _reserved1[6];
+	unsigned short _padding;
 	unsigned int flags;
-	void *stack_pointer;
-	unsigned short ss_selector;
-	char _reserved2[6];
 } __attribute__((packed));
 
-__attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
+void print_interrupt_frame(struct interrupt_stack_frame *interrupt_frame) {
 	printk("interrupt frame at %p\n", interrupt_frame);
-	printk("double fault at eip %p\n", interrupt_frame->instruction_pointer);
+	printk("eip %p\n", interrupt_frame->instruction_pointer);
 	printk("flags ");
 	unsigned int f = interrupt_frame->flags;
-	for (int i = 0; i && i < 31; i++, f >>= 1) {
+	bool first = true;
+	for (unsigned int i = 0; f && i < 31; i++, f >>= 1) {
 		if (f & 1) {
-			printk("%d ", i);
+			if (!first)
+				printk(", ");
+			switch (i) {
+			case 0:
+				printk("CARRY");
+				break;
+			case 1:
+				printk("RESERVED_1");
+				break;
+			case 2:
+				printk("PARITY");
+				break;
+			case 4:
+				printk("AUX_CARRY");
+				break;
+			case 6:
+				printk("ZERO");
+				break;
+			case 7:
+				printk("SIGN");
+				break;
+			case 8:
+				printk("TRAP");
+				break;
+			case 9:
+				printk("INTERRUPT_ENABLE");
+				break;
+			case 10:
+				printk("DIRECTION");
+				break;
+			case 11:
+				printk("OVERFLOW");
+				break;
+			default:
+				printk("%u ", i);
+			}
+			first = false;
 		}
 	}
 	printk("\n");
-	printk("stack pointer %p\n", interrupt_frame->stack_pointer);
-	printk("selectors: [cs] %u [ss] %u\n", (unsigned int)interrupt_frame->cs_selector, (unsigned int)interrupt_frame->ss_selector);
+	printk("code segment selector: %u\n", (unsigned int)interrupt_frame->cs_selector);
+}
+
+__attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
+	writes("double fault :(\n");
+	print_interrupt_frame(interrupt_frame);
+	while (1);
+}
+
+__attribute__((interrupt)) void page_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
+	writes("page fault :(\n");
+	unsigned int virtual_address;
+    asm volatile("mov %%cr2, %0" : "=r"(virtual_address));
+	printk("while %s %s page at virtual address: %p\n", error_code & 2 ? "writing" : "reading", error_code & 1 ? "present" : "non-present", virtual_address);
+	print_interrupt_frame(interrupt_frame);
 	while (1);
 }
 
@@ -174,6 +220,7 @@ void kernel_main(struct s_mb2_info *multi) {
 	idt[INT_DOUBLE_FAULT] = DEF_INTERRUPT(double_fault_handler);
 	idt[INT_TIMER] = DEF_INTERRUPT(timer_handler);
 	idt[INT_KEYBOARD] = DEF_INTERRUPT(keyboard_handler);
+	idt[INT_PAGE_FAULT] = DEF_INTERRUPT(page_fault_handler);
 	struct descriptor_table_pointer {
 		unsigned short limit;
 		unsigned int base;

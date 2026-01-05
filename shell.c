@@ -31,9 +31,9 @@ void handle_command(unsigned char len, const char *cmd) {
 	case 5:
 		if (memcmp(cmd, "clear", 5) == 0)
 			clear_vga_screen();
-		else if (memcmp(cmd, "crash", 5) == 0)
-			*((unsigned char *)3115098112)=5;
-		else
+		else if (memcmp(cmd, "crash", 5) == 0) {
+			*((unsigned char *)4242424242)=5;
+		} else
 			found = false;
 		break;
 	case 11:

@@ -5,7 +5,7 @@ SRCS := main.o shell.o entry.o pic.o tty/tty.o vga/vga.o libk/print_stack.o libk
 ISO := kfs.iso
 ELF := kfs.elf
 
-QEMU := qemu-system-i386 -cdrom $(ISO) -m 5G
+QEMU := qemu-system-i386 -cdrom $(ISO) -m 128M
 
 qemu: $(ISO)
 	$(QEMU)

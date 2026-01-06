@@ -22,6 +22,7 @@ void handle_command(unsigned char len, const char *cmd) {
 				"- print trace: print call backtrace\n"
 				"- crash: crash the kernel by accessing unmapped memory\n"
 				"- clear: clear TTY\n"
+				"- breakpoint: cause the breakpoint instruction to be executed\n"
 				);
 		} else if (memcmp(cmd, "date", 4) == 0) {
 			print_clock();
@@ -33,6 +34,12 @@ void handle_command(unsigned char len, const char *cmd) {
 			clear_vga_screen();
 		else if (memcmp(cmd, "crash", 5) == 0) {
 			*((unsigned char *)4242424242)=5;
+		} else
+			found = false;
+		break;
+	case 10:
+		if (memcmp(cmd, "breakpoint", 10) == 0) {
+			asm volatile("int3"); // breakpoint
 		} else
 			found = false;
 		break;

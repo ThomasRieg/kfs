@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:35:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/05 17:49:53 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/06 14:05:36 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@ extern char __kernel_start;
 extern char __kernel_end;
 
 static inline uint32_t align_up_u32(uint32_t x, uint32_t a)   { return (x + a - 1) & ~(a - 1); }
-static inline uint32_t align_dn_u32(uint32_t x, uint32_t a)   { return x & ~(a - 1); }
+//static inline uint32_t align_dn_u32(uint32_t x, uint32_t a)   { return x & ~(a - 1); }
 static inline uint64_t align_up_u64(uint64_t x, uint64_t a)   { return (x + a - 1) & ~(a - 1); }
 static inline uint64_t align_dn_u64(uint64_t x, uint64_t a)   { return x & ~(a - 1); }
 

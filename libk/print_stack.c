@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 00:19:03 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/24 05:49:06 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/06 14:05:13 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,12 +65,12 @@ void stack_dump_words(uint32_t bytes)
 	uint32_t esp = read_esp();
 	uint32_t ebp = read_ebp();
 	uint32_t eip = read_eip_approx();
-    if (bytes == 0)
-        bytes = ((uint32_t)&__kstack_top - (uint32_t)esp);
+	if (bytes == 0)
+		bytes = ((uint32_t)&__kstack_top - (uint32_t)esp);
 
 	printk("=== kernel stack dump ===\n");
 	printk("eip~=%p  ebp=%p  esp=%p\n", (void*)eip, (void*)ebp, (void*)esp);
-    printk("stack top=%p  stack bottom=%p  used=%u bytes (%u%%)\n", (void*)&__kstack_top, (void*)&__kstack_bottom, (uint32_t)&__kstack_top - esp, (((uint32_t)&__kstack_top - esp) * 100) / ((uint32_t)&__kstack_top - (uint32_t)&__kstack_bottom));
+	printk("stack top=%p  stack bottom=%p  used=%u bytes (%u%%)\n", (void*)&__kstack_top, (void*)&__kstack_bottom, (uint32_t)&__kstack_top - esp, (((uint32_t)&__kstack_top - esp) * 100) / ((uint32_t)&__kstack_top - (uint32_t)&__kstack_bottom));
 
 	uint8_t *p = (uint8_t *)&__kstack_top;
 

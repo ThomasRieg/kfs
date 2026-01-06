@@ -83,7 +83,7 @@ void print_interrupt_frame(struct interrupt_stack_frame *interrupt_frame) {
 				printk("OVERFLOW");
 				break;
 			default:
-				printk("%u ", i);
+				printk("%u", i);
 			}
 			first = false;
 		}
@@ -92,7 +92,7 @@ void print_interrupt_frame(struct interrupt_stack_frame *interrupt_frame) {
 	printk("code segment selector: %u\n", (unsigned int)interrupt_frame->cs_selector);
 }
 
-__attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
+__attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_frame *interrupt_frame, __attribute__((unused))unsigned int error_code) {
 	writes("double fault :(\n");
 	print_interrupt_frame(interrupt_frame);
 	while (1);
@@ -100,6 +100,7 @@ __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_fram
 
 __attribute__((interrupt)) void page_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code) {
 	writes("page fault :(\n");
+	printk("error code: %u\n", error_code);
 	unsigned int virtual_address;
     asm volatile("mov %%cr2, %0" : "=r"(virtual_address));
 	printk("while %s %s page at virtual address: %p\n", error_code & 2 ? "writing" : "reading", error_code & 1 ? "present" : "non-present", virtual_address);
@@ -109,12 +110,13 @@ __attribute__((interrupt)) void page_fault_handler(struct interrupt_stack_frame 
 
 __attribute__((interrupt)) void breakpoint_handler(struct interrupt_stack_frame *interrupt_frame) {
 	writes("breakpoint\n");
+	print_interrupt_frame(interrupt_frame);
 }
 
 void pic_eoi(unsigned char irq);
 void setup_pics(void);
 
-__attribute__((interrupt)) void timer_handler(struct interrupt_stack_frame *interrupt_frame) {
+__attribute__((interrupt)) void timer_handler(__attribute__((unused))struct interrupt_stack_frame *interrupt_frame) {
 	//writes(".");
 	pic_eoi(INT_TIMER);
 }
@@ -123,7 +125,7 @@ bool shift_held = false;
 bool caps_lock = false;
 bool lctrl_held = false;
 
-__attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *interrupt_frame) {
+__attribute__((interrupt)) void keyboard_handler(__attribute__((unused))struct interrupt_stack_frame *interrupt_frame) {
 	unsigned char scancode = inb(PORT_PS2_DATA);
 	if (!(scancode >> 7)) { // if not a release event
 		char c;
@@ -147,8 +149,6 @@ __attribute__((interrupt)) void keyboard_handler(struct interrupt_stack_frame *i
 			shift_held = true;
 		} else if (scancode == SET1_QW_LCTRL){
 			lctrl_held = true;
-		} else {
-			printk("key event: %u\n", scancode);
 		}
 	} else { // if release
 		scancode &= 0x7F;
@@ -210,11 +210,10 @@ void print_clock(void) {
 }
 
 void kernel_main(struct s_mb2_info *multi) {
-	printk("Initializing...\n");
+	writes("Initializing...\n");
 	gdt_install_basic();
+	writes("GDT installed.\n");
 	paging_init(multi);
-	writes("\n");
-	print_clock();
 
 	idt[INT_BREAKPOINT] = DEF_INTERRUPT(breakpoint_handler);
 	idt[INT_DOUBLE_FAULT] = DEF_INTERRUPT(double_fault_handler);
@@ -229,10 +228,14 @@ void kernel_main(struct s_mb2_info *multi) {
 		.base = (unsigned int)&idt[0],
 	};
 	asm volatile("lidt %0" : : "m" (idt_pointer));
+	writes("Interrupt Descriptor Table loaded.\n");
 	setup_pics();
+	writes("PICs configured.\n");
 	asm volatile("sti"); // enable interrupts
+	writes("Hardware interrupts enabled.\n");
 	writes("Hello world! KFS @ 42\n");
-	asm volatile("int3"); // breakpoint
+	print_clock();
+	writes("\n");
 	writes("> ");
 
 	while (1)

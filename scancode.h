@@ -1,6 +1,6 @@
 #define SET1_QW_SHIFT 0x2a
 #define SET1_QW_CAPLOCK 0x3a
-#define SET1_QW_LCTRL 0x1D //TODO test this ont campus
+#define SET1_QW_LCTRL 0x1D
 
 static char scan_code_set_1_qwerty[128] = {
 	0, '\e', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',

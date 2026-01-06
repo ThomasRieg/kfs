@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/01 01:14:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/05 17:38:52 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/06 14:03:15 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -110,13 +110,13 @@ void paging_init(void *multiboot2_info)
     memset(pd, 0, PAGE_SIZE);
 
     // 3) Compute what we must identity-map to survive the switch
-    uint32_t kernel_start = (uint32_t)(uintptr_t)&__kernel_start;
+    //uint32_t kernel_start = (uint32_t)(uintptr_t)&__kernel_start;
     uint32_t kernel_end   = (uint32_t)(uintptr_t)&__kernel_end;
 
-    uint32_t stack_bot = (uint32_t)(uintptr_t)&__kstack_bottom;
+    //uint32_t stack_bot = (uint32_t)(uintptr_t)&__kstack_bottom;
     uint32_t stack_top = (uint32_t)(uintptr_t)&__kstack_top;
 
-    uint32_t bmp_start = pmm_bitmap_pa_start();
+    //uint32_t bmp_start = pmm_bitmap_pa_start();
     uint32_t bmp_end   = pmm_bitmap_pa_end();
 
     // multiboot2 info region
@@ -125,7 +125,7 @@ void paging_init(void *multiboot2_info)
     uint32_t mbi_end   = mbi_start + mbi->total_size;
 
     // VGA text buffer physical
-    uint32_t vga_start = (uint32_t)(uintptr_t)g_vga_text_buf;
+    //uint32_t vga_start = (uint32_t)(uintptr_t)g_vga_text_buf;
     uint32_t vga_end   = (uint32_t)(uintptr_t)g_vga_text_buf + VGA_SIZE;
 
     // idmap_end = max of everything you need

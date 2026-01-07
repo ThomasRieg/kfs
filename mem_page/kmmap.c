@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 13:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 16:32:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/07 17:18:44 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -179,7 +179,7 @@ virt_ptr kmmap(virt_ptr start, uint32_t nb_map, uint32_t flags)
 	return (virt_ptr)(uintptr_t)base;
 }
 
-void kmmunmap(virt_ptr ptr, uint32_t nb_map)
+void kmunmap(virt_ptr ptr, uint32_t nb_map)
 {
 	for (uint32_t i = 0; i < nb_map; i++)
 	{

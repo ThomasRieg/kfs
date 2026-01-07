@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 19:37:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 16:31:39 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/07 17:18:38 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,6 @@ void write_cr0(uint32_t v);
 void paging_init(void *multiboot2_info);
 
 virt_ptr kmmap(virt_ptr start, uint32_t nb_map, uint32_t flags);
-void kmmunmap(virt_ptr ptr, uint32_t nb_map);
+void kmunmap(virt_ptr ptr, uint32_t nb_map);
 
 #endif

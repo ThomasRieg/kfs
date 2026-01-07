@@ -7,6 +7,7 @@
 #include "gdt/gdt.h"
 #include "mem_page/mem_paging.h"
 #include "mem_page/mem_defines.h"
+#include "vmalloc/vmalloc.h"
 #include "multiboot2.h"
 
 enum interrupt
@@ -290,8 +291,12 @@ void kernel_main(struct s_mb2_info *multi)
 		bigboytab[i] = 42;
 	}
 	printk("big array at: %p\n42th value: %u\n", bigboytab, bigboytab[42]);
-	kmmunmap(bigboytab, 10);
-	printk("big array at: %p\n42th value: %u\n", bigboytab, bigboytab[42]);
+	kmunmap(bigboytab, 10);
+	bigboytab = vmalloc(43 * sizeof(uint32_t));
+	bigboytab[42] = 67;
+	printk("big array at: %p\n12th value: %u\nallocated space: %u\n", bigboytab, bigboytab[42], vsize(bigboytab));
+	vfree(bigboytab);
+	printk("big array at: %p\nallocated space: %u\n", bigboytab, vsize(bigboytab)); // doesn't page fault because the last malloc buffer isn't munmapped
 	writes("> ");
 	while (1)
 		asm volatile("hlt");

@@ -11,7 +11,7 @@ qemu: $(ISO)
 	$(QEMU)
 
 debug: $(ISO)
-	$(QEMU) -s -S &
+	set -m; $(QEMU) -s -S &
 	gdb -ix .gdb_init
 
 all: $(ISO)

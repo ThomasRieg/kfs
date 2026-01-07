@@ -15,6 +15,7 @@ void handle_command(unsigned char len, const char *cmd) {
 			pci_enumerate();
 		} else
 			found = false;
+		break;
 	case 4:
 		if (memcmp(cmd, "stop", 4) == 0) {
 			writes("stopping...\n");

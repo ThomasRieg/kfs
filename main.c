@@ -7,6 +7,7 @@
 #include "gdt/gdt.h"
 #include "mem_page/mem_paging.h"
 #include "multiboot2.h"
+#include "pci.h"
 
 enum interrupt {
 	INT_BREAKPOINT = 3,
@@ -233,6 +234,7 @@ void kernel_main(struct s_mb2_info *multi) {
 	writes("PICs configured.\n");
 	asm volatile("sti"); // enable interrupts
 	writes("Hardware interrupts enabled.\n");
+	pci_enumerate();
 	writes("Hello world! KFS @ 42\n");
 	print_clock();
 	writes("\n");

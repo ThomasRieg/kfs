@@ -1,11 +1,11 @@
 CFLAGS := -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-SRCS := main.o shell.o entry.o pic.o tty/tty.o vga/vga.o libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o gdt/gdt.o mem_page/kmap.o mem_page/paging.o mem_page/utils.o pmm/pmm.o
+SRCS := main.o shell.o entry.o pic.o tty/tty.o vga/vga.o libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o gdt/gdt.o mem_page/kmap.o mem_page/paging.o mem_page/utils.o pmm/pmm.o pci.o
 ISO := kfs.iso
 ELF := kfs.elf
 
-QEMU := qemu-system-i386 -cdrom $(ISO) -m 128M
+QEMU := qemu-system-i386 -device rtl8139 -cdrom $(ISO) -m 128M
 
 qemu: $(ISO)
 	$(QEMU)

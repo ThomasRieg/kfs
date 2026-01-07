@@ -1,6 +1,7 @@
 #include "libk/libk.h"
 #include "vga/vga.h"
 #include "io.h"
+#include "pci.h"
 #include "common.h"
 
 void print_clock(void);
@@ -9,6 +10,11 @@ void handle_command(unsigned char len, const char *cmd) {
 	bool found = true;
 
 	switch (len) {
+	case 3:
+		if (memcmp(cmd, "pci", 3) == 0) {
+			pci_enumerate();
+		} else
+			found = false;
 	case 4:
 		if (memcmp(cmd, "stop", 4) == 0) {
 			writes("stopping...\n");
@@ -23,6 +29,7 @@ void handle_command(unsigned char len, const char *cmd) {
 				"- crash: crash the kernel by accessing unmapped memory\n"
 				"- clear: clear TTY\n"
 				"- breakpoint: cause the breakpoint instruction to be executed\n"
+				"- pci: enumerate PCI devices on bus 0 with function 0\n"
 				);
 		} else if (memcmp(cmd, "date", 4) == 0) {
 			print_clock();

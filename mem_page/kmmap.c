@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 13:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 17:27:48 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 18:02:38 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -186,6 +186,7 @@ void kmunmap(virt_ptr ptr, uint32_t nb_map)
 	for (uint32_t i = 0; i < nb_map; i++)
 	{
 		virt_ptr curr_page = (virt_ptr)(ptr + (i * PAGE_SIZE));
+		memset(curr_page, 0, PAGE_SIZE);
 		pmm_free_frame_from_va(curr_page);
 		unmap_page(curr_page, get_pte(curr_page));
 	}

@@ -2,6 +2,18 @@
 #include "libk/libk.h"
 #include "tty/tty.h"
 
+enum pci_vendor {
+	VENDOR_REALTEK = 0x10ec,
+	VENDOR_INTEL = 0x8086,
+};
+
+enum pci_device {
+	DEVICE_REALTEK_RTL8139 = 0x8139,
+	DEVICE_INTEL_82540EM = 0x100e,
+	DEVICE_INTEL_82371SB = 0x7000,
+	DEVICE_INTEL_440FX = 0x1237
+};
+
 // See https://wiki.osdev.org/PCI
 static unsigned short pci_config_read_word(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offset) {
     unsigned int address;
@@ -23,12 +35,12 @@ static unsigned short pci_config_read_word(unsigned char bus, unsigned char slot
 }
 
 const char *pci_to_name(unsigned short vendor, unsigned short device) {
-	if (vendor == 0x10ec && device == 0x8139) {
+	if (vendor == VENDOR_REALTEK && device == DEVICE_REALTEK_RTL8139) {
 		return "RTL-8100/8101L/8139 PCI Fast Ethernet Adapter";
-	} else if (vendor == 0x8086) {
-		if (device == 0x100e) return "82540EM Gigabit Ethernet Controller";
-		if (device == 0x7000) return "82371SB PIIX3 ISA";
-		if (device == 0x1237) return "440FX - 82441FX PMC [Natoma]";
+	} else if (vendor == VENDOR_INTEL) {
+		if (device == DEVICE_INTEL_82540EM) return "82540EM Gigabit Ethernet Controller";
+		if (device == DEVICE_INTEL_82371SB) return "82371SB PIIX3 ISA";
+		if (device == DEVICE_INTEL_440FX) return "440FX - 82441FX PMC [Natoma]";
 	}
 	return "Unknown";
 }
@@ -54,6 +66,9 @@ void pci_enumerate(void) {
 					printk("bar%u", i);
 					vga_set_color(VGA_WHITE, VGA_BLACK);
 					printk(": 0x%x IO: %u ", base, bar & 1);
+					if (vendor == VENDOR_REALTEK && device == DEVICE_REALTEK_RTL8139 && (bar & 1) && i == 0) {
+						printk("MAC: %x:%x:%x:%x:%x:%x ", inb(base), inb(base + 1), inb(base + 2), inb(base + 3), inb(base + 4), inb(base + 5));
+					}
 				}
 				writes("\n");
 			}

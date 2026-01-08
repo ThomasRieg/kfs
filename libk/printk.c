@@ -6,11 +6,11 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:53:22 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 05:17:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 14:34:23 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../vga/vga.h"
+#include "../tty/tty.h"
 #include "libk.h"
 #include <stdarg.h>
 

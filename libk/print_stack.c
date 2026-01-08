@@ -6,13 +6,13 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 00:19:03 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/06 14:05:13 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/08 14:34:12 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <stddef.h>
 #include "libk.h"
-#include "../vga/vga.h"
+#include "../tty/tty.h"
 
 extern char __kstack_bottom; //defined in link.ld
 extern char __kstack_top; //defined in link.ld

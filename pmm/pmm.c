@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:35:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 23:21:21 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 00:10:22 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -250,29 +250,69 @@ phys_ptr pmm_alloc_frame(void)
 phys_ptr pmm_alloc_frames(uint32_t nb_frames)
 {
 	uint32_t max_page = g_total_frames - nb_frames;
+	uint32_t word_count = (g_total_frames + 31u) >> 5;
+	bool first_free = 1;
 	for (uint32_t i = g_first_free; i < max_page; i++)
 	{
 		if (bit_test(i))
 			continue;
 		else
 		{
+			if (first_free)
+			{
+				first_free = false;
+				g_first_free = i;
+			}
 			uint32_t start = i;
 			bool allfree = true;
 			uint32_t nb_free = 0;
-			for (; nb_free < nb_frames; nb_free++)
+			//allign to 32 bits to use words
+			for (; nb_free < nb_frames && ((start + nb_free) & 0x0000001F); nb_free++)
 			{
-				if (bit_test(i))
+				if (i >= max_page)
+					return (NULL);
+				if (bit_test(start + nb_free))
 				{
 					allfree = false;
 					break;
 				}
 			}
+			if (!allfree)
+			{
+				i += nb_free;
+				continue;
+			}
+			// scan word by word
+			uint32_t word_index = (start + nb_free) >> 5; // goes from bit index to word index by /32
+			for (; (word_index < word_count) && (nb_free < nb_frames) && allfree; word_index++)
+			{
+				uint32_t *wptr = (uint32_t *)(g_bitmap + (word_index << 2));
+				uint32_t word = *wptr;
+
+				if (word != 0x00000000u)
+				{
+					uint32_t bit = (uint32_t)__builtin_ctz(word); //first used bit
+					uint32_t idx = (word_index << 5) + bit;
+					
+					nb_free = idx - start;
+					if (nb_free < nb_frames)
+					{
+						allfree = false;
+						break;
+					}
+					if (idx >= g_total_frames)
+						return (0);
+				}
+				else
+					nb_free += 32;
+			}
+			if (nb_free > nb_frames)
+				nb_free = nb_frames;
 			i += nb_free;
 			if (allfree)
 			{
 				for (uint32_t j = start; j < i; j++)
 					bit_set(j);
-				g_first_free = i;
 				if (g_free_frames > nb_frames)
 					g_free_frames -= nb_frames;
 				else

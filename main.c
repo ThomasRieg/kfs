@@ -36,10 +36,9 @@ struct idt_entry_32
 	short offset_2;
 };
 
-__attribute__((noreturn))
-void kernel_panic(const char *message)
+__attribute__((noreturn)) void kernel_panic(const char *message)
 {
-	asm volatile("cli");
+	disable_interrupts();
 	vga_set_color(VGA_RED, VGA_BLACK);
 	writes("/!\\Kernel Panic/!\\\n");
 	writes(message);
@@ -291,7 +290,7 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Interrupt Descriptor Table loaded.\n");
 	setup_pics();
 	writes("PICs configured.\n");
-	asm volatile("sti"); // enable interrupts
+	enable_interrupts();
 	writes("Hardware interrupts enabled.\n");
 	writes("Hello world! KFS @ 42\n");
 	print_clock();

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 13:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 17:18:44 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 15:35:30 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,7 +60,7 @@ static int ensure_page_table(uint32_t pdi)
 	if (!pt_pa)
 		return 0;
 
-	// TODO protect this with a spinlock and deactivate interupts
+	disable_interrupts();
 	void *tmp = kmap((phys_ptr)pt_pa);
 	if (!tmp)
 	{
@@ -73,6 +73,7 @@ static int ensure_page_table(uint32_t pdi)
 		pt_words[i] = 0;
 
 	kunmap();
+	enable_interrupts();
 
 	// Install PDE: present + RW, supervisor
 	pd[pdi] = (pt_pa & 0xFFFFF000u) | PTE_P | PTE_RW;

@@ -1,4 +1,6 @@
 #include "io.h"
+#include "pci.h"
+#include "pic.h"
 #include "scancode.h"
 #include "common.h"
 #include "tty/tty.h"
@@ -9,16 +11,6 @@
 #include "mem_page/mem_defines.h"
 #include "vmalloc/vmalloc.h"
 #include "multiboot2.h"
-
-enum interrupt
-{
-	INT_BREAKPOINT = 3,
-	INT_DOUBLE_FAULT = 8,
-	INT_PAGE_FAULT = 14,
-	INT_TIMER = PIC_OFFSET,
-	INT_KEYBOARD,
-	INT_SERIAL1 = PIC_OFFSET + 4,
-};
 
 #define IDT_PRESENT_AND_GATE_32_INT 0x8e
 
@@ -47,14 +39,6 @@ __attribute__((noreturn)) void kernel_panic(const char *message)
 }
 
 struct idt_entry_32 idt[256];
-
-struct interrupt_stack_frame
-{
-	void *instruction_pointer;
-	unsigned short cs_selector;
-	unsigned short _padding;
-	unsigned int flags;
-} __attribute__((packed));
 
 void print_interrupt_frame(struct interrupt_stack_frame *interrupt_frame)
 {
@@ -136,9 +120,6 @@ __attribute__((interrupt)) void breakpoint_handler(struct interrupt_stack_frame 
 	writes("breakpoint\n");
 	print_interrupt_frame(interrupt_frame);
 }
-
-void pic_eoi(unsigned char irq);
-void setup_pics(void);
 
 __attribute__((interrupt)) void timer_handler(__attribute__((unused)) struct interrupt_stack_frame *interrupt_frame)
 {
@@ -275,6 +256,7 @@ void kernel_main(struct s_mb2_info *multi)
 	idt[INT_KEYBOARD] = DEF_INTERRUPT(keyboard_handler);
 	idt[INT_PAGE_FAULT] = DEF_INTERRUPT(page_fault_handler);
 	idt[INT_SERIAL1] = DEF_INTERRUPT(serial1_handler);
+	idt[INT_NIC] = DEF_INTERRUPT(rtl8139_handler);
 	struct descriptor_table_pointer
 	{
 		unsigned short limit;

@@ -1,3 +1,4 @@
+#include "pci.h"
 #include "io.h"
 #include "libk/libk.h"
 #include "tty/tty.h"
@@ -14,26 +15,6 @@ enum pci_device {
 	DEVICE_INTEL_440FX = 0x1237
 };
 
-// See https://wiki.osdev.org/PCI
-static unsigned short pci_config_read_word(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offset) {
-    unsigned int address;
-    unsigned int lbus  = (uint32_t)bus;
-    unsigned int lslot = (uint32_t)slot;
-    unsigned int lfunc = (uint32_t)func;
-    unsigned short tmp = 0;
-
-    // Create configuration address as per Figure 1
-    address = (unsigned int)((lbus << 16) | (lslot << 11) |
-              (lfunc << 8) | (offset & 0xFC) | ((unsigned int)0x80000000));
-
-    // Write out the address
-    outl(PORT_PCI_CONFIG_ADDR, address);
-    // Read in the data
-    // (offset & 2) * 8) = 0 will choose the first word of the 32-bit register
-    tmp = (unsigned short)((inl(PORT_PCI_CONFIG_DATA) >> ((offset & 2) * 8)) & 0xFFFF);
-    return tmp;
-}
-
 const char *pci_to_name(unsigned short vendor, unsigned short device) {
 	if (vendor == VENDOR_REALTEK && device == DEVICE_REALTEK_RTL8139) {
 		return "RTL-8100/8101L/8139 PCI Fast Ethernet Adapter";
@@ -43,6 +24,15 @@ const char *pci_to_name(unsigned short vendor, unsigned short device) {
 		if (device == DEVICE_INTEL_440FX) return "440FX - 82441FX PMC [Natoma]";
 	}
 	return "Unknown";
+}
+
+
+void rtl_8139_init(unsigned char bus, unsigned char slot);
+
+void pci_init_device(unsigned char bus, unsigned char slot, unsigned short vendor, unsigned short device) {
+	if (vendor == VENDOR_REALTEK && device == DEVICE_REALTEK_RTL8139) {
+		rtl_8139_init(bus, slot);
+	}
 }
 
 void pci_enumerate(void) {
@@ -61,17 +51,15 @@ void pci_enumerate(void) {
 			if (header_type == 0) {
 				for (unsigned int i = 0; i < 6; i++) {
 					unsigned int bar = (unsigned int)pci_config_read_word(bus, slot, 0, 18 + 4 * i) << 16 | pci_config_read_word(bus, slot, 0, 16 + 4 * i);
-					unsigned int base = bar & 1 ? (bar & 0xFFFFFFFC) : (bar & 0xFFFFFFF0);
+					unsigned int base = bar & 1 ? (bar & IO_BAR_MASK) : (bar & 0xFFFFFFF0);
 					vga_set_color(VGA_RED, VGA_BLACK);
 					printk("bar%u", i);
 					vga_set_color(VGA_WHITE, VGA_BLACK);
 					printk(": 0x%x IO: %u ", base, bar & 1);
-					if (vendor == VENDOR_REALTEK && device == DEVICE_REALTEK_RTL8139 && (bar & 1) && i == 0) {
-						printk("MAC: %x:%x:%x:%x:%x:%x ", inb(base), inb(base + 1), inb(base + 2), inb(base + 3), inb(base + 4), inb(base + 5));
-					}
 				}
 				writes("\n");
 			}
+			pci_init_device(bus, slot, vendor, device);
 		}
 
 		if (slot == 255)

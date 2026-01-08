@@ -1,3 +1,6 @@
+#ifndef IO_H
+#define IO_H
+
 #define PIC_OFFSET 32
 
 enum port {
@@ -37,6 +40,16 @@ static inline void outl(unsigned short port, unsigned int value) {
 	asm volatile("outl %0, %w1": : "a" (value), "Nd"(port) : "memory");
 }
 
+static inline unsigned short inw(unsigned short port)
+{
+    unsigned short ret;
+    __asm__ volatile ( "inw %w1, %w0"
+                   : "=a"(ret)
+                   : "Nd"(port)
+                   : "memory");
+    return ret;
+}
+
 static inline unsigned int inl(unsigned short port)
 {
     unsigned int ret;
@@ -51,3 +64,4 @@ static inline void io_wait(void)
 {
 	outb(0x80, 0);
 }
+#endif

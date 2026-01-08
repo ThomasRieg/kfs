@@ -46,16 +46,21 @@ void pci_enumerate(void) {
 			unsigned short class_subclass = pci_config_read_word(bus, slot, 0, 10);
 			unsigned char class_code = class_subclass >> 8;
 			unsigned char subclass = class_subclass & 0xFF;
+			vga_set_color(VGA_RED, VGA_BLACK);
 			printk("- %x:%x, class %u:%u on slot %u %s\n", vendor, device, class_code, subclass, slot, pci_to_name(vendor, device));
+			vga_set_color(VGA_WHITE, VGA_BLACK);
 			unsigned short header_type = pci_config_read_word(bus, slot, 0, 14) & 0xFF;
 			if (header_type == 0) {
+				unsigned short interrupt_line = pci_config_read_word(bus, slot, 0, 0x3C) & 0xFF;
+				if (interrupt_line != 0xFF)
+					printk("  IRQ: %u\n", interrupt_line);
+				printk("  BARs: ");
 				for (unsigned int i = 0; i < 6; i++) {
 					unsigned int bar = (unsigned int)pci_config_read_word(bus, slot, 0, 18 + 4 * i) << 16 | pci_config_read_word(bus, slot, 0, 16 + 4 * i);
-					unsigned int base = bar & 1 ? (bar & IO_BAR_MASK) : (bar & 0xFFFFFFF0);
-					vga_set_color(VGA_RED, VGA_BLACK);
-					printk("bar%u", i);
-					vga_set_color(VGA_WHITE, VGA_BLACK);
-					printk(": 0x%x IO: %u ", base, bar & 1);
+					if (bar) {
+						unsigned int base = bar & 1 ? (bar & IO_BAR_MASK) : (bar & 0xFFFFFFF0);
+						printk("%s 0x%x ", bar & 1 ? "IO" : "MM", base);
+					}
 				}
 				writes("\n");
 			}

@@ -23,9 +23,8 @@ __attribute__((interrupt)) void rtl8139_handler(__attribute__((unused)) struct i
 	unsigned int io_base = rtl_8139_io_base;
 	unsigned short status = inw(io_base + OFF_ISR);
 	unsigned short capr = inw(io_base + OFF_CAPR);
-	outw(io_base + OFF_ISR, INT_NIC);
 	printk("NIC %u %u %u!\n", capr, io_base, status);
-	pic_eoi(INT_NIC);
+	//pic_eoi(INT_NIC);
 }
 
 void rtl_8139_init(unsigned char bus, unsigned char slot) {
@@ -51,7 +50,7 @@ void rtl_8139_init(unsigned char bus, unsigned char slot) {
 		unsigned char dst_ipv4[] = {10, 11, 4, 14};
 
 		outl(io_base + OFF_RBSTART, (unsigned int)&receive_buffer[0]); // receive buffer start
-		outw(io_base + OFF_IMR, 0x0005); // Transmit OK and Receive OK interrupts
+		outw(io_base + OFF_IMR, 0xffff); // Transmit OK/Error and Receive OK/Error interrupts
 		outl(io_base + OFF_RCR, 0xf | (1<<7)); // Accept all packets, overflow instead of wrap around
 		outb(io_base + OFF_CMD, 0x0c); // Enable receive and transmission
 		unsigned char frame[] = {

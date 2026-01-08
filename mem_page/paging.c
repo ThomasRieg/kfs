@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/01 01:14:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 16:09:02 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 19:10:33 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,10 +72,7 @@ static void map_page_identity(uint32_t *pd, uint32_t va, uint32_t pa, uint32_t f
 		uint32_t pt_phys = pmm_alloc_frame();
 		// must have memory for page tables; OOM here should be fatal in a kernel.
 		if (!pt_phys)
-			while (1)
-			{
-				asm volatile("cli; hlt");
-			}
+			kernel_panic("not enough memory to allocate a page table during init_paging\n");
 
 		memset((void *)pt_phys, 0, PAGE_SIZE);				// paging off => identity works
 		pd[pdi] = (pt_phys & 0xFFFFF000u) | PTE_P | PTE_RW; // supervisor RW
@@ -111,10 +108,7 @@ void paging_init(void *multiboot2_info)
 	// 2) Allocate page directory frame
 	uint32_t pd_phys = pmm_alloc_frame();
 	if (!pd_phys)
-		while (1)
-		{
-			asm volatile("cli; hlt");
-		}
+		kernel_panic("not enough memory to allocate the page directory during init_paging\n");
 	uint32_t *pd = (uint32_t *)pd_phys;
 	memset(pd, 0, PAGE_SIZE);
 

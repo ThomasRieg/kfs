@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 16:47:20 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 01:40:15 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 01:57:54 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@
 
 #define TINY_SIZE_MAX 64
 #define SMALL_SIZE_MAX 4096
-#define ALLIGN_BYTES _Alignof(max_align_t)
+#define ALLIGN_BYTES 8
 
 typedef enum e_type
 {
@@ -34,18 +34,16 @@ typedef struct s_zone
 {
 	t_type type;
 	uint32_t size;
-	struct s_zone *next; // lock g_mut
-	struct s_zone *prev; // lock g_mut
-	char padding[4];
-} t_zone;
+	struct s_zone *next;
+	struct s_zone *prev;
+} __attribute__((aligned(ALLIGN_BYTES))) t_zone;
 
 typedef struct s_header
 {
-	uint32_t size;   // lock
-	bool occupied; // lock
+	uint32_t size;
+	bool occupied;
 	t_zone *zone;
-	char padding[12];
-} t_header;
+} __attribute__((aligned(ALLIGN_BYTES))) t_header;
 
 typedef struct s_state
 {

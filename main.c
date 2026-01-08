@@ -285,18 +285,7 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Hello world! KFS @ 42\n");
 	print_clock();
 	writes("\n");
-	uint32_t *bigboytab = kmmap(NULL, 10, PTE_RW | MMAP_CONTIG);
-	for (uint32_t i = 0; i < (PAGE_SIZE * 10 / sizeof(uint32_t)); i++)
-	{
-		bigboytab[i] = 42;
-	}
-	printk("big array at: %p\n42th value: %u\n", bigboytab, bigboytab[42]);
-	kmunmap(bigboytab, 10);
-	bigboytab = vmalloc(43 * sizeof(uint32_t));
-	bigboytab[42] = 67;
-	printk("big array at: %p\n12th value: %u\nallocated space: %u\n", bigboytab, bigboytab[42], vsize(bigboytab));
-	vfree(bigboytab);
-	printk("big array at: %p\nallocated space: %u\n", bigboytab, vsize(bigboytab)); // doesn't page fault because the last malloc buffer isn't munmapped
+	mem_test_all();
 	writes("> ");
 	while (1)
 		asm volatile("hlt");

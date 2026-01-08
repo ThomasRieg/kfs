@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/08 00:19:00 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 02:02:24 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 11:44:50 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 #include "mem_defines.h"
 #include "mem_paging.h"
 #include "../vmalloc/vmalloc_private.h" //for macros like ALLIGN_BYTES for alignment check
-#include "../vga/vga.h"
+#include "../tty/tty.h"
 
 // --------------------------------------------------------------------------
 // Helpers

@@ -35,12 +35,13 @@ struct idt_entry_32
 	short offset_2;
 };
 
+__attribute__((noreturn))
 void kernel_panic(const char *message)
 {
+	asm volatile("cli");
 	vga_set_color(VGA_RED, VGA_BLACK);
 	writes("/!\\Kernel Panic/!\\\n");
 	writes(message);
-	*(volatile char *)0 = 42; // crash
 	while (1)
 		asm volatile("hlt");
 }
@@ -262,6 +263,7 @@ void kernel_main(struct s_mb2_info *multi)
 	gdt_install_basic();
 	writes("GDT installed.\n");
 	paging_init(multi);
+	mem_test_all();
 
 	idt[INT_BREAKPOINT] = DEF_INTERRUPT(breakpoint_handler);
 	idt[INT_DOUBLE_FAULT] = DEF_INTERRUPT(double_fault_handler);
@@ -284,8 +286,6 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Hardware interrupts enabled.\n");
 	writes("Hello world! KFS @ 42\n");
 	print_clock();
-	writes("\n");
-	mem_test_all();
 	writes("> ");
 	while (1)
 		asm volatile("hlt");

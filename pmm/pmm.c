@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:35:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 00:10:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 00:11:59 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -270,7 +270,7 @@ phys_ptr pmm_alloc_frames(uint32_t nb_frames)
 			for (; nb_free < nb_frames && ((start + nb_free) & 0x0000001F); nb_free++)
 			{
 				if (i >= max_page)
-					return (NULL);
+					return (0);
 				if (bit_test(start + nb_free))
 				{
 					allfree = false;

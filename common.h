@@ -1,3 +1,6 @@
+#ifndef COMMON_H
+#define COMMON_H
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -18,3 +21,5 @@ static inline void enable_interrupts(void)
 {
 	asm volatile("sti");
 }
+
+#endif

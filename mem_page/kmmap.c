@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 13:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 15:35:30 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 17:27:48 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,6 +65,7 @@ static int ensure_page_table(uint32_t pdi)
 	if (!tmp)
 	{
 		pmm_free_frame(pt_pa);
+		enable_interrupts();
 		return 0;
 	}
 

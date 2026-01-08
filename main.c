@@ -269,9 +269,6 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Initializing...\n");
 	gdt_install_basic();
 	writes("GDT installed.\n");
-	paging_init(multi);
-	mem_test_all();
-
 	idt[INT_BREAKPOINT] = DEF_INTERRUPT(breakpoint_handler);
 	idt[INT_DOUBLE_FAULT] = DEF_INTERRUPT(double_fault_handler);
 	idt[INT_TIMER] = DEF_INTERRUPT(timer_handler);
@@ -288,9 +285,12 @@ void kernel_main(struct s_mb2_info *multi)
 	};
 	asm volatile("lidt %0" : : "m"(idt_pointer));
 	writes("Interrupt Descriptor Table loaded.\n");
+	paging_init(multi);
+
 	setup_pics();
 	writes("PICs configured.\n");
 	enable_interrupts();
+	mem_test_all();
 	writes("Hardware interrupts enabled.\n");
 	writes("Hello world! KFS @ 42\n");
 	print_clock();

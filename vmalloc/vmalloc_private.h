@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   vmalloc_private.h                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 16:47:20 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 18:00:54 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 01:40:15 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ typedef struct s_zone
 	uint32_t size;
 	struct s_zone *next; // lock g_mut
 	struct s_zone *prev; // lock g_mut
+	char padding[4];
 } t_zone;
 
 typedef struct s_header
@@ -43,7 +44,7 @@ typedef struct s_header
 	uint32_t size;   // lock
 	bool occupied; // lock
 	t_zone *zone;
-	char padding[8];
+	char padding[12];
 } t_header;
 
 typedef struct s_state

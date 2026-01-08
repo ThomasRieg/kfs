@@ -16,7 +16,8 @@ enum interrupt
 	INT_DOUBLE_FAULT = 8,
 	INT_PAGE_FAULT = 14,
 	INT_TIMER = PIC_OFFSET,
-	INT_KEYBOARD
+	INT_KEYBOARD,
+	INT_SERIAL1 = PIC_OFFSET + 4,
 };
 
 #define IDT_PRESENT_AND_GATE_32_INT 0x8e
@@ -116,7 +117,7 @@ __attribute__((interrupt)) void double_fault_handler(struct interrupt_stack_fram
 	writes("double fault :(\n");
 	print_interrupt_frame(interrupt_frame);
 	while (1)
-		;
+		asm volatile("hlt");
 }
 
 __attribute__((interrupt)) void page_fault_handler(struct interrupt_stack_frame *interrupt_frame, unsigned int error_code)
@@ -128,7 +129,7 @@ __attribute__((interrupt)) void page_fault_handler(struct interrupt_stack_frame 
 	printk("while %s %s page at virtual address: %p\n", error_code & 2 ? "writing" : "reading", error_code & 1 ? "present" : "non-present", virtual_address);
 	print_interrupt_frame(interrupt_frame);
 	while (1)
-		;
+		asm volatile("hlt");
 }
 
 __attribute__((interrupt)) void breakpoint_handler(struct interrupt_stack_frame *interrupt_frame)
@@ -149,6 +150,13 @@ __attribute__((interrupt)) void timer_handler(__attribute__((unused)) struct int
 bool shift_held = false;
 bool caps_lock = false;
 bool lctrl_held = false;
+
+__attribute__((interrupt)) void serial1_handler(__attribute__((unused)) struct interrupt_stack_frame *interrupt_frame)
+{
+	char c = inb(PORT_COM1);
+	tty_add_input(c);
+	pic_eoi(INT_SERIAL1);
+}
 
 __attribute__((interrupt)) void keyboard_handler(__attribute__((unused)) struct interrupt_stack_frame *interrupt_frame)
 {
@@ -270,6 +278,7 @@ void kernel_main(struct s_mb2_info *multi)
 	idt[INT_TIMER] = DEF_INTERRUPT(timer_handler);
 	idt[INT_KEYBOARD] = DEF_INTERRUPT(keyboard_handler);
 	idt[INT_PAGE_FAULT] = DEF_INTERRUPT(page_fault_handler);
+	idt[INT_SERIAL1] = DEF_INTERRUPT(serial1_handler);
 	struct descriptor_table_pointer
 	{
 		unsigned short limit;
@@ -286,6 +295,7 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Hardware interrupts enabled.\n");
 	writes("Hello world! KFS @ 42\n");
 	print_clock();
+	writes("\n");
 	writes("> ");
 	while (1)
 		asm volatile("hlt");

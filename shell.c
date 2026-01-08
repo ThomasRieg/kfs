@@ -1,5 +1,5 @@
 #include "libk/libk.h"
-#include "vga/vga.h"
+#include "tty/tty.h"
 #include "io.h"
 #include "pci.h"
 #include "common.h"

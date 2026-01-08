@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:29:07 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/29 23:38:26 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 11:31:58 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,9 +52,9 @@ void vga_set_color(uint8_t foreground, uint8_t background);
 
 void vga_get_color(uint8_t *foreground, uint8_t *background);
 
-void writes(const char *str);
+void vga_writes(const char *str);
 
-void write(const char *str, unsigned int n);
+void vga_write(const char *str, unsigned int n);
 
 void clear_vga_screen();
 

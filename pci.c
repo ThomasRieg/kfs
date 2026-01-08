@@ -1,6 +1,6 @@
 #include "io.h"
 #include "libk/libk.h"
-#include "vga/vga.h"
+#include "tty/tty.h"
 
 // See https://wiki.osdev.org/PCI
 static unsigned short pci_config_read_word(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offset) {

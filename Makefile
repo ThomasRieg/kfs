@@ -5,7 +5,7 @@ SRCS := main.o shell.o entry.o pic.o tty/tty.o vga/vga.o libk/print_stack.o libk
 ISO := kfs.iso
 ELF := kfs.elf
 
-QEMU := qemu-system-i386 -device rtl8139 -cdrom $(ISO) -m 128M
+QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -device rtl8139 -cdrom $(ISO) -m 128M
 
 qemu: $(ISO)
 	$(QEMU)

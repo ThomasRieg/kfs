@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:10:42 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 13:47:35 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/08 11:33:49 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,5 +37,9 @@ void next_tty();
 //silently does nothing if you are on the first tty, just stay on the first one
 void prev_tty();
 void tty_add_input(char c);
+
+void write(const char *str, unsigned int n);
+
+void writes(const char *str);
 
 #endif

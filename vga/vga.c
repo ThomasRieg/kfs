@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:33:35 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/30 13:58:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/08 11:35:59 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,38 +56,33 @@ void scroll_down()
 	g_vga_text_location = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
 }
 
-void write(const char *str, unsigned int n) {
+static inline void vga_add_char(char c) {
+	if (c == '\n')
+		g_vga_text_location += (VGA_WIDTH * 2) - (g_vga_text_location % (VGA_WIDTH * 2));
+	else
+	{
+		g_vga_text_buf[g_vga_text_location] = c;
+		g_vga_text_buf[g_vga_text_location + 1] = g_vga_text_color;
+		g_vga_text_location += 2;
+	}
+	if (g_vga_text_location + 1 >= VGA_SIZE)
+		scroll_down();
+}
+
+void vga_write(const char *str, unsigned int n) {
 	if (g_vga_text_location + 1 >= VGA_SIZE)
 		scroll_down();
 	for (unsigned int i = 0; i < n; i++) {
-		if (str[i] == '\n')
-			g_vga_text_location += (VGA_WIDTH * 2) - (g_vga_text_location % (VGA_WIDTH * 2));
-		else
-		{
-			g_vga_text_buf[g_vga_text_location] = str[i];
-			g_vga_text_buf[g_vga_text_location + 1] = g_vga_text_color;
-			g_vga_text_location += 2;
-		}
-		if (g_vga_text_location + 1 >= VGA_SIZE)
-			scroll_down();
+		vga_add_char(str[i]);
 	}
 	update_cursor(g_vga_text_location / 2);
 }
 
-void writes(const char *str) {
+void vga_writes(const char *str) {
 	if (g_vga_text_location + 1 >= VGA_SIZE)
 		scroll_down();
 	while (*str) {
-		if (*str == '\n')
-			g_vga_text_location += (VGA_WIDTH * 2) - (g_vga_text_location % (VGA_WIDTH * 2));
-		else
-		{
-			g_vga_text_buf[g_vga_text_location] = *str;
-			g_vga_text_buf[g_vga_text_location + 1] = g_vga_text_color;
-			g_vga_text_location += 2;
-		}
-		if (g_vga_text_location + 1 >= VGA_SIZE)
-			scroll_down();
+		vga_add_char(*str);
 		str++;
 	}
 	update_cursor(g_vga_text_location / 2);

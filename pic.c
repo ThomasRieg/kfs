@@ -65,6 +65,9 @@ void setup_pics(void) {
 	outb(PORT_PIC_SECONDARY_DATA, ICW4_8086);
 	io_wait();
 
+	// enable serial interrupts
+	outb(PORT_COM1 + 1, 1);
+
 	// Unmask both PICs.
 	outb(PORT_PIC_PRIMARY_DATA, 0);
 	outb(PORT_PIC_SECONDARY_DATA, 0);

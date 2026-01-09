@@ -59,7 +59,7 @@ void pci_enumerate(void) {
 					unsigned int bar = (unsigned int)pci_config_read_word(bus, slot, 0, 18 + 4 * i) << 16 | pci_config_read_word(bus, slot, 0, 16 + 4 * i);
 					if (bar) {
 						unsigned int base = bar & 1 ? (bar & IO_BAR_MASK) : (bar & 0xFFFFFFF0);
-						printk("%s 0x%x ", bar & 1 ? "IO" : "MM", base);
+						printk("%u %s 0x%x ", i, bar & 1 ? "IO" : "MM", base);
 					}
 				}
 				writes("\n");

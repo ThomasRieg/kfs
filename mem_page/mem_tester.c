@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/08 00:19:00 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/09 17:51:59 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/09 18:17:38 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -518,6 +518,7 @@ void fill_memory(void)
 			break;
 		}
 	}
+	virt_ptr first_va = nb_alloc ? alloc_array[0] : 0;
 	// free the memory
 	for (uint32_t i = 0; i < nb_alloc; i++)
 	{
@@ -539,6 +540,8 @@ void fill_memory(void)
 	}
 	if (success)
 		printk("successfully managed to realloc every page we just freed\n");
+	virt_ptr first_va_round_two = nb_alloc ? alloc_array[0] : 0;
+	printk("address of first alloc : %p\naddress of first alloc the 2nd time: %p\n", first_va, first_va_round_two);
 	// free everything
 	for (uint32_t i = 0; i < nb_alloc; i++)
 	{

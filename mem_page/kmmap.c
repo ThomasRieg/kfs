@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 13:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 18:02:38 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/09 18:13:10 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -132,17 +132,20 @@ static uint32_t find_free_run(uint32_t start, uint32_t limit, uint32_t nb_map)
 	return 0;
 }
 
+static uint32_t g_kmmap_cursor = KMMAP_BASE;
+
 virt_ptr kmmap(virt_ptr start, uint32_t nb_map, uint32_t flags)
 {
 	if (nb_map == 0)
 		return NULL;
 
-	uint32_t va_start = (start == NULL) ? KMMAP_BASE : (uint32_t)(uintptr_t)start;
-	va_start = align_up_u32(va_start, PAGE_SIZE);
+	uint32_t va_start = start ? align_up_u32((uint32_t)(uintptr_t)start, PAGE_SIZE) : g_kmmap_cursor;
 
 	uint32_t base = find_free_run(va_start, KMMAP_LIMIT, nb_map);
 	if (!base)
 		return NULL;
+	if (!start)
+		g_kmmap_cursor = base + (nb_map * PAGE_SIZE);
 
 	if (flags & MMAP_CONTIG)
 	{
@@ -167,7 +170,7 @@ virt_ptr kmmap(virt_ptr start, uint32_t nb_map, uint32_t flags)
 				// If allocation fails mid-way, roll back what we already mapped.
 				for (uint32_t j = 0; j < i; j++)
 				{
-					virt_ptr curr_page = (virt_ptr)(va_start + (i * PAGE_SIZE));
+					virt_ptr curr_page = (virt_ptr)(uintptr_t)(base + j * PAGE_SIZE);
 					pmm_free_frame_from_va(curr_page);
 					unmap_page(curr_page, get_pte(curr_page));
 				}
@@ -183,9 +186,11 @@ virt_ptr kmmap(virt_ptr start, uint32_t nb_map, uint32_t flags)
 
 void kmunmap(virt_ptr ptr, uint32_t nb_map)
 {
+	if ((uintptr_t)ptr < (uintptr_t)g_kmmap_cursor)
+		g_kmmap_cursor = (uint32_t)(uintptr_t)ptr;
 	for (uint32_t i = 0; i < nb_map; i++)
 	{
-		virt_ptr curr_page = (virt_ptr)(ptr + (i * PAGE_SIZE));
+		virt_ptr curr_page = (virt_ptr)(uintptr_t)((uintptr_t)ptr + i * PAGE_SIZE);
 		memset(curr_page, 0, PAGE_SIZE);
 		pmm_free_frame_from_va(curr_page);
 		unmap_page(curr_page, get_pte(curr_page));

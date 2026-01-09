@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/08 00:19:00 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 17:30:54 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/09 16:34:11 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -187,7 +187,7 @@ static void test_kmmap_fragmentation(uint32_t rounds, uint32_t flags_contig, uin
 	printk("[kmmap] frag rounds=%u cs=%p [OK]\n", rounds, (void *)cs);
 }
 
-static void test_vmalloc_fragmentation(uint32_t count)
+static void test_vmalloc_fragmentation(uint32_t count, bool contig)
 {
 	virt_ptr ptrs[128];
 	uint32_t sizes[128];
@@ -214,7 +214,7 @@ static void test_vmalloc_fragmentation(uint32_t count)
 		if ((i & 7u) == 3)
 			sz = 33;
 
-		virt_ptr p = vmalloc(sz);
+		virt_ptr p = contig ? kmalloc(sz) : vmalloc(sz);
 		ptrs[i] = p;
 		sizes[i] = sz;
 
@@ -269,7 +269,7 @@ static void test_vmalloc_fragmentation(uint32_t count)
 	{
 		uint32_t sz = 64 + (xorshift32(&seed) % 4096);
 
-		virt_ptr p = vmalloc(sz);
+		virt_ptr p = contig ? kmalloc(sz) : vmalloc(sz);
 		if (!p)
 		{
 			TEST_FAILF("vmalloc returned NULL (phase=C k=%u sz=%u)", k, sz);
@@ -318,7 +318,7 @@ static void test_vmalloc_fragmentation(uint32_t count)
 		ptrs[i] = NULL;
 	}
 
-	printk("[vmalloc] rounds=%u [OK]\n", count);
+	printk("[%s] rounds=%u [OK]\n", contig ? "kmalloc" : "vmalloc", count);
 }
 
 static void test_vrealloc_stress(uint32_t iters, uint32_t *cs_out)
@@ -394,7 +394,8 @@ void mem_test_all(void)
 	test_kmmap_fragmentation(1024, PTE_RW | MMAP_CONTIG, PTE_RW, &cs);
 
 	// vmalloc/vfree fragmentation
-	test_vmalloc_fragmentation(1024);
+	test_vmalloc_fragmentation(1024, false);
+	test_vmalloc_fragmentation(1024, true);
 
 	// vrealloc stress
 	test_vrealloc_stress(1024, &cs);

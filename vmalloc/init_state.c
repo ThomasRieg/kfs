@@ -6,13 +6,18 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/18 16:44:13 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 18:38:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/09 16:31:10 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "vmalloc_private.h"
 
 t_state g_state = {.tiny_zone = NULL, .small_zone = NULL, .large_zone = NULL};
+
+static inline bool same_flags_zone(t_zone *zone, uint32_t flags)
+{
+	return (zone->flags == flags ? true : false);
+}
 
 // inserts a page in the linked list whilst keeping the zones sorted in ascending address
 static void zone_insert_sorted(t_zone **head, t_zone *z)
@@ -52,7 +57,7 @@ static void zone_insert_sorted(t_zone **head, t_zone *z)
 }
 
 // only call this for TINY or SMALL
-void *add_page(t_type type)
+static void *add_page(t_type type, uint32_t flags)
 {
 	uint32_t size;
 	if (type == E_TINY)
@@ -61,10 +66,11 @@ void *add_page(t_type type)
 		size = ((((((SMALL_SIZE_MAX + sizeof(t_header)) * 100) + sizeof(t_zone))) / PAGE_SIZE) + 1) * PAGE_SIZE;
 	else
 		return (NULL); // TODO handle error somehow
-	t_zone *ptr = kmmap(NULL, size / PAGE_SIZE, PTE_RW);
+	t_zone *ptr = kmmap(NULL, size / PAGE_SIZE, flags);
 	if (ptr == NULL)
 		return (NULL);
 	ptr->size = size;
+	ptr->flags = flags;
 	if (type == E_TINY)
 	{
 		ptr->type = E_TINY;
@@ -89,10 +95,10 @@ void *add_page(t_type type)
 }
 
 // returns the start of the buffer (returned by malloc)
-void *add_large(uint32_t size)
+void *add_large(uint32_t size, uint32_t flags)
 {
 	size = (((size + sizeof(t_header) + sizeof(t_zone)) / PAGE_SIZE) + 1) * PAGE_SIZE;
-	t_zone *ptr = kmmap(NULL, size / PAGE_SIZE, PTE_RW);
+	t_zone *ptr = kmmap(NULL, size / PAGE_SIZE, flags);
 	if (ptr == NULL)
 		return (NULL);
 	ptr->size = size;
@@ -108,7 +114,7 @@ void *add_large(uint32_t size)
 
 // returns the start of the buffer (returned by malloc)
 // size has to be alligned
-void *add_small(uint32_t size)
+void *add_small(uint32_t size, uint32_t flags)
 {
 	t_zone *zone;
 	t_header *hdr;
@@ -117,45 +123,48 @@ void *add_small(uint32_t size)
 	zone = g_state.small_zone;
 	while (zone && !result)
 	{
-		char *zone_start = (char *)zone;
-		char *zone_end = zone_start + zone->size;
-
-		// First header is right after the zone struct
-		hdr = (t_header *)(zone + 1);
-
-		while ((char *)hdr + sizeof(t_header) <= zone_end)
+		if (same_flags_zone(zone, flags))
 		{
-			if (!hdr->occupied && hdr->size >= size)
+			char *zone_start = (char *)zone;
+			char *zone_end = zone_start + zone->size;
+
+			// First header is right after the zone struct
+			hdr = (t_header *)(zone + 1);
+
+			while ((char *)hdr + sizeof(t_header) <= zone_end)
 			{
-				// Found a free block big enough
-				uint32_t remaining = hdr->size - size;
-
-				if (remaining > sizeof(t_header))
+				if (!hdr->occupied && hdr->size >= size)
 				{
-					// Split the block: create a new header in the remaining space
-					char *new_addr = (char *)(hdr + 1) + size;
-					t_header *newhdr = (t_header *)new_addr;
+					// Found a free block big enough
+					uint32_t remaining = hdr->size - size;
 
-					newhdr->size = remaining - sizeof(t_header);
-					newhdr->occupied = false;
-					newhdr->zone = zone;
+					if (remaining > sizeof(t_header))
+					{
+						// Split the block: create a new header in the remaining space
+						char *new_addr = (char *)(hdr + 1) + size;
+						t_header *newhdr = (t_header *)new_addr;
 
-					hdr->size = size;
+						newhdr->size = remaining - sizeof(t_header);
+						newhdr->occupied = false;
+						newhdr->zone = zone;
+
+						hdr->size = size;
+					}
+					// else: not enough room for another header, we just don't touch the size
+
+					hdr->occupied = true;
+					result = (void *)(hdr + 1);
+					break;
 				}
-				// else: not enough room for another header, we just don't touch the size
 
-				hdr->occupied = true;
-				result = (void *)(hdr + 1);
-				break;
+				char *next_addr = (char *)(hdr + 1) + hdr->size;
+
+				// If there's no room for another valid header, stop.
+				if (next_addr + sizeof(t_header) > zone_end)
+					break;
+
+				hdr = (t_header *)next_addr;
 			}
-
-			char *next_addr = (char *)(hdr + 1) + hdr->size;
-
-			// If there's no room for another valid header, stop.
-			if (next_addr + sizeof(t_header) > zone_end)
-				break;
-
-			hdr = (t_header *)next_addr;
 		}
 
 		zone = zone->next;
@@ -165,7 +174,7 @@ void *add_small(uint32_t size)
 		return result;
 
 	// not enough room, create a new page
-	zone = (t_zone *)add_page(E_SMALL);
+	zone = (t_zone *)add_page(E_SMALL, flags);
 	if (!zone)
 		return (NULL);
 
@@ -200,7 +209,7 @@ void *add_small(uint32_t size)
 
 // returns the start of the buffer (returned by malloc)
 // size has to be alligned
-void *add_tiny(uint32_t size)
+void *add_tiny(uint32_t size, uint32_t flags)
 {
 	t_zone *zone;
 	t_header *hdr;
@@ -209,45 +218,48 @@ void *add_tiny(uint32_t size)
 	zone = g_state.tiny_zone;
 	while (zone && !result)
 	{
-		char *zone_start = (char *)zone;
-		char *zone_end = zone_start + zone->size;
-
-		// First header is right after the zone struct
-		hdr = (t_header *)(zone + 1);
-
-		while ((char *)hdr + sizeof(t_header) <= zone_end)
+		if (same_flags_zone(zone, flags))
 		{
-			if (!hdr->occupied && hdr->size >= size)
+			char *zone_start = (char *)zone;
+			char *zone_end = zone_start + zone->size;
+
+			// First header is right after the zone struct
+			hdr = (t_header *)(zone + 1);
+
+			while ((char *)hdr + sizeof(t_header) <= zone_end)
 			{
-				// Found a free block big enough
-				uint32_t remaining = hdr->size - size;
-
-				if (remaining > sizeof(t_header))
+				if (!hdr->occupied && hdr->size >= size)
 				{
-					// Split the block: create a new header in the remaining space
-					char *new_addr = (char *)(hdr + 1) + size;
-					t_header *newhdr = (t_header *)new_addr;
+					// Found a free block big enough
+					uint32_t remaining = hdr->size - size;
 
-					newhdr->size = remaining - sizeof(t_header);
-					newhdr->occupied = false;
-					newhdr->zone = zone;
+					if (remaining > sizeof(t_header))
+					{
+						// Split the block: create a new header in the remaining space
+						char *new_addr = (char *)(hdr + 1) + size;
+						t_header *newhdr = (t_header *)new_addr;
 
-					hdr->size = size;
+						newhdr->size = remaining - sizeof(t_header);
+						newhdr->occupied = false;
+						newhdr->zone = zone;
+
+						hdr->size = size;
+					}
+					// else: not enough room for another header, we just
+
+					hdr->occupied = true;
+					result = (void *)(hdr + 1);
+					break;
 				}
-				// else: not enough room for another header, we just
 
-				hdr->occupied = true;
-				result = (void *)(hdr + 1);
-				break;
+				char *next_addr = (char *)(hdr + 1) + hdr->size;
+
+				// If there's no room for another valid header, stop.
+				if (next_addr + sizeof(t_header) > zone_end)
+					break;
+
+				hdr = (t_header *)next_addr;
 			}
-
-			char *next_addr = (char *)(hdr + 1) + hdr->size;
-
-			// If there's no room for another valid header, stop.
-			if (next_addr + sizeof(t_header) > zone_end)
-				break;
-
-			hdr = (t_header *)next_addr;
 		}
 
 		zone = zone->next;
@@ -257,7 +269,7 @@ void *add_tiny(uint32_t size)
 		return result;
 
 	// not enough room, create a new page
-	zone = (t_zone *)add_page(E_TINY);
+	zone = (t_zone *)add_page(E_TINY, flags);
 	if (!zone)
 		return (NULL);
 

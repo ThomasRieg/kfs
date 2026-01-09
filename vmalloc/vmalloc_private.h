@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   vmalloc_private.h                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 16:47:20 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 01:57:54 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/09 16:15:14 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,7 @@ typedef struct s_zone
 {
 	t_type type;
 	uint32_t size;
+	uint32_t flags;
 	struct s_zone *next;
 	struct s_zone *prev;
 } __attribute__((aligned(ALLIGN_BYTES))) t_zone;
@@ -54,9 +55,8 @@ typedef struct s_state
 
 extern t_state g_state;
 
-void *add_large(uint32_t size);
-void *add_small(uint32_t size);
-void *add_tiny(uint32_t size);
-void *add_page(t_type type);
+void *add_large(uint32_t size, uint32_t flags);
+void *add_small(uint32_t size, uint32_t flags);
+void *add_tiny(uint32_t size, uint32_t flags);
 
 #endif

@@ -92,14 +92,15 @@ struct arp_ipv4_frame {
 } __attribute__((packed));
 
 enum arp_operation {
-	ARP_REQUEST = 1,
-	ARP_REPLY = 2,
+	// Already in network byte order for little-endian CPU
+	ARP_REQUEST = 0x0100,
+	ARP_REPLY = 0x0200,
 };
 
 enum ether_type {
 	// Already in network byte order for little-endian CPU
 	ETH_IPV4 = 0x0008,
-	ETH_ARP = 0x0408,
+	ETH_ARP = 0x0608,
 };
 
 void rtl_8139_init(unsigned char bus, unsigned char slot) {
@@ -120,9 +121,9 @@ void rtl_8139_init(unsigned char bus, unsigned char slot) {
 		outb(io_base + OFF_CMD, 0x10); // Software reset
 		while ((inb(io_base + OFF_CMD) & 0x10) != 0) {}
 
-		unsigned char our_ipv4[] = {10, 0, 2, 15};
+		unsigned char our_ipv4[] = {192, 168, 76, 9};
 		//unsigned char dst_mac[] = {0xd0, 0x46, 0x0c, 0x85, 0xa6, 0x64};
-		unsigned char dst_ipv4[] = {10, 0, 2, 2};
+		unsigned char dst_ipv4[] = {192, 168, 76, 2};
 
 		outl(io_base + OFF_RBSTART, (unsigned int)&receive_buffer[0]); // receive buffer start
 		outw(io_base + OFF_IMR, 0xffff); // receive all interrupts
@@ -134,7 +135,7 @@ void rtl_8139_init(unsigned char bus, unsigned char slot) {
 		memcpy(frame.ether.dst_mac, "\xff\xff\xff\xff\xff\xff", 6);
 		memcpy(frame.ether.src_mac, our_mac, 6);
 		frame.ether.ether_type = ETH_ARP;
-		frame.arp.hardware_type = 1;
+		frame.arp.hardware_type = 0x0100;
 		frame.arp.protocol_type = ETH_IPV4;
 		frame.arp.hw_addr_len = 6;
 		frame.arp.prot_addr_len = 4;
@@ -142,7 +143,7 @@ void rtl_8139_init(unsigned char bus, unsigned char slot) {
 		memcpy(&frame.arp.sender_ipv4, our_ipv4, 4);
 		memcpy(&frame.arp.target_ipv4, dst_ipv4, 4);
 		memset(&frame.arp.target_mac, 0, 6);
-		frame.arp.operation = ARP_REQUEST,
+		frame.arp.operation = ARP_REQUEST;
 		/*struct icmp_ipv4_frame frame;
 		memcpy(frame.ether.dst_mac, dst_mac, 6);
 		memcpy(frame.ether.src_mac, our_mac, 6);

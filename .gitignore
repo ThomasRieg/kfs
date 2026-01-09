@@ -3,3 +3,4 @@ kfs.iso
 *.o
 iso
 *.d
+netdump.pcap

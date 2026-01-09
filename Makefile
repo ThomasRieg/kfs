@@ -5,7 +5,7 @@ SRCS := main.o shell.o entry.o pic.o rtl8139.o tty/tty.o vga/vga.o libk/print_st
 ISO := kfs.iso
 ELF := kfs.elf
 
-QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -device rtl8139 -cdrom $(ISO) -m 128M
+QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -cdrom $(ISO) -m 128M
 
 qemu: $(ISO)
 	$(QEMU)

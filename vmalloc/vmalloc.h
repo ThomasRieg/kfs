@@ -1,10 +1,22 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   vmalloc.h                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/01/09 17:13:46 by thrieg            #+#    #+#             */
+/*   Updated: 2026/01/09 17:13:48 by thrieg           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef VMALLOC_H
 #define VMALLOC_H
 
 #include <stddef.h>
 #include <stdbool.h>
 
-// kmalloc guarantees that the physical memory is contiguous, you can just call get_phys_ptr on the returned ptr to get the physical address
+// kmalloc guarantees that the physical memory is contiguous, you can just call get_phys_ptr(virt_ptr va) on the returned ptr to get the physical address
 virt_ptr kmalloc(uint32_t size);
 virt_ptr kcalloc(uint32_t nmemb, uint32_t size);
 

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   mem_paging.h                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 19:37:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 01:30:54 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/09 17:46:44 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,7 +45,8 @@ void paging_init(void *multiboot2_info);
 virt_ptr kmmap(virt_ptr start, uint32_t nb_map, uint32_t flags);
 void kmunmap(virt_ptr ptr, uint32_t nb_map);
 
-//small tester to call after paging is setup, crashes the kernel if memory is unstable
+// small tester to call after paging is setup, crashes the kernel if memory is unstable
 void mem_test_all(void);
+void fill_memory(void);
 
 #endif

@@ -3,16 +3,18 @@
 /*                                                        :::      ::::::::   */
 /*   memstuff.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:50:39 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/19 11:59:47 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/09 17:11:40 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-void	*memchr(const void *s, int c, unsigned int n)
+#include "libk.h"
+
+void *memchr(const void *s, int c, unsigned int n)
 {
-	const char	*str;
+	const char *str;
 
 	str = (const char *)s;
 	while (n--)
@@ -24,10 +26,10 @@ void	*memchr(const void *s, int c, unsigned int n)
 	return (0);
 }
 
-int	memcmp(const void *s1, const void *s2, unsigned int n)
+int memcmp(const void *s1, const void *s2, unsigned int n)
 {
-	const unsigned char	*st1;
-	const unsigned char	*st2;
+	const unsigned char *st1;
+	const unsigned char *st2;
 
 	st1 = (const unsigned char *)s1;
 	st2 = (const unsigned char *)s2;
@@ -42,12 +44,12 @@ int	memcmp(const void *s1, const void *s2, unsigned int n)
 	return (*st1 - *st2);
 }
 
-void	*memcpy(void *dest, const void *src, unsigned int bytes)
+void *memcpy(void *dest, const void *src, unsigned int bytes)
 {
-	char				*str;
-	unsigned long	    *str_packed;
-	char				*str_src;
-	unsigned long   	*str_src_packed;
+	char *str;
+	unsigned long *str_packed;
+	char *str_src;
+	unsigned long *str_src_packed;
 
 	str_packed = (unsigned long *)dest;
 	str_src_packed = (unsigned long *)src;
@@ -66,13 +68,12 @@ void	*memcpy(void *dest, const void *src, unsigned int bytes)
 	return (dest);
 }
 
-
-void	*memset(void *dest, int c, unsigned int bytes)
+void *memset(void *dest, int c, unsigned int bytes)
 {
-	char				*str;
-	unsigned long		*str_packed;
-	unsigned long		cccc;
-	unsigned long long				i;
+	char *str;
+	unsigned long *str_packed;
+	unsigned long cccc;
+	unsigned long long i;
 
 	str = (char *)dest;
 	while (bytes % sizeof(unsigned long))
@@ -96,12 +97,12 @@ void	*memset(void *dest, int c, unsigned int bytes)
 	return (dest);
 }
 
-static void	*ft_optimised_revcpy(void *dest, const void *src, unsigned int n)
+static void *ft_optimised_revcpy(void *dest, const void *src, unsigned int n)
 {
-	char				*str;
-	unsigned long   	*str_packed;
-	char				*str_src;
-	unsigned long   	*str_src_packed;
+	char *str;
+	unsigned long *str_packed;
+	char *str_src;
+	unsigned long *str_src_packed;
 
 	str = (char *)dest;
 	str_src = (char *)src;
@@ -121,10 +122,10 @@ static void	*ft_optimised_revcpy(void *dest, const void *src, unsigned int n)
 	return (dest);
 }
 
-void	*memmove(void *dest, const void *src, unsigned int bytes)
+void *memmove(void *dest, const void *src, unsigned int bytes)
 {
-	char		*str;
-	const char	*str_src;
+	char *str;
+	const char *str_src;
 
 	if (!dest && !src)
 		return (0);
@@ -144,3 +145,10 @@ void	*memmove(void *dest, const void *src, unsigned int bytes)
 	return (dest);
 }
 
+#include "../mem_page/mem_paging.h"
+
+phys_ptr get_phys_ptr(virt_ptr va)
+{
+	uint32_t *pte = get_pte(va);
+	return ((*pte & 0xFFFFF000) + (((uintptr_t)va) & 0x00000FFF));
+}

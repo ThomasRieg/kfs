@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/08 00:19:00 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/09 16:34:11 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/09 17:51:59 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -377,6 +377,95 @@ static void test_vrealloc_stress(uint32_t iters, uint32_t *cs_out)
 	printk("[vrealloc] iters=%u cs=%p [OK]\n", iters, (void *)cs);
 }
 
+static void check_phys_contiguous(virt_ptr p, uint32_t size)
+{
+	uintptr_t va = (uintptr_t)p;
+	uintptr_t pa0 = get_phys_ptr((virt_ptr)va);
+
+	if (!pa0)
+		TEST_FAILF("get_phys_ptr returned NULL (p=%p)", p);
+
+	uint32_t pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+
+	for (uint32_t i = 1; i < pages; ++i)
+	{
+		uintptr_t pai = get_phys_ptr((virt_ptr)(va + i * PAGE_SIZE));
+		if (pai != pa0 + i * PAGE_SIZE)
+		{
+			TEST_FAILF(
+				"kmalloc not physically contiguous (p=%p page=%u pa=%p expected=%p)",
+				p, i, (void *)pai, (void *)(pa0 + i * PAGE_SIZE));
+		}
+	}
+}
+
+static void test_kmalloc_contiguous(uint32_t rounds)
+{
+	uint32_t seed = 0xBADC0FFEu;
+
+	printk("[kmalloc] contiguous test rounds=%u\n", rounds);
+
+	for (uint32_t i = 0; i < rounds; ++i)
+	{
+		uint32_t sz;
+		switch (i & 3u)
+		{
+		case 0:
+			sz = 16;
+			break;
+		case 1:
+			sz = PAGE_SIZE - 32;
+			break;
+		case 2:
+			sz = PAGE_SIZE + 128;
+			break;
+		default:
+			sz = (PAGE_SIZE * (2 + (xorshift32(&seed) & 3u))) + 64;
+			break;
+		}
+
+		virt_ptr kp = kmalloc(sz);
+		if (!kp)
+			TEST_FAILF("kmalloc returned NULL (i=%u sz=%u)", i, sz);
+
+		if (!is_aligned(kp, ALLIGN_BYTES))
+			TEST_FAILF("kmalloc bad alignment (p=%p sz=%u)", kp, sz);
+
+		uint32_t vs = vsize(kp);
+		if (vs < sz)
+			TEST_FAILF("kmalloc vsize < requested (p=%p sz=%u vsize=%u)", kp, sz, vs);
+
+		// Write pattern
+		uint8_t *b = (uint8_t *)kp;
+		for (uint32_t k = 0; k < sz; ++k)
+			b[k] = (uint8_t)(k ^ 0xAA);
+
+		// Verify pattern
+		for (uint32_t k = 0; k < sz; ++k)
+			if (b[k] != (uint8_t)(k ^ 0xAA))
+				TEST_FAILF("kmalloc memory corruption (p=%p sz=%u)", kp, sz);
+
+		check_phys_contiguous(kp, sz);
+
+		// Interleave vmalloc to ensure zones are isolated
+		virt_ptr vp = vmalloc(256 + (xorshift32(&seed) & 1023u));
+		if (!vp)
+			TEST_FAILF("vmalloc returned NULL during kmalloc test");
+
+		uint8_t *vb = (uint8_t *)vp;
+		vb[0] = 0x55;
+		vb[vsize(vp) - 1] = 0xAA;
+
+		if (vb[0] != 0x55 || vb[vsize(vp) - 1] != 0xAA)
+			TEST_FAILF("vmalloc corrupted during kmalloc test");
+
+		vfree(vp);
+		kfree(kp);
+	}
+
+	printk("[kmalloc] contiguous + isolation [OK]\n");
+}
+
 void mem_test_all(void)
 {
 	uint32_t cs = 0;
@@ -397,9 +486,63 @@ void mem_test_all(void)
 	test_vmalloc_fragmentation(1024, false);
 	test_vmalloc_fragmentation(1024, true);
 
+	// kmalloc physical contiguity + isolation
+	test_kmalloc_contiguous(512);
+
 	// vrealloc stress
 	test_vrealloc_stress(1024, &cs);
 
 	printk("[DONE] cs=%p\n", (void *)cs);
 	vga_set_color(foreground, background);
+}
+
+void fill_memory(void)
+{
+	virt_ptr *alloc_array = vmalloc(100000 * sizeof(virt_ptr));
+	if (!alloc_array)
+	{
+		printk("couldn't allocate enough memory to setup fill_memory\n");
+		return;
+	}
+	uint32_t nb_alloc = 0;
+	while (nb_alloc < 100000)
+	{
+		alloc_array[nb_alloc] = kmmap(0, 1, PTE_RW);
+		if (alloc_array[nb_alloc])
+		{
+			nb_alloc++;
+		}
+		else
+		{
+			printk("memory filled after %u page kmmap'ed\n", nb_alloc);
+			break;
+		}
+	}
+	// free the memory
+	for (uint32_t i = 0; i < nb_alloc; i++)
+	{
+		kmunmap(alloc_array[i], 1);
+	}
+	printk("memory munmap'ed\n", nb_alloc);
+	// try to realloc as many pages as we got before
+	bool success = true;
+	for (uint32_t i = 0; i < nb_alloc; i++)
+	{
+		alloc_array[i] = kmmap(0, 1, PTE_RW);
+		if (!alloc_array[i])
+		{
+			printk("ERROR couldn't get back as many pages as we just kmunmap'ed, memory filled after %u page kmmap'ed (%u less than expected)\n", i, nb_alloc - i);
+			nb_alloc = i;
+			success = false;
+			break;
+		}
+	}
+	if (success)
+		printk("successfully managed to realloc every page we just freed\n");
+	// free everything
+	for (uint32_t i = 0; i < nb_alloc; i++)
+	{
+		kmunmap(alloc_array[i], 1);
+	}
+	vfree(alloc_array);
 }

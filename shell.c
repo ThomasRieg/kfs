@@ -3,6 +3,7 @@
 #include "io.h"
 #include "pci.h"
 #include "common.h"
+#include "mem_page/mem_paging.h"
 
 void print_clock(void);
 
@@ -74,6 +75,10 @@ void handle_command(unsigned char len, const char *cmd)
 		else if (memcmp(cmd, "print trace", 11) == 0)
 		{
 			stack_trace_ebp(32);
+		}
+		else if (memcmp(cmd, "fill memory", 11) == 0)
+		{
+			fill_memory();
 		}
 		else
 			found = false;

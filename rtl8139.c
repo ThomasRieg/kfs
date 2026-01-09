@@ -1,5 +1,6 @@
 #include "common.h"
 #include "pic.h"
+#include "net.h"
 #include "pci.h"
 #include "libk/libk.h"
 
@@ -30,6 +31,32 @@ __attribute__((interrupt)) void rtl8139_handler(__attribute__((unused)) struct i
 	outw(io_base + OFF_ISR, 0xFFFF);
 	unsigned short capr = inw(io_base + OFF_CAPR);
 	printk("NIC io_base: 0x%x, status 0x%x, CAPR: 0x%x\n", io_base, status, capr);
+	if (status & 1) {
+		struct ether *ether = (struct ether *)(receive_buffer + 4);
+		unsigned char *d = &ether->dst_mac[0];
+		unsigned char *s = &ether->src_mac[0];
+		printk("received %x dst %x:%x:%x:%x:%x:%x src %x:%x:%x:%x:%x:%x\n",
+			ether->ether_type,
+			d[0], d[1], d[2], d[3], d[4], d[5],
+			s[0], s[1], s[2], s[3], s[4], s[5]);
+
+		if (ether->ether_type == ETH_ARP) {
+			struct arp_eth_ipv4 *arp = (struct arp_eth_ipv4 *)(ether + 1);
+			if (arp->hardware_type == ARP_ETHER && arp->protocol_type == ETH_IPV4 && arp->prot_addr_len == 4 && arp->hw_addr_len == 6) {
+				printk("ARP %s sender %u.%u.%u.%u %x:%x:%x:%x:%x:%x target %u.%u.%u.%u %x:%x:%x:%x:%x:%x\n", arp->operation == ARP_REQUEST ? "request" : "reply",
+					arp->sender_ipv4[0], arp->sender_ipv4[1], arp->sender_ipv4[2], arp->sender_ipv4[3],
+					arp->sender_mac[0], arp->sender_mac[1], arp->sender_mac[2], arp->sender_mac[3], arp->sender_mac[4], arp->sender_mac[5],
+					arp->target_ipv4[0], arp->target_ipv4[1], arp->target_ipv4[2], arp->target_ipv4[3],
+					arp->target_mac[0], arp->target_mac[1], arp->target_mac[2], arp->target_mac[3], arp->target_mac[4], arp->target_mac[5]
+
+					);
+			}
+		}
+		const char *hex = "0123456789abcdef";
+		for (unsigned int i = 0; i < 500; i++) {
+			printk("%c%c", hex[receive_buffer[i] >> 4], hex[receive_buffer[i] & 0xF]);
+		}
+	}
 	pic_eoi(INT_NIC);
 }
 
@@ -42,66 +69,6 @@ __attribute__((interrupt)) void rtl8139_handler(__attribute__((unused)) struct i
 	}
 	return sum;
 }*/
-
-struct ipv4 {
-	unsigned char version_ihl;
-	unsigned char dscp_ecn;
-	unsigned short total_length;
-	unsigned short ident;
-	unsigned short flags_frag_offset;
-	unsigned char ttl;
-	unsigned char prot;
-	unsigned short header_sum;
-	unsigned char src_ipv4[4];
-	unsigned char dst_ipv4[4];
-} __attribute__((packed));
-
-struct icmp {
-	unsigned short code;
-	unsigned short checksum;
-	unsigned char data[4];
-} __attribute__((packed));
-
-struct ether {
-	unsigned char dst_mac[6];
-	unsigned char src_mac[6];
-	unsigned short ether_type;
-} __attribute__((packed));
-
-struct arp_eth_ipv4 {
-	unsigned short hardware_type;
-	unsigned short protocol_type; // ether type
-	unsigned char hw_addr_len;
-	unsigned char prot_addr_len;
-	unsigned short operation;
-	unsigned char sender_mac[6];
-	unsigned char sender_ipv4[4];
-	unsigned char target_mac[6];
-	unsigned char target_ipv4[4];
-} __attribute__((packed));
-
-struct icmp_ipv4_frame {
-	struct ether ether;
-	struct ipv4 ipv4;
-	struct icmp icmp;
-} __attribute__((packed));
-
-struct arp_ipv4_frame {
-	struct ether ether;
-	struct arp_eth_ipv4 arp;
-} __attribute__((packed));
-
-enum arp_operation {
-	// Already in network byte order for little-endian CPU
-	ARP_REQUEST = 0x0100,
-	ARP_REPLY = 0x0200,
-};
-
-enum ether_type {
-	// Already in network byte order for little-endian CPU
-	ETH_IPV4 = 0x0008,
-	ETH_ARP = 0x0608,
-};
 
 void rtl_8139_init(unsigned char bus, unsigned char slot) {
 		unsigned int io_base = (unsigned int)pci_config_read_word(bus, slot, 0, 18) << 16 | pci_config_read_word(bus, slot, 0, 16);
@@ -135,7 +102,7 @@ void rtl_8139_init(unsigned char bus, unsigned char slot) {
 		memcpy(frame.ether.dst_mac, "\xff\xff\xff\xff\xff\xff", 6);
 		memcpy(frame.ether.src_mac, our_mac, 6);
 		frame.ether.ether_type = ETH_ARP;
-		frame.arp.hardware_type = 0x0100;
+		frame.arp.hardware_type = ARP_ETHER;
 		frame.arp.protocol_type = ETH_IPV4;
 		frame.arp.hw_addr_len = 6;
 		frame.arp.prot_addr_len = 4;

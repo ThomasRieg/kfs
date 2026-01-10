@@ -56,6 +56,12 @@ void next_tty()
 
 void handle_command(unsigned char len, const unsigned char *cmd);
 
+static inline void serial_delete_char(void) {
+	outb(PORT_COM1, '\b');
+	outb(PORT_COM1, ' ');
+	outb(PORT_COM1, '\b');
+}
+
 void tty_add_input(char c) {
 	t_tty *curr = &g_ttys[g_current_tty];
 
@@ -65,6 +71,7 @@ void tty_add_input(char c) {
 	else if (c == '\b' || c == 0x7F) {
 		if (curr->cmd_len != 0) {
 			curr->cmd_len--;
+			serial_delete_char();
 			g_vga_text_location -= 2;
 			g_vga_text_buf[g_vga_text_location] = 0;
 			update_cursor(g_vga_text_location / 2);

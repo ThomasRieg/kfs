@@ -2,10 +2,74 @@
 #include "tty/tty.h"
 #include "io.h"
 #include "pci.h"
+#include "net.h"
 #include "common.h"
 #include "mem_page/mem_paging.h"
 
 void print_clock(void);
+
+void net_test(void) {
+	extern struct rtl8139 rtl8139;
+	unsigned char our_ipv4[] = {192, 168, 76, 9};
+	// unsigned char dst_mac[] = {0xd0, 0x46, 0x0c, 0x85, 0xa6, 0x64};
+	unsigned char dst_ipv4[] = {192, 168, 76, 2};
+
+	////////////////////////////// ARP test
+	struct arp_ipv4_frame frame;
+	memcpy(frame.ether.dst_mac, "\xff\xff\xff\xff\xff\xff", 6);
+	memcpy(frame.ether.src_mac, rtl8139.mac, 6);
+	frame.ether.ether_type = ETH_ARP;
+	frame.arp.hardware_type = ARP_ETHER;
+	frame.arp.protocol_type = ETH_IPV4;
+	frame.arp.hw_addr_len = 6;
+	frame.arp.prot_addr_len = 4;
+	memcpy(&frame.arp.sender_mac, rtl8139.mac, 6);
+	memcpy(&frame.arp.sender_ipv4, our_ipv4, 4);
+	memcpy(&frame.arp.target_ipv4, dst_ipv4, 4);
+	memset(&frame.arp.target_mac, 0, 6);
+	frame.arp.operation = ARP_REQUEST;
+
+	///////////////////////////////// ICMP test
+	/*struct icmp_ipv4_frame frame;
+	memcpy(frame.ether.dst_mac, dst_mac, 6);
+	memcpy(frame.ether.src_mac, our_mac, 6);
+	frame.ether.ether_type = 0x0080;
+	frame.ipv4.version_ihl = 0x54;
+	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
+	frame.ipv4.ident = 0;
+	frame.ipv4.ttl = 64;
+	frame.ipv4.prot = 1;
+	memcpy(frame.ipv4.dst_ipv4, dst_ipv4, 6);
+	memcpy(frame.ipv4.src_ipv4, our_ipv4, 6);
+	unsigned short ipv4_sum = checksum((unsigned short *)&frame.ipv4, 10, 5);
+	unsigned short icmp_sum = checksum((unsigned short *)&frame.icmp, 4, 1);
+	frame.ipv4.header_sum = ipv4_sum >> 8;
+	frame.ipv4.header_sum = ipv4_sum & 0xFF;
+	frame.icmp.checksum = icmp_sum >> 8;
+	frame.icmp.checksum = icmp_sum & 0xFF;*/
+
+
+	//////////////////////////////// TCP test
+	/*struct tcp_ipv4_frame frame;
+	memcpy(frame.ether.dst_mac, dst_mac, 6);
+	memcpy(frame.ether.src_mac, our_mac, 6);
+	frame.ether.ether_type = 0x0080;
+	frame.ipv4.version_ihl = 0x54;
+	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
+	frame.ipv4.ident = 0;
+	frame.ipv4.ttl = 64;
+	frame.ipv4.prot = 1;
+	memcpy(frame.ipv4.dst_ipv4, dst_ipv4, 6);
+	memcpy(frame.ipv4.src_ipv4, our_ipv4, 6);
+	unsigned short ipv4_sum = checksum((unsigned short *)&frame.ipv4, 10, 5);
+	unsigned short icmp_sum = checksum((unsigned short *)&frame.icmp, 4, 1);
+	frame.ipv4.header_sum = ipv4_sum >> 8;
+	frame.ipv4.header_sum = ipv4_sum & 0xFF;
+	frame.icmp.checksum = icmp_sum >> 8;
+	frame.icmp.checksum = icmp_sum & 0xFF;*/
+	void rtl_8139_transmit(void *frame, unsigned int size);
+	rtl_8139_transmit(&frame, sizeof(frame));
+}
 
 void handle_command(unsigned char len, const char *cmd)
 {
@@ -17,6 +81,8 @@ void handle_command(unsigned char len, const char *cmd)
 		if (memcmp(cmd, "pci", 3) == 0)
 		{
 			pci_enumerate();
+		} else if (memcmp(cmd, "net", 3) == 0) {
+			net_test();
 		}
 		else
 			found = false;
@@ -38,7 +104,8 @@ void handle_command(unsigned char len, const char *cmd)
 				   "- crash: crash the kernel by accessing unmapped memory\n"
 				   "- clear: clear TTY\n"
 				   "- breakpoint: cause the breakpoint instruction to be executed\n"
-				   "- pci: enumerate PCI devices on bus 0 with function 0\n"
+				   "- pci: enumerate all installed PCI devices\n"
+				   "- net: test network capabilities\n"
 				   "- fill memory: memory tester, tries to allocate the entire available memory and memset it to 0\n");
 		}
 		else if (memcmp(cmd, "date", 4) == 0)

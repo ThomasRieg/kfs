@@ -85,4 +85,12 @@ struct tcp_ipv4_frame {
 	struct tcp tcp;
 } __attribute__((packed));
 
+struct rtl8139 {
+	unsigned int io_base;
+	unsigned char receive_buffer[8192 + 16 + 1500];
+	unsigned char send_buffers[4][1700];
+	unsigned char next_send_buffer;
+	unsigned char mac[6];
+};
+
 void handle_frame(struct ether *ether);

@@ -2,18 +2,18 @@
 #include "pic.h"
 #include "net.h"
 #include "pci.h"
+#include "tty/tty.h"
 #include "libk/libk.h"
 #include "interrupts/interrupts.h"
 
-unsigned int rtl_8139_io_base;
-unsigned char receive_buffer[8192 + 16 + 1500];
-unsigned char send_buffer[1700];
+struct rtl8139 rtl8139;
 
 enum io_offset
 {
 	OFF_RBSTART = 0x30, // Read Buffer Start
 	OFF_CMD = 0x37,
 	OFF_CAPR = 0x38,  // Current Address of Packet Read
+	OFF_CBR = 0x3A,  // Current Buffer Address
 	OFF_IMR = 0x3C,	  // Interrupt Mask Register
 	OFF_ISR = 0x3E,	  // Interrupt Status Register
 	OFF_TSD0 = 0x10,  // Transmit Status of Descriptor 0
@@ -23,38 +23,79 @@ enum io_offset
 	OFF_CONFIG1 = 0x52,
 };
 
+// From http://realtek.info/pdf/rtl8139d.pdf
+enum isr {
+	ROK = 1, // In normal mode, indicates the successful completion of a packet recepetion.
+			 // In early mode, indicates that the Rx byte count of the arriving packet exceeds the early Rx thresholds.
+	RER = 1 << 1, // Indicates that a packet has either CRC error or frame alignment error (FAE). 
+				  // The collided frame will not be recognized as CRC error if the length of this frame is shorter than 16 bytes.
+	TOK = 1 << 2, // Indicates that a packet transmission is completed successfully.
+	TER = 1 << 3, // Indicates that a packet transmission was aborted, due to excessive collisions, according to the TXRR's settings.
+	RXOVW = 1 << 4, // Set when receive (Rx) buffer ring storage resources have been exhausted.
+	PUN_LINKCHG = 1 << 5, // Set to 1 when CAPR is written but Rx buffer is empty, or when link status is changed.
+	FOVW = 1 << 6, // Set when an overflow occurs on the Rx status FIFO
+	LENCHG = 1 << 13, // Cable length is changed after Receiver is enabled.
+	TIMEOUT = 1 << 14, // Set to 1 when the TCTR register reaches to the value of the TimerInt register.
+	SERR = 1 << 15, // Set to 1 when the RTL8139D(L) signals a system error on the PCI bus.
+};
+
 void rtl8139_handler(__attribute__((unused)) t_regs *regs)
 {
-	unsigned int io_base = rtl_8139_io_base;
+	unsigned int io_base = rtl8139.io_base;
 	unsigned short status = inw(io_base + OFF_ISR);
 	// official documentation says writing to ISR
 	// has no effect but it seems to be mandatory
 	// to mark the interrupt as handled
 	outw(io_base + OFF_ISR, 0xFFFF);
 	unsigned short capr = inw(io_base + OFF_CAPR);
-	printk("NIC io_base: 0x%x, status 0x%x, CAPR: 0x%x\n", io_base, status, capr);
-	if (status & 1)
+	unsigned short cbr = inw(io_base + OFF_CBR);
+	printk("NIC io_base: 0x%x, status 0x%x (", io_base, status);
+	if (status & ROK)
+		writes("ROK ");
+	if (status & RER) {
+		writes("RER ");
+	}
+	if (status & TOK) {
+		writes("TOK ");
+	}
+	if (status & TER) {
+		writes("TER ");
+	}
+	if (status & RXOVW) {
+		writes("RXOVW ");
+	}
+	if (status & PUN_LINKCHG) {
+		writes("PUN_LINKCHG ");
+	}
+	printk("), CBR 0x%x, CAPR: 0x%x\n", cbr, capr);
+	if (status & ROK)
 	{
-		struct ether *ether = (struct ether *)(receive_buffer + 4);
+		unsigned char *start = rtl8139.receive_buffer + (unsigned short)(capr + 16);
+		unsigned short length = *(unsigned short *)(start + 2);
+		printk("length %d\n", length);
+		struct ether *ether = (struct ether *)(start + 4);
 		handle_frame(ether);
 		const char *hex = "0123456789abcdef";
-		for (unsigned int i = 0; i < 500; i++)
+		// print whole packet with status
+		for (unsigned int i = 0; i < length + 4; i++)
 		{
-			printk("%c%c", hex[receive_buffer[i] >> 4], hex[receive_buffer[i] & 0xF]);
+			printk("%c%c", hex[start[i] >> 4], hex[start[i] & 0xF]);
 		}
+		outw(io_base + OFF_CAPR, start - rtl8139.receive_buffer + 4 + length - 16); // mark as read up until now
 	}
 	pic_eoi(INT_NIC);
 }
 
-/*static unsigned short checksum(unsigned short *buf, unsigned int word_count, unsigned int except_word) {
-	unsigned short sum = 0;
-	for (unsigned int i = 0; i < word_count; i++) {
-		if (i == except_word) continue;
-		unsigned int tmp = buf[i] + sum;
-		sum = tmp & 0xFFFF + (tmp >> 16);
-	}
-	return sum;
-}*/
+void rtl_8139_transmit(void *frame, unsigned int size) {
+	unsigned int buffer_i = rtl8139.next_send_buffer;
+	void *send_buffer = rtl8139.send_buffers[rtl8139.next_send_buffer];
+	rtl8139.next_send_buffer = (rtl8139.next_send_buffer + 1) % 4;
+
+	unsigned int io_base = rtl8139.io_base;
+	memcpy(send_buffer, frame, size);
+	outl(io_base + OFF_TSAD0 + buffer_i * 4, (unsigned int)send_buffer); // transmit start, for now physical = virtual
+	outl(io_base + OFF_TSD0 + buffer_i * 4, size);
+}
 
 void rtl_8139_init(struct pci_installed *installed)
 {
@@ -68,8 +109,9 @@ void rtl_8139_init(struct pci_installed *installed)
 	pci_config_write_word(installed->bus, installed->slot, 0, 4, command);
 
 	io_base = io_base & IO_BAR_MASK;
-	rtl_8139_io_base = io_base;
+	rtl8139.io_base = io_base;
 	unsigned char our_mac[] = {inb(io_base), inb(io_base + 1), inb(io_base + 2), inb(io_base + 3), inb(io_base + 4), inb(io_base + 5)};
+	memcpy(rtl8139.mac, our_mac, 6);
 	printk("MAC: %x:%x:%x:%x:%x:%x\n", our_mac[0], our_mac[1], our_mac[2], our_mac[3], our_mac[4], our_mac[5]);
 	outb(io_base + OFF_CONFIG1, 0x0); // LWAKE + LWPTN
 	outb(io_base + OFF_CMD, 0x10);	  // Software reset
@@ -78,71 +120,9 @@ void rtl_8139_init(struct pci_installed *installed)
 		// wait for software reset to happen.
 	}
 
-	//unsigned char our_ipv4[] = {192, 168, 76, 9};
-	// unsigned char dst_mac[] = {0xd0, 0x46, 0x0c, 0x85, 0xa6, 0x64};
-	//unsigned char dst_ipv4[] = {192, 168, 76, 2};
-
-	outl(io_base + OFF_RBSTART, (unsigned int)&receive_buffer[0]); // receive buffer start
+	outl(io_base + OFF_RBSTART, (unsigned int)&rtl8139.receive_buffer[0]); // receive buffer start
 	outw(io_base + OFF_IMR, 0xffff);							   // receive all interrupts
 	outl(io_base + OFF_TCR, 1 << 15);							   // Append Ethernet CRC
 	outl(io_base + OFF_RCR, 0xf | (1 << 7));					   // Accept all packets, overflow instead of wrap around
 	outb(io_base + OFF_CMD, 0x0c);								   // Enable receive and transmission
-
-	////////////////////////////// ARP test
-	/*struct arp_ipv4_frame frame;
-	memcpy(frame.ether.dst_mac, "\xff\xff\xff\xff\xff\xff", 6);
-	memcpy(frame.ether.src_mac, our_mac, 6);
-	frame.ether.ether_type = ETH_ARP;
-	frame.arp.hardware_type = ARP_ETHER;
-	frame.arp.protocol_type = ETH_IPV4;
-	frame.arp.hw_addr_len = 6;
-	frame.arp.prot_addr_len = 4;
-	memcpy(&frame.arp.sender_mac, our_mac, 6);
-	memcpy(&frame.arp.sender_ipv4, our_ipv4, 4);
-	memcpy(&frame.arp.target_ipv4, dst_ipv4, 4);
-	memset(&frame.arp.target_mac, 0, 6);
-	frame.arp.operation = ARP_REQUEST;*/
-
-	///////////////////////////////// ICMP test
-	/*struct icmp_ipv4_frame frame;
-	memcpy(frame.ether.dst_mac, dst_mac, 6);
-	memcpy(frame.ether.src_mac, our_mac, 6);
-	frame.ether.ether_type = 0x0080;
-	frame.ipv4.version_ihl = 0x54;
-	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
-	frame.ipv4.ident = 0;
-	frame.ipv4.ttl = 64;
-	frame.ipv4.prot = 1;
-	memcpy(frame.ipv4.dst_ipv4, dst_ipv4, 6);
-	memcpy(frame.ipv4.src_ipv4, our_ipv4, 6);
-	unsigned short ipv4_sum = checksum((unsigned short *)&frame.ipv4, 10, 5);
-	unsigned short icmp_sum = checksum((unsigned short *)&frame.icmp, 4, 1);
-	frame.ipv4.header_sum = ipv4_sum >> 8;
-	frame.ipv4.header_sum = ipv4_sum & 0xFF;
-	frame.icmp.checksum = icmp_sum >> 8;
-	frame.icmp.checksum = icmp_sum & 0xFF;*/
-
-
-	//////////////////////////////// TCP test
-	/*struct tcp_ipv4_frame frame;
-	memcpy(frame.ether.dst_mac, dst_mac, 6);
-	memcpy(frame.ether.src_mac, our_mac, 6);
-	frame.ether.ether_type = 0x0080;
-	frame.ipv4.version_ihl = 0x54;
-	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
-	frame.ipv4.ident = 0;
-	frame.ipv4.ttl = 64;
-	frame.ipv4.prot = 1;
-	memcpy(frame.ipv4.dst_ipv4, dst_ipv4, 6);
-	memcpy(frame.ipv4.src_ipv4, our_ipv4, 6);
-	unsigned short ipv4_sum = checksum((unsigned short *)&frame.ipv4, 10, 5);
-	unsigned short icmp_sum = checksum((unsigned short *)&frame.icmp, 4, 1);
-	frame.ipv4.header_sum = ipv4_sum >> 8;
-	frame.ipv4.header_sum = ipv4_sum & 0xFF;
-	frame.icmp.checksum = icmp_sum >> 8;
-	frame.icmp.checksum = icmp_sum & 0xFF;*/
-
-	/*memcpy(send_buffer, &frame, sizeof(frame));
-	outl(io_base + OFF_TSAD0, (unsigned int)&send_buffer); // transmit start, for now physical = virtual
-	outl(io_base + OFF_TSD0, sizeof(frame));*/
 }

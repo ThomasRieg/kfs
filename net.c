@@ -5,6 +5,16 @@
 struct arp_eth_ipv4_cache_entry arp_cache[10];
 unsigned int arp_cache_entry_count = 0;
 
+/*static unsigned short checksum(unsigned short *buf, unsigned int word_count, unsigned int except_word) {
+	unsigned short sum = 0;
+	for (unsigned int i = 0; i < word_count; i++) {
+		if (i == except_word) continue;
+		unsigned int tmp = buf[i] + sum;
+		sum = tmp & 0xFFFF + (tmp >> 16);
+	}
+	return sum;
+}*/
+
 static void arp_update_cache(struct arp_eth_ipv4 *arp) {
 	if (arp->operation == ARP_REPLY) {
 		unsigned int i = 0;

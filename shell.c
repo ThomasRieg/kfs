@@ -38,7 +38,8 @@ void handle_command(unsigned char len, const char *cmd)
 				   "- crash: crash the kernel by accessing unmapped memory\n"
 				   "- clear: clear TTY\n"
 				   "- breakpoint: cause the breakpoint instruction to be executed\n"
-				   "- pci: enumerate PCI devices on bus 0 with function 0\n");
+				   "- pci: enumerate PCI devices on bus 0 with function 0\n"
+				   "- fill memory: memory tester, tries to allocate the entire available memory and memset it to 0\n");
 		}
 		else if (memcmp(cmd, "date", 4) == 0)
 		{

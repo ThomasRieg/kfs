@@ -36,27 +36,7 @@ void rtl8139_handler(__attribute__((unused)) t_regs *regs)
 	if (status & 1)
 	{
 		struct ether *ether = (struct ether *)(receive_buffer + 4);
-		unsigned char *d = &ether->dst_mac[0];
-		unsigned char *s = &ether->src_mac[0];
-		printk("received %x dst %x:%x:%x:%x:%x:%x src %x:%x:%x:%x:%x:%x\n",
-			   ether->ether_type,
-			   d[0], d[1], d[2], d[3], d[4], d[5],
-			   s[0], s[1], s[2], s[3], s[4], s[5]);
-
-		if (ether->ether_type == ETH_ARP)
-		{
-			struct arp_eth_ipv4 *arp = (struct arp_eth_ipv4 *)(ether + 1);
-			if (arp->hardware_type == ARP_ETHER && arp->protocol_type == ETH_IPV4 && arp->prot_addr_len == 4 && arp->hw_addr_len == 6)
-			{
-				printk("ARP %s sender %u.%u.%u.%u %x:%x:%x:%x:%x:%x target %u.%u.%u.%u %x:%x:%x:%x:%x:%x\n", arp->operation == ARP_REQUEST ? "request" : "reply",
-					   arp->sender_ipv4[0], arp->sender_ipv4[1], arp->sender_ipv4[2], arp->sender_ipv4[3],
-					   arp->sender_mac[0], arp->sender_mac[1], arp->sender_mac[2], arp->sender_mac[3], arp->sender_mac[4], arp->sender_mac[5],
-					   arp->target_ipv4[0], arp->target_ipv4[1], arp->target_ipv4[2], arp->target_ipv4[3],
-					   arp->target_mac[0], arp->target_mac[1], arp->target_mac[2], arp->target_mac[3], arp->target_mac[4], arp->target_mac[5]
-
-				);
-			}
-		}
+		handle_frame(ether);
 		const char *hex = "0123456789abcdef";
 		for (unsigned int i = 0; i < 500; i++)
 		{
@@ -76,16 +56,16 @@ void rtl8139_handler(__attribute__((unused)) t_regs *regs)
 	return sum;
 }*/
 
-void rtl_8139_init(unsigned char bus, unsigned char slot)
+void rtl_8139_init(struct pci_installed *installed)
 {
-	unsigned int io_base = (unsigned int)pci_config_read_word(bus, slot, 0, 18) << 16 | pci_config_read_word(bus, slot, 0, 16);
+	unsigned int io_base = (unsigned int)pci_config_read_word(installed->bus, installed->slot, 0, 18) << 16 | pci_config_read_word(installed->bus, installed->slot, 0, 16);
 	if (!(io_base & 1))
 		return;
 
 	// Mark as bus master for DMA
-	unsigned short command = pci_config_read_word(bus, slot, 0, 4);
+	unsigned short command = pci_config_read_word(installed->bus, installed->slot, 0, 4);
 	command |= 0x4;
-	pci_config_write_word(bus, slot, 0, 4, command);
+	pci_config_write_word(installed->bus, installed->slot, 0, 4, command);
 
 	io_base = io_base & IO_BAR_MASK;
 	rtl_8139_io_base = io_base;
@@ -95,11 +75,12 @@ void rtl_8139_init(unsigned char bus, unsigned char slot)
 	outb(io_base + OFF_CMD, 0x10);	  // Software reset
 	while ((inb(io_base + OFF_CMD) & 0x10) != 0)
 	{
+		// wait for software reset to happen.
 	}
 
-	unsigned char our_ipv4[] = {192, 168, 76, 9};
+	//unsigned char our_ipv4[] = {192, 168, 76, 9};
 	// unsigned char dst_mac[] = {0xd0, 0x46, 0x0c, 0x85, 0xa6, 0x64};
-	unsigned char dst_ipv4[] = {192, 168, 76, 2};
+	//unsigned char dst_ipv4[] = {192, 168, 76, 2};
 
 	outl(io_base + OFF_RBSTART, (unsigned int)&receive_buffer[0]); // receive buffer start
 	outw(io_base + OFF_IMR, 0xffff);							   // receive all interrupts
@@ -107,7 +88,8 @@ void rtl_8139_init(unsigned char bus, unsigned char slot)
 	outl(io_base + OFF_RCR, 0xf | (1 << 7));					   // Accept all packets, overflow instead of wrap around
 	outb(io_base + OFF_CMD, 0x0c);								   // Enable receive and transmission
 
-	struct arp_ipv4_frame frame;
+	////////////////////////////// ARP test
+	/*struct arp_ipv4_frame frame;
 	memcpy(frame.ether.dst_mac, "\xff\xff\xff\xff\xff\xff", 6);
 	memcpy(frame.ether.src_mac, our_mac, 6);
 	frame.ether.ether_type = ETH_ARP;
@@ -119,7 +101,9 @@ void rtl_8139_init(unsigned char bus, unsigned char slot)
 	memcpy(&frame.arp.sender_ipv4, our_ipv4, 4);
 	memcpy(&frame.arp.target_ipv4, dst_ipv4, 4);
 	memset(&frame.arp.target_mac, 0, 6);
-	frame.arp.operation = ARP_REQUEST;
+	frame.arp.operation = ARP_REQUEST;*/
+
+	///////////////////////////////// ICMP test
 	/*struct icmp_ipv4_frame frame;
 	memcpy(frame.ether.dst_mac, dst_mac, 6);
 	memcpy(frame.ether.src_mac, our_mac, 6);
@@ -138,7 +122,27 @@ void rtl_8139_init(unsigned char bus, unsigned char slot)
 	frame.icmp.checksum = icmp_sum >> 8;
 	frame.icmp.checksum = icmp_sum & 0xFF;*/
 
-	memcpy(send_buffer, &frame, sizeof(frame));
+
+	//////////////////////////////// TCP test
+	/*struct tcp_ipv4_frame frame;
+	memcpy(frame.ether.dst_mac, dst_mac, 6);
+	memcpy(frame.ether.src_mac, our_mac, 6);
+	frame.ether.ether_type = 0x0080;
+	frame.ipv4.version_ihl = 0x54;
+	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
+	frame.ipv4.ident = 0;
+	frame.ipv4.ttl = 64;
+	frame.ipv4.prot = 1;
+	memcpy(frame.ipv4.dst_ipv4, dst_ipv4, 6);
+	memcpy(frame.ipv4.src_ipv4, our_ipv4, 6);
+	unsigned short ipv4_sum = checksum((unsigned short *)&frame.ipv4, 10, 5);
+	unsigned short icmp_sum = checksum((unsigned short *)&frame.icmp, 4, 1);
+	frame.ipv4.header_sum = ipv4_sum >> 8;
+	frame.ipv4.header_sum = ipv4_sum & 0xFF;
+	frame.icmp.checksum = icmp_sum >> 8;
+	frame.icmp.checksum = icmp_sum & 0xFF;*/
+
+	/*memcpy(send_buffer, &frame, sizeof(frame));
 	outl(io_base + OFF_TSAD0, (unsigned int)&send_buffer); // transmit start, for now physical = virtual
-	outl(io_base + OFF_TSD0, sizeof(frame));
+	outl(io_base + OFF_TSD0, sizeof(frame));*/
 }

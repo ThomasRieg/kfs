@@ -57,9 +57,32 @@ enum arp_operation {
 	ARP_REPLY = 0x0200,
 };
 
+struct arp_eth_ipv4_cache_entry {
+	unsigned char ipv4[4];
+	unsigned char mac[6];
+};
+
 enum ether_type {
 	// Already in network byte order for little-endian CPU
 	ETH_IPV4 = 0x0008,
 	ETH_ARP = 0x0608,
 };
 
+struct tcp {
+	unsigned short src_port;
+	unsigned short destination_port;
+	unsigned int sequence_number;
+	unsigned int ack_number;
+	unsigned short flags;
+	unsigned short window;
+	unsigned short checksum;
+	unsigned short urgent_pointer;
+};
+
+struct tcp_ipv4_frame {
+	struct ether ether;
+	struct ipv4 ipv4;
+	struct tcp tcp;
+} __attribute__((packed));
+
+void handle_frame(struct ether *ether);

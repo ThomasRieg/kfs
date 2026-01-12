@@ -6,6 +6,24 @@
 
 #define IO_BAR_MASK 0xFFFFFFFC
 
+struct pci_installed {
+	unsigned short vendor;
+	unsigned short device;
+	union {
+		// header type 0
+		struct {
+			unsigned int bars[6];
+			unsigned char irq;
+		};
+	};
+	unsigned char bus;
+	unsigned char slot;
+	unsigned char function;
+	unsigned char class_code;
+	unsigned char subclass;
+	unsigned char header_type;
+};
+
 // See https://wiki.osdev.org/PCI
 static inline unsigned short pci_config_read_word(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offset) {
 	unsigned int address;
@@ -45,4 +63,5 @@ static inline void pci_config_write_word(unsigned char bus, unsigned char slot, 
 }
 
 void pci_enumerate(void);
+void pci_init_all(void);
 #endif

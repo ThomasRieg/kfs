@@ -88,21 +88,32 @@ void print_clock(void)
 void kernel_main(struct s_mb2_info *multi)
 {
 	writes("Initializing...\n");
+
 	gdt_install_basic();
 	writes("GDT installed.\n");
+
 	setup_interrupts();
 	writes("Interrupt Descriptor Table loaded.\n");
+
 	paging_init(multi);
 
 	setup_pics();
 	writes("PICs configured.\n");
+
 	enable_interrupts();
-	mem_test_all();
 	writes("Hardware interrupts enabled.\n");
+
+	mem_test_all();
+	pci_init_all();
+
 	writes("Hello world! KFS @ 42\n");
 	print_clock();
 	writes("\n");
 	writes("> ");
-	while (1)
+	while (1) {
+		extern void handle_ps2(void);
 		asm volatile("hlt");
+		// this executes after each interrupt exit
+		handle_ps2();
+	}
 }

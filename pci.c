@@ -32,17 +32,18 @@ const char *pci_to_name(unsigned short vendor, unsigned short device) {
 	return "Unknown";
 }
 
+struct pci_installed pci_devices[100];
+unsigned int pci_device_count = 0;
 
-void rtl_8139_init(unsigned char bus, unsigned char slot);
+void rtl_8139_init(struct pci_installed *installed);
 
-void pci_init_device(unsigned char bus, unsigned char slot, unsigned short vendor, unsigned short device) {
-	if (vendor == VENDOR_REALTEK && device == DEVICE_REALTEK_RTL8139) {
-		rtl_8139_init(bus, slot);
+void pci_init_device(struct pci_installed *installed) {
+	if (installed->vendor == VENDOR_REALTEK && installed->device == DEVICE_REALTEK_RTL8139) {
+		rtl_8139_init(installed);
 	}
 }
 
-void pci_enumerate(void) {
-	printk("PCI devices:\n");
+void pci_init_all(void) {
 	unsigned char bus = 0;
 	for (;;bus++) {
 		unsigned char slot = 0;
@@ -51,29 +52,24 @@ void pci_enumerate(void) {
 			for (;;function++) {
 				unsigned short vendor = pci_config_read_word(bus, slot, function, 0);
 				if (vendor != 0xFFFF) {
-					unsigned short device = pci_config_read_word(bus, slot, function, 2);
+					struct pci_installed *installed = &pci_devices[pci_device_count++];
+					installed->vendor = vendor;
+					installed->device = pci_config_read_word(bus, slot, function, 2);
+					installed->bus = bus;
+					installed->slot = slot;
+					installed->function = function;
+
 					unsigned short class_subclass = pci_config_read_word(bus, slot, function, 10);
-					unsigned char class_code = class_subclass >> 8;
-					unsigned char subclass = class_subclass & 0xFF;
-					vga_set_color(VGA_RED, VGA_BLACK);
-					printk("- %u:%u.%u %x:%x, class %u:%u %s\n", bus, slot, function, vendor, device, class_code, subclass, pci_to_name(vendor, device));
-					vga_set_color(VGA_WHITE, VGA_BLACK);
-					unsigned short header_type = pci_config_read_word(bus, slot, function, 14) & 0xFF;
-					if (header_type == 0) {
-						unsigned short interrupt_line = pci_config_read_word(bus, slot, function, 0x3C) & 0xFF;
-						if (interrupt_line != 0xFF)
-							printk("  IRQ: %u\n", interrupt_line);
-						printk("  BARs: ");
+					installed->class_code = class_subclass >> 8;
+					installed->subclass = class_subclass & 0xFF;
+					installed->header_type = pci_config_read_word(bus, slot, function, 14) & 0xFF;
+					if (installed->header_type == 0) {
+						installed->irq = pci_config_read_word(bus, slot, function, 0x3C) & 0xFF;
 						for (unsigned int i = 0; i < 6; i++) {
-							unsigned int bar = (unsigned int)pci_config_read_word(bus, slot, function, 18 + 4 * i) << 16 | pci_config_read_word(bus, slot, function, 16 + 4 * i);
-							if (bar) {
-								unsigned int base = bar & 1 ? (bar & IO_BAR_MASK) : (bar & 0xFFFFFFF0);
-								printk("%u %s 0x%x ", i, bar & 1 ? "IO" : "MM", base);
-							}
+							installed->bars[i] = (unsigned int)pci_config_read_word(bus, slot, function, 18 + 4 * i) << 16 | pci_config_read_word(bus, slot, function, 16 + 4 * i);
 						}
-						writes("\n");
 					}
-					pci_init_device(bus, slot, vendor, device);
+					pci_init_device(installed);
 				}
 				if (function == 7)
 					break;
@@ -84,5 +80,29 @@ void pci_enumerate(void) {
 		}
 		if (bus == 255)
 			break;
+	}
+}
+
+void pci_enumerate(void) {
+	printk("PCI devices:\n");
+	for (unsigned int i = 0; i < pci_device_count; i++) {
+		struct pci_installed *installed = &pci_devices[i];
+		vga_set_color(VGA_RED, VGA_BLACK);
+		printk("- %u:%u.%u %x:%x, class %u:%u %s\n", installed->bus, installed->slot, installed->function, installed->vendor, installed->device, installed->class_code, installed->subclass, pci_to_name(installed->vendor, installed->device));
+		vga_set_color(VGA_WHITE, VGA_BLACK);
+		if (installed->header_type == 0) {
+			unsigned short interrupt_line = installed->irq;
+			if (interrupt_line != 0xFF)
+				printk("  IRQ: %u\n", interrupt_line);
+			printk("  BARs: ");
+			for (unsigned int i = 0; i < 6; i++) {
+				unsigned int bar = installed->bars[i];
+				if (bar) {
+					unsigned int base = bar & 1 ? (bar & IO_BAR_MASK) : (bar & 0xFFFFFFF0);
+					printk("%u %s 0x%x ", i, bar & 1 ? "IO" : "MM", base);
+				}
+			}
+			writes("\n");
+		}
 	}
 }

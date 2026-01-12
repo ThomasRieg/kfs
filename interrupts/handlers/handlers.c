@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 14:29:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/12 16:26:00 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,67 +102,9 @@ void timer_handler(__attribute__((unused)) t_regs *regs)
 	// pic_eoi(INT_TIMER);
 }
 
-bool shift_held = false;
-bool caps_lock = false;
-bool lctrl_held = false;
-
 void serial1_handler(__attribute__((unused)) t_regs *regs)
 {
 	char c = inb(PORT_COM1);
 	tty_add_input(c);
 	// pic_eoi(INT_SERIAL1);
-}
-
-void keyboard_handler(__attribute__((unused)) t_regs *regs)
-{
-	unsigned char scancode = inb(PORT_PS2_DATA);
-	if (!(scancode >> 7))
-	{ // if not a release event
-		char c;
-		if (shift_held)
-			c = scan_code_set_1_qwerty_shifted[scancode];
-		else
-			c = scan_code_set_1_qwerty[scancode];
-		if (caps_lock)
-			c = invert_caps(c);
-		if (lctrl_held && c == '+')
-		{
-			save_tty();
-			next_tty();
-		}
-		else if (lctrl_held && c == '-')
-		{
-			save_tty();
-			prev_tty();
-		}
-		else if (c)
-		{
-			tty_add_input(c);
-		}
-		else if (scancode == SET1_QW_CAPLOCK)
-		{
-			caps_lock = !caps_lock;
-		}
-		else if (scancode == SET1_QW_SHIFT)
-		{
-			shift_held = true;
-		}
-		else if (scancode == SET1_QW_LCTRL)
-		{
-			lctrl_held = true;
-		}
-	}
-	else
-	{ // if release
-		scancode &= 0x7F;
-		if (scancode == SET1_QW_SHIFT)
-		{
-			shift_held = false;
-		}
-		else if (scancode == SET1_QW_LCTRL)
-		{
-			lctrl_held = false;
-		}
-	}
-	// pic_eoi(INT_KEYBOARD);
 }

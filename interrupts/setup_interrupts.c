@@ -13,6 +13,7 @@
 #include "interrupts.h"
 #include "stubs_declaration.h"
 #include "handlers/handlers.h"
+#include "../common.h"
 
 t_idt_entry_32 idt[256];
 

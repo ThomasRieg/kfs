@@ -13,7 +13,6 @@
 #ifndef INTERRUPTS_H
 #define INTERRUPTS_H
 
-#include "../common.h"
 #include "s_regs.h"
 
 #define IDT_PRESENT_AND_GATE_32_INT 0x8e

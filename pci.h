@@ -45,5 +45,4 @@ static inline void pci_config_write_word(unsigned char bus, unsigned char slot, 
 }
 
 void pci_enumerate(void);
-__attribute__((interrupt)) void rtl8139_handler(__attribute__((unused)) struct interrupt_stack_frame *interrupt_frame);
 #endif

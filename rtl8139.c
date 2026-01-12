@@ -3,6 +3,7 @@
 #include "net.h"
 #include "pci.h"
 #include "libk/libk.h"
+#include "interupts/interupts.h"
 
 unsigned int rtl_8139_io_base;
 unsigned char receive_buffer[8192 + 16 + 1500];
@@ -21,7 +22,7 @@ enum io_offset {
 	OFF_CONFIG1 = 0x52,
 };
 
-__attribute__((interrupt)) void rtl8139_handler(__attribute__((unused)) struct interrupt_stack_frame *interrupt_frame)
+void rtl8139_handler(__attribute__((unused)) t_regs *regs)
 {
 	unsigned int io_base = rtl_8139_io_base;
 	unsigned short status = inw(io_base + OFF_ISR);

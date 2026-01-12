@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 19:37:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/09 17:46:44 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/12 14:29:51 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 #define PDE_INDEX(va) (((uint32_t)(va) >> 22) & 0x3FF)
 #define PTE_INDEX(va) (((uint32_t)(va) >> 12) & 0x3FF)
 
-// temporarily maps a PAGE_SIZE bytes of physical memory , RW ring 0 only (not thread safe, disable interupts or parallelism that would call this function until kunmap returns)
+// temporarily maps a PAGE_SIZE bytes of physical memory , RW ring 0 only (not thread safe, disable interrupts or parallelism that would call this function until kunmap returns)
 void *kmap(phys_ptr physical_address);
 void kunmap(void);
 

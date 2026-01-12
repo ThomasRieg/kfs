@@ -4,8 +4,8 @@
 
 #include "io.h"
 
-#include <stdint.h>
 #include <stddef.h>
+#include "interrupts/s_regs.h"
 
 typedef _Bool bool;
 #define false 0
@@ -33,7 +33,8 @@ enum interrupt
 	INT_NIC = PIC_OFFSET + 11,
 };
 
-void kernel_panic(const char *message);
+void kernel_panic(const char *message, t_regs *regs);
+
 static inline void disable_interrupts(void)
 {
 	asm volatile("cli");

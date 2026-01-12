@@ -11,17 +11,30 @@
 #include "mem_page/mem_defines.h"
 #include "vmalloc/vmalloc.h"
 #include "multiboot2.h"
-#include "interupts/interupts.h"
+#include "interrupts/interrupts.h"
 
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
 	.hdr_len = sizeof(struct multiboot2_header),
 	.checksum = 397258538 - sizeof(struct multiboot2_header)};
 
-__attribute__((noreturn)) void kernel_panic(const char *message)
+void print_cpu_state(t_regs *regs)
+{
+	printk("cpu state: \n");
+	printk("ds %u; es %u; fs %u; gs %u\n", regs->ds, regs->es, regs->fs, regs->gs);
+	printk("edi %u; esi %u; ebp %u; orig_esp %u; ebx %u; edx %u; ecx %u; eax %u\n", regs->edi, regs->esi, regs->ebp, regs->orig_esp, regs->ebx, regs->edx, regs->ecx, regs->eax);
+	printk("int_number %u; err_code %u\n", regs->int_no, regs->err_code);
+	printk("eip %p; cs %u; eflags %u\n", (void *)regs->eip, regs->cs, regs->eflags);
+	if ((regs->cs & 3) == 3)
+		printk("useresp %u; ss %u\n", regs->useresp, regs->ss);
+}
+
+__attribute__((noreturn)) void kernel_panic(const char *message, t_regs *regs)
 {
 	disable_interrupts();
 	vga_set_color(VGA_RED, VGA_BLACK);
+	print_cpu_state(regs);
+	stack_dump_words(0);
 	writes("/!\\Kernel Panic/!\\\n");
 	writes(message);
 	while (1)
@@ -76,7 +89,7 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Initializing...\n");
 	gdt_install_basic();
 	writes("GDT installed.\n");
-	setup_interupts();
+	setup_interrupts();
 	writes("Interrupt Descriptor Table loaded.\n");
 	paging_init(multi);
 

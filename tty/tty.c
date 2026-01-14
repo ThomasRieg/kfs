@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 01:56:38 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 11:39:11 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/14 17:40:21 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,7 +68,9 @@ void tty_add_input(char c) {
 	// echo mode
 	if (c == '\r')
 		write(&(char){'\n'}, 1);
-	else if (c == '\b' || c == 0x7F) {
+	else if (c == '\t') {
+		write(" ", 1);
+	} else if (c == '\b' || c == 0x7F) {
 		if (curr->cmd_len != 0) {
 			curr->cmd_len--;
 			serial_delete_char();

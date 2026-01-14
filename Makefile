@@ -1,7 +1,7 @@
 CFLAGS := -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-SRCS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o\
+OBJS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o\
 		tty/tty.o\
 		vga/vga.o\
 		libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o\
@@ -26,8 +26,8 @@ debug: $(ISO)
 
 all: $(ISO)
 
-$(ELF): $(SRCS)
-	$(LD) -o $@ $(LDFLAGS) $(SRCS)
+$(ELF): $(OBJS)
+	$(LD) -o $@ $(LDFLAGS) $(OBJS)
 
 $(ISO): $(ELF) grub.cfg
 	mkdir -p iso/boot/grub
@@ -36,7 +36,8 @@ $(ISO): $(ELF) grub.cfg
 	grub-mkrescue -o $@ iso
 
 clean:
-	rm -f $(SRCS) **/*.d
+	find -name '*.d' -delete
+	rm -f $(OBJS)
 
 fclean: clean
 	rm -f $(ELF) $(ISO)
@@ -45,4 +46,4 @@ re: fclean all
 
 .PHONY: all clean fclean re qemu debug
 
--include **/*.d
+-include $(OBJS:%.o=%.d)

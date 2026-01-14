@@ -82,14 +82,15 @@ void handle_command(unsigned char len, const char *cmd)
 			writes("help:\n"
 				   "- stop: power off the machine\n"
 				   "- date: print RTC/wall-clock date and time\n"
-				   "- print stack: print the whole stack bye per byte in hexadecimal\n"
-				   "- print trace: print call backtrace\n"
+				   "- print-stack: print the stack from top to current esp in hexadecimal\n"
+				   "- print-trace: print call backtrace\n"
 				   "- crash: crash the kernel by accessing unmapped memory\n"
 				   "- clear: clear TTY\n"
+				   "- layout: swap layout between QWERTY <-> AZERTY\n"
 				   "- breakpoint: cause the breakpoint instruction to be executed\n"
 				   "- pci: enumerate all installed PCI devices\n"
 				   "- net: test network capabilities\n"
-				   "- fill memory: memory tester, tries to allocate the entire available memory and memset it to 0\n");
+				   "- fill-memory: memory tester, tries to allocate the entire available memory and memset it to 0\n");
 		}
 		else if (memcmp(cmd, "date", 4) == 0)
 		{
@@ -108,6 +109,14 @@ void handle_command(unsigned char len, const char *cmd)
 		else
 			found = false;
 		break;
+	case 6:
+		if (memcmp(cmd, "layout", 6) == 0) {
+			void tty_swap_layout(void);
+			tty_swap_layout();
+		}
+		else
+			found = false;
+		break;
 	case 10:
 		if (memcmp(cmd, "breakpoint", 10) == 0)
 		{
@@ -117,17 +126,17 @@ void handle_command(unsigned char len, const char *cmd)
 			found = false;
 		break;
 	case 11:
-		if (memcmp(cmd, "print stack", 11) == 0)
+		if (memcmp(cmd, "print-stack", 11) == 0)
 		{
 			char forty_two[100];
 			memset(forty_two, 0x42, 100);
 			stack_dump_words(0);
 		}
-		else if (memcmp(cmd, "print trace", 11) == 0)
+		else if (memcmp(cmd, "print-trace", 11) == 0)
 		{
 			stack_trace_ebp(32);
 		}
-		else if (memcmp(cmd, "fill memory", 11) == 0)
+		else if (memcmp(cmd, "fill-memory", 11) == 0)
 		{
 			fill_memory();
 		}

@@ -3,15 +3,28 @@
 #include "libk/libk.h"
 #include "common.h"
 
-bool shift_held = false;
-bool caps_lock = false;
-bool lctrl_held = false;
-unsigned char scancode = 0;
+static bool shift_held = false;
+static bool caps_lock = false;
+static bool lctrl_held = false;
+static unsigned char scancode = 0;
+static unsigned char *layout[2] = { scan_code_set_1_qwerty, scan_code_set_1_qwerty_shifted };
 
 void keyboard_handler(__attribute__((unused)) t_regs *regs)
 {
 	scancode = inb(PORT_PS2_DATA);
 	// pic_eoi(INT_KEYBOARD);
+}
+
+void tty_swap_layout(void) {
+	if (layout[0] == scan_code_set_1_qwerty) {
+		layout[0] = scan_code_set_1_azerty;
+		layout[1] = scan_code_set_1_azerty_shifted;
+		printk("You are now using the AZERTY layout.\n");
+	} else {
+		layout[0] = scan_code_set_1_qwerty;
+		layout[1] = scan_code_set_1_qwerty_shifted;
+		printk("You are now using the QWERTY layout.\n");
+	}
 }
 
 void handle_ps2(void) {
@@ -20,9 +33,9 @@ void handle_ps2(void) {
 		{ // if not a release event
 			char c;
 			if (shift_held)
-				c = scan_code_set_1_qwerty_shifted[scancode];
+				c = layout[1][scancode];
 			else
-				c = scan_code_set_1_qwerty[scancode];
+				c = layout[0][scancode];
 			if (caps_lock)
 				c = invert_caps(c);
 			if (lctrl_held && c == '+')

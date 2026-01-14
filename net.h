@@ -91,6 +91,13 @@ struct rtl8139 {
 	unsigned char send_buffers[4][1700];
 	unsigned char next_send_buffer;
 	unsigned char mac[6];
+	unsigned char ipv4[4];
+	unsigned char gateway_ipv4[4];
 };
 
+extern struct rtl8139 rtl8139;
+void rtl_8139_transmit(void *frame, unsigned int size);
+unsigned char *arp_lookup(unsigned char ipv4[4]);
 void handle_frame(struct ether *ether);
+void arp_print_table(void);
+unsigned short checksum(unsigned short *buf, unsigned int word_count, unsigned int except_word);

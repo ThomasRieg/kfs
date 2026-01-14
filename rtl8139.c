@@ -110,9 +110,13 @@ void rtl_8139_init(struct pci_installed *installed)
 
 	io_base = io_base & IO_BAR_MASK;
 	rtl8139.io_base = io_base;
+	memcpy(rtl8139.ipv4, "\xC0\xA8\x4C\x09", 4); // 192.168.76.9
+	memcpy(rtl8139.gateway_ipv4, "\xC0\xA8\x4C\x02", 4); // 192.168.76.2
 	unsigned char our_mac[] = {inb(io_base), inb(io_base + 1), inb(io_base + 2), inb(io_base + 3), inb(io_base + 4), inb(io_base + 5)};
 	memcpy(rtl8139.mac, our_mac, 6);
 	printk("MAC: %x:%x:%x:%x:%x:%x\n", our_mac[0], our_mac[1], our_mac[2], our_mac[3], our_mac[4], our_mac[5]);
+	printk("IPv4: %u.%u.%u.%u\n", rtl8139.ipv4[0], rtl8139.ipv4[1], rtl8139.ipv4[2], rtl8139.ipv4[3]);
+	printk("Gateway IPv4: %u.%u.%u.%u\n", rtl8139.gateway_ipv4[0], rtl8139.gateway_ipv4[1], rtl8139.gateway_ipv4[2], rtl8139.gateway_ipv4[3]);
 	outb(io_base + OFF_CONFIG1, 0x0); // LWAKE + LWPTN
 	outb(io_base + OFF_CMD, 0x10);	  // Software reset
 	while ((inb(io_base + OFF_CMD) & 0x10) != 0)

@@ -1,0 +1,74 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   syscalls.c                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/01/14 16:48:13 by thrieg            #+#    #+#             */
+/*   Updated: 2026/01/14 17:49:43 by thrieg           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "syscalls.h"
+#include "../interrupts/interrupts.h"
+#include "../libk/libk.h"
+#include <stdarg.h>
+
+static t_syscall_func g_syscall_handlers[1000];
+
+void syscall_dispatcher(t_regs *regs)
+{
+	if (regs->eax >= (sizeof(g_syscall_handlers) / sizeof(t_syscall_func)))
+		kernel_panic("tried to overflow g_syscall_handlers tab (called a syscall with a too high number)\n", regs); // TODO handle in the kfs that asks for syscalls
+	if (g_syscall_handlers[regs->eax])
+	{
+		regs->eax = g_syscall_handlers[regs->eax](regs);
+	}
+	else
+	{
+		printk("received unhandled syscall %u\n", regs->eax);
+		kernel_panic("unhandled syscall", regs); // TODO handle in the kfs that asks for syscalls
+	}
+}
+
+void init_syscalls(void)
+{
+	isr_add_handler(INT_SYSCALLS, syscall_dispatcher);
+}
+
+// unsafe showcase way of calling a syscall from the kernel
+uint32_t syscall_call(uint32_t syscall_nbr, ...)
+{
+	va_list ap;
+	uint32_t a[5] = {0};
+
+	va_start(ap, syscall_nbr);
+	for (int i = 0; i < 5; i++)
+		a[i] = va_arg(ap, uint32_t);
+	va_end(ap);
+
+	uint32_t ret;
+
+	asm volatile(
+		"int $%c[intno]"
+		: "=a"(ret)
+		: [intno] "i"(INT_SYSCALLS),
+		  "a"(syscall_nbr),
+		  "b"(a[0]),
+		  "c"(a[1]),
+		  "d"(a[2]),
+		  "S"(a[3]),
+		  "D"(a[4])
+		: "memory", "cc");
+
+	return ret;
+}
+
+void add_syscall(uint32_t syscall_nbr, t_syscall_func func)
+{
+	if (syscall_nbr < (sizeof(g_syscall_handlers) / sizeof(t_syscall_func)))
+		g_syscall_handlers[syscall_nbr] = func;
+	else
+		kernel_panic("tried to add a syscall with a too high number\n", NULL);
+}

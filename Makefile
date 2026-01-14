@@ -10,7 +10,8 @@ SRCS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o\
 		pmm/pmm.o\
 		pci.o\
 		vmalloc/init_state.o vmalloc/vcalloc.o vmalloc/vfree.o vmalloc/vmalloc.o vmalloc/vrealloc.o vmalloc/kmalloc.o\
-		interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o
+		interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o\
+		syscalls/syscalls.o
 ISO := kfs.iso
 ELF := kfs.elf
 

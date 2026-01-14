@@ -31,6 +31,7 @@ enum interrupt
 	INT_KEYBOARD,
 	INT_SERIAL1 = PIC_OFFSET + 4,
 	INT_NIC = PIC_OFFSET + 11,
+	INT_SYSCALLS = 0x80u,
 };
 
 void kernel_panic(const char *message, t_regs *regs);

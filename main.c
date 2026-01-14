@@ -12,6 +12,7 @@
 #include "vmalloc/vmalloc.h"
 #include "multiboot2.h"
 #include "interrupts/interrupts.h"
+#include "syscalls/syscalls.h"
 
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
@@ -85,6 +86,13 @@ void print_clock(void)
 	vga_set_color(orig_foreground, orig_background);
 }
 
+// showcase function for kfs-4 bonuses, not the actual write syscall
+uint32_t syscall_write(t_regs *regs)
+{
+	write((void *)regs->ebx, regs->ecx);
+	return (0);
+}
+
 void kernel_main(struct s_mb2_info *multi)
 {
 	writes("Initializing...\n");
@@ -94,6 +102,8 @@ void kernel_main(struct s_mb2_info *multi)
 
 	setup_interrupts();
 	writes("Interrupt Descriptor Table loaded.\n");
+	init_syscalls();
+	add_syscall(4, syscall_write);
 
 	paging_init(multi);
 
@@ -106,11 +116,13 @@ void kernel_main(struct s_mb2_info *multi)
 	mem_test_all();
 	pci_init_all();
 
-	writes("Hello world! KFS @ 42\n");
+	uint32_t syscall_ret = syscall_call(4, "Hello world! KFS @ 42\n", strlen("Hello world! KFS @ 42\n"));
+	printk("syscall returned %u\n", syscall_ret);
 	print_clock();
 	writes("\n");
 	writes("> ");
-	while (1) {
+	while (1)
+	{
 		extern void handle_ps2(void);
 		asm volatile("hlt");
 		// this executes after each interrupt exit

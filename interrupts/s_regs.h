@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 14:25:18 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 14:26:11 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/14 17:53:25 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,12 +17,6 @@
 
 typedef struct __attribute__((packed)) t_regs
 {
-	/* segment registers saved by common stub (int_entrypoint.s)*/
-	uint32_t ds;
-	uint32_t es;
-	uint32_t fs;
-	uint32_t gs;
-
 	/* general registers saved by pusha */
 	uint32_t edi;
 	uint32_t esi;
@@ -32,6 +26,12 @@ typedef struct __attribute__((packed)) t_regs
 	uint32_t edx;
 	uint32_t ecx;
 	uint32_t eax;
+
+	/* segment registers saved by common stub (int_entrypoint.s)*/
+	uint32_t ds;
+	uint32_t es;
+	uint32_t fs;
+	uint32_t gs;
 
 	/* pushed by micro-stub (isr_stubs.s) */
 	uint32_t int_no;

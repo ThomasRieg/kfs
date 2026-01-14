@@ -1,7 +1,16 @@
 CFLAGS := -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-SRCS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o tty/tty.o vga/vga.o libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o gdt/gdt.o mem_page/kmap.o mem_page/paging.o mem_page/utils.o mem_page/kmmap.o mem_page/mem_tester.o pmm/pmm.o pci.o vmalloc/init_state.o vmalloc/vcalloc.o vmalloc/vfree.o vmalloc/vmalloc.o vmalloc/vrealloc.o vmalloc/kmalloc.o interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o
+SRCS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o\
+		tty/tty.o\
+		vga/vga.o\
+		libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o\
+		gdt/gdt.o\
+		mem_page/kmap.o mem_page/paging.o mem_page/utils.o mem_page/kmmap.o mem_page/mem_tester.o\
+		pmm/pmm.o\
+		pci.o\
+		vmalloc/init_state.o vmalloc/vcalloc.o vmalloc/vfree.o vmalloc/vmalloc.o vmalloc/vrealloc.o vmalloc/kmalloc.o\
+		interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o
 ISO := kfs.iso
 ELF := kfs.elf
 

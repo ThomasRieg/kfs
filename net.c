@@ -76,7 +76,7 @@ unsigned char *arp_lookup(unsigned char ipv4[4]) {
 		rtl_8139_transmit(&frame, sizeof(frame));
 
 		// waste some cycles and hope we get a reply before then
-		for (int z = 0; z < 100000000; z ++) {}
+		for (int z = 0; z < 100000000; z++) {}
 	}
 	return NULL;
 }

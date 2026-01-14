@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:37:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/14 15:14:29 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/14 18:27:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@ void isr_dispatch_c(t_regs *regs)
 	if (g_isr_handlers[regs->int_no])
 	{
 		g_isr_handlers[regs->int_no](regs);
-		if (regs->int_no > PIC_OFFSET && regs->int_no < (PIC_OFFSET + 16))
+		if (regs->int_no >= PIC_OFFSET && regs->int_no < (PIC_OFFSET + 16))
 			pic_eoi((unsigned char)(regs->int_no & 0xFF));
 	}
 	else

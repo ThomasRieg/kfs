@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:35:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 16:21:07 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/15 17:15:21 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -182,6 +182,7 @@ void pmm_init(void *multiboot2_info)
 			p += mmap->entry_size;
 		}
 	}
+	g_total_frames = g_free_frames; // total physical memory given by grubs before we allocate anythign for our kernel
 
 	// 5) Re-reserve critical regions
 	// - never allocate frame 0

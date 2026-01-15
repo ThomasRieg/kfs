@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 16:26:00 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/15 15:10:55 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,9 +102,3 @@ void timer_handler(__attribute__((unused)) t_regs *regs)
 	// pic_eoi(INT_TIMER);
 }
 
-void serial1_handler(__attribute__((unused)) t_regs *regs)
-{
-	char c = inb(PORT_COM1);
-	tty_add_input(c);
-	// pic_eoi(INT_SERIAL1);
-}

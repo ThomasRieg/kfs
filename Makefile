@@ -1,7 +1,7 @@
 CFLAGS := -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-OBJS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o\
+OBJS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o serial.o\
 		tty/tty.o\
 		vga/vga.o\
 		libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o\

@@ -124,8 +124,10 @@ void kernel_main(struct s_mb2_info *multi)
 	while (1)
 	{
 		extern void handle_ps2(void);
+		extern void handle_serial(void);
 		asm volatile("hlt");
 		// this executes after each interrupt exit
 		handle_ps2();
+		handle_serial();
 	}
 }

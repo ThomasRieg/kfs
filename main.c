@@ -81,8 +81,8 @@ void print_clock(void)
 	uint8_t orig_background;
 	uint8_t orig_foreground;
 	vga_get_color(&orig_foreground, &orig_background);
-	vga_set_color(VGA_CYAN, VGA_YELLOW);
-	printk("date is %u:%u:%u %u/%u/%u\n", hour, minute, second, day, month, century * 100 + year);
+	vga_set_color(VGA_WHITE, VGA_LIGHT_RED);
+	printk("datetime is %u:%u:%u %u/%u/%u\n", hour, minute, second, day, month, century * 100 + year);
 	vga_set_color(orig_foreground, orig_background);
 }
 

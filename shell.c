@@ -67,6 +67,17 @@ void handle_command(unsigned char len, const char *cmd)
 			net_test();
 		} else if (memcmp(cmd, "arp", 3) == 0) {
 			arp_print_table();
+		} else if (memcmp(cmd, "vga", 3) == 0) {
+			for (unsigned int i = 0; i < 16; i++) {
+				for (unsigned int j = 0; j < 16; j++) {
+					vga_set_color(j, i);
+					writes("@");
+					vga_set_color(VGA_WHITE, VGA_BLACK);
+					writes(" ");
+				}
+				writes("\n");
+			}
+			writes("\n");
 		}
 		else
 			found = false;
@@ -91,6 +102,8 @@ void handle_command(unsigned char len, const char *cmd)
 				   "- breakpoint: cause the breakpoint instruction to be executed\n"
 				   "- pci: enumerate all installed PCI devices\n"
 				   "- net: test network capabilities\n"
+				   "- arp: print ARP table\n"
+				   "- vga: print all colour combinations\n"
 				   "- fill-memory: memory tester, tries to allocate the entire available memory and memset it to 0\n");
 		}
 		else if (memcmp(cmd, "date", 4) == 0)

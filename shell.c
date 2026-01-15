@@ -9,7 +9,8 @@
 
 void print_clock(void);
 
-void net_test(void) {
+void net_test(void)
+{
 
 	const unsigned char *gateway_mac = arp_lookup(rtl8139.gateway_ipv4);
 
@@ -18,7 +19,8 @@ void net_test(void) {
 	memcpy(frame.ether.dst_mac, gateway_mac, 6);
 	memcpy(frame.ether.src_mac, rtl8139.mac, 6);
 	frame.ether.ether_type = 0x0080;
-	frame.ipv4.version_ihl = 0x54; frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
+	frame.ipv4.version_ihl = 0x54;
+	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
 	frame.ipv4.ident = 0;
 	frame.ipv4.ttl = 64;
 	frame.ipv4.prot = 1;
@@ -63,13 +65,21 @@ void handle_command(unsigned char len, const char *cmd)
 		if (memcmp(cmd, "pci", 3) == 0)
 		{
 			pci_enumerate();
-		} else if (memcmp(cmd, "net", 3) == 0) {
+		}
+		else if (memcmp(cmd, "net", 3) == 0)
+		{
 			net_test();
-		} else if (memcmp(cmd, "arp", 3) == 0) {
+		}
+		else if (memcmp(cmd, "arp", 3) == 0)
+		{
 			arp_print_table();
-		} else if (memcmp(cmd, "vga", 3) == 0) {
-			for (unsigned int i = 0; i < 16; i++) {
-				for (unsigned int j = 0; j < 16; j++) {
+		}
+		else if (memcmp(cmd, "vga", 3) == 0)
+		{
+			for (unsigned int i = 0; i < 16; i++)
+			{
+				for (unsigned int j = 0; j < 16; j++)
+				{
 					vga_set_color(j, i);
 					writes("@");
 					vga_set_color(VGA_WHITE, VGA_BLACK);
@@ -104,17 +114,25 @@ void handle_command(unsigned char len, const char *cmd)
 				   "- net: test network capabilities\n"
 				   "- arp: print ARP table\n"
 				   "- vga: print all colour combinations\n"
+				   "- free: print how many physical memory frames are left\n"
 				   "- fill-memory: memory tester, tries to allocate the entire available memory and memset it to 0\n");
 		}
 		else if (memcmp(cmd, "date", 4) == 0)
 		{
 			print_clock();
 		}
+		else if (memcmp(cmd, "free", 4) == 0)
+		{
+			extern uint32_t pmm_free_frames(void);
+			extern uint32_t pmm_total_frames(void);
+			printk("%u physical frames left\n", pmm_free_frames());
+		}
 		else
 			found = false;
 		break;
 	case 5:
-		if (memcmp(cmd, "clear", 5) == 0) {
+		if (memcmp(cmd, "clear", 5) == 0)
+		{
 			vga_clear_screen();
 			serial_writes("\33[H\33[2J\33[3J");
 		}
@@ -126,7 +144,8 @@ void handle_command(unsigned char len, const char *cmd)
 			found = false;
 		break;
 	case 6:
-		if (memcmp(cmd, "layout", 6) == 0) {
+		if (memcmp(cmd, "layout", 6) == 0)
+		{
 			void tty_swap_layout(void);
 			tty_swap_layout();
 		}

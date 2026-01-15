@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/08 00:19:00 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 13:44:33 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/15 16:19:29 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -515,6 +515,8 @@ void fill_memory(void)
 		else
 		{
 			printk("memory filled after %u page kmmap'ed\n", nb_alloc);
+			extern uint32_t pmm_free_frames(void);
+			printk("%u physical frames left\n", pmm_free_frames());
 			break;
 		}
 	}

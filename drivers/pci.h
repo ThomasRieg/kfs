@@ -1,8 +1,8 @@
 #ifndef PCI_H
 #define PCI_H
 
-#include "common.h"
-#include "io.h"
+#include "../common.h"
+#include "../io.h"
 
 #define IO_BAR_MASK 0xFFFFFFFC
 

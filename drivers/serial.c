@@ -1,5 +1,5 @@
-#include "tty/tty.h"
-#include "common.h"
+#include "../tty/tty.h"
+#include "../common.h"
 
 static unsigned char c;
 

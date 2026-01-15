@@ -1,4 +1,4 @@
-#include "io.h"
+#include "../io.h"
 
 // 8259 PIC
 // Diagrams stolen from https://os.phil-opp.com/hardware-interrupts/

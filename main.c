@@ -1,6 +1,6 @@
 #include "io.h"
-#include "pci.h"
-#include "pic.h"
+#include "drivers/pci.h"
+#include "drivers/pic.h"
 #include "scancode.h"
 #include "common.h"
 #include "tty/tty.h"

@@ -1,7 +1,7 @@
 #include "pci.h"
-#include "io.h"
-#include "libk/libk.h"
-#include "tty/tty.h"
+#include "../io.h"
+#include "../libk/libk.h"
+#include "../tty/tty.h"
 
 enum pci_vendor {
 	VENDOR_REALTEK = 0x10ec,

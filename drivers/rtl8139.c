@@ -1,10 +1,10 @@
-#include "common.h"
+#include "../common.h"
 #include "pic.h"
-#include "net.h"
+#include "../net.h"
 #include "pci.h"
-#include "tty/tty.h"
-#include "libk/libk.h"
-#include "interrupts/interrupts.h"
+#include "../tty/tty.h"
+#include "../libk/libk.h"
+#include "../interrupts/interrupts.h"
 
 struct rtl8139 rtl8139;
 

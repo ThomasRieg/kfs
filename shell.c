@@ -1,9 +1,9 @@
 #include "libk/libk.h"
 #include "tty/tty.h"
 #include "io.h"
-#include "pci.h"
+#include "drivers/pci.h"
 #include "net.h"
-#include "serial.h"
+#include "drivers/serial.h"
 #include "common.h"
 #include "mem_page/mem_paging.h"
 

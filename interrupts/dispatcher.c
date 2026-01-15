@@ -6,13 +6,13 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:37:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/14 18:27:12 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/15 16:38:44 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "interrupts.h"
 #include "../libk/libk.h"
-#include "../pic.h"
+#include "../drivers/pic.h"
 
 static t_isr_handler g_isr_handlers[256];
 

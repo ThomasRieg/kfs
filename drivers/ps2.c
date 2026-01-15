@@ -1,7 +1,7 @@
-#include "scancode.h"
-#include "tty/tty.h"
-#include "libk/libk.h"
-#include "common.h"
+#include "../scancode.h"
+#include "../tty/tty.h"
+#include "../libk/libk.h"
+#include "../common.h"
 
 static bool shift_held = false;
 static bool caps_lock = false;

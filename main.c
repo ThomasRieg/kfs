@@ -93,6 +93,22 @@ uint32_t syscall_write(t_regs *regs)
 	return (0);
 }
 
+static void print_header(void) {
+	vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
+	vga_writes("\xC9\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBB\n");
+	writes("\xBA                                                                             \xBA\n"
+"\xBA                                                         :::      ::::::::   \xBA\n"
+"\xBA      KFS                                              :+:      :+:    :+:   \xBA\n"
+"\xBA                                                     +:+ +:+         +:+     \xBA\n"
+"\xBA      By: alier & thrieg                           +#+  +:+       +#+        \xBA\n"
+"\xBA                                                 +#+#+#+#+#+   +#+           \xBA\n"
+"\xBA      Welcome to our little kernel!                   #+#    #+#             \xBA\n"
+"\xBA      Use command `help` to get started.             ###   ########.fr       \xBA\n"
+"\xBA                                                                             \xBA\n");
+	vga_writes("\xC8\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBC\n");
+	vga_set_color(VGA_WHITE, VGA_BLACK);
+}
+
 void kernel_main(struct s_mb2_info *multi)
 {
 	writes("Initializing...\n");
@@ -120,6 +136,8 @@ void kernel_main(struct s_mb2_info *multi)
 	printk("syscall returned %u\n", syscall_ret);
 	print_clock();
 	writes("\n");
+
+	print_header();
 	writes("> ");
 	while (1)
 	{

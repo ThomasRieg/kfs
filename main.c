@@ -19,7 +19,7 @@ struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.hdr_len = sizeof(struct multiboot2_header),
 	.checksum = 397258538 - sizeof(struct multiboot2_header)};
 
-void print_cpu_state(t_regs *regs)
+void print_cpu_state(t_interrupt_data *regs)
 {
 	printk("cpu state: \n");
 	printk("ds %u; es %u; fs %u; gs %u\n", regs->ds, regs->es, regs->fs, regs->gs);
@@ -30,7 +30,7 @@ void print_cpu_state(t_regs *regs)
 		printk("useresp %u; ss %u\n", regs->useresp, regs->ss);
 }
 
-__attribute__((noreturn)) void kernel_panic(const char *message, t_regs *regs)
+__attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_data *regs)
 {
 	disable_interrupts();
 	vga_set_color(VGA_RED, VGA_BLACK);
@@ -87,7 +87,7 @@ void print_clock(void)
 }
 
 // showcase function for kfs-4 bonuses, not the actual write syscall
-uint32_t syscall_write(t_regs *regs)
+uint32_t syscall_write(t_interrupt_data *regs)
 {
 	write((void *)regs->ebx, regs->ecx);
 	return (0);

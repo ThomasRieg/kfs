@@ -17,7 +17,7 @@
 
 static t_syscall_func g_syscall_handlers[1000];
 
-void syscall_dispatcher(t_regs *regs)
+void syscall_dispatcher(t_interrupt_data *regs)
 {
 	if (regs->eax >= (sizeof(g_syscall_handlers) / sizeof(t_syscall_func)))
 		kernel_panic("tried to overflow g_syscall_handlers tab (called a syscall with a too high number)\n", regs); // TODO handle in the kfs that asks for syscalls

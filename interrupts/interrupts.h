@@ -36,7 +36,7 @@ typedef struct s_idt_entry_32
 		.offset_2 = ((unsigned int)&handler) >> 16,     \
 	}
 
-typedef void (*t_isr_handler)(t_regs *r);
+typedef void (*t_isr_handler)(t_interrupt_data *r);
 
 void isr_add_handler(uint8_t int_no, t_isr_handler func);
 

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 14:25:18 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/14 17:53:25 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/15 17:07:11 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 
-typedef struct __attribute__((packed)) t_regs
+typedef struct __attribute__((packed)) s_interrupt_data
 {
 	/* general registers saved by pusha */
 	uint32_t edi;
@@ -45,6 +45,6 @@ typedef struct __attribute__((packed)) t_regs
 	/* Only present if coming from lower privilege (user->kernel) (check cs & 3 before using)*/
 	uint32_t useresp;
 	uint32_t ss;
-} t_regs;
+} t_interrupt_data;
 
 #endif

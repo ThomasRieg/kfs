@@ -39,7 +39,7 @@ enum isr {
 	SERR = 1 << 15, // Set to 1 when the RTL8139D(L) signals a system error on the PCI bus.
 };
 
-void rtl8139_handler(__attribute__((unused)) t_regs *regs)
+void rtl8139_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
 	unsigned int io_base = rtl8139.io_base;
 	unsigned short status = inw(io_base + OFF_ISR);

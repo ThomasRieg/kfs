@@ -9,7 +9,7 @@ static bool lctrl_held = false;
 static unsigned char scancode = 0;
 static unsigned char *layout[2] = { scan_code_set_1_qwerty, scan_code_set_1_qwerty_shifted };
 
-void keyboard_handler(__attribute__((unused)) t_regs *regs)
+void keyboard_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
 	scancode = inb(PORT_PS2_DATA);
 	// pic_eoi(INT_KEYBOARD);

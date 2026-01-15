@@ -3,6 +3,7 @@
 #define COMMON_H
 
 #include "io.h"
+#include "task.h"
 
 #include <stddef.h>
 #include "interrupts/s_regs.h"
@@ -34,7 +35,7 @@ enum interrupt
 	INT_SYSCALLS = 0x80u,
 };
 
-void kernel_panic(const char *message, t_regs *regs);
+void kernel_panic(const char *message, t_interrupt_data *regs);
 
 static inline void disable_interrupts(void)
 {

@@ -16,7 +16,7 @@
 
 static t_isr_handler g_isr_handlers[256];
 
-void isr_dispatch_c(t_regs *regs)
+void isr_dispatch_c(t_interrupt_data *regs)
 {
 	if (g_isr_handlers[regs->int_no])
 	{

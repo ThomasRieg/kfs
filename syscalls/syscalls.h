@@ -17,7 +17,7 @@
 #include "../interrupts/s_regs.h"
 
 void init_syscalls(void);
-typedef uint32_t (*t_syscall_func)(t_regs *);
+typedef uint32_t (*t_syscall_func)(t_interrupt_data *);
 void add_syscall(uint32_t syscall_nbr, t_syscall_func func);
 uint32_t syscall_call(uint32_t syscall_nbr, ...);
 

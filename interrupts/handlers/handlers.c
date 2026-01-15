@@ -15,7 +15,7 @@
 #include "../../tty/tty.h"
 #include "../../libk/libk.h"
 
-void print_interrupt_frame(t_regs *regs)
+void print_interrupt_frame(t_interrupt_data *regs)
 {
 	printk("interrupt frame at %p\n", regs);
 	printk("eip %p\n", regs->eip);
@@ -70,7 +70,7 @@ void print_interrupt_frame(t_regs *regs)
 	printk("code segment selector: %u\n", (unsigned int)regs->cs);
 }
 
-void double_fault_handler(t_regs *regs)
+void double_fault_handler(t_interrupt_data *regs)
 {
 	writes("double fault :(\n");
 	print_interrupt_frame(regs);
@@ -78,7 +78,7 @@ void double_fault_handler(t_regs *regs)
 		asm volatile("hlt");
 }
 
-void page_fault_handler(t_regs *regs)
+void page_fault_handler(t_interrupt_data *regs)
 {
 	writes("page fault :(\n");
 	printk("error code: %u\n", regs->err_code);
@@ -90,13 +90,13 @@ void page_fault_handler(t_regs *regs)
 		asm volatile("hlt");
 }
 
-void breakpoint_handler(t_regs *regs)
+void breakpoint_handler(t_interrupt_data *regs)
 {
 	writes("breakpoint\n");
 	print_interrupt_frame(regs);
 }
 
-void timer_handler(__attribute__((unused)) t_regs *regs)
+void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
 	// writes(".");
 	// pic_eoi(INT_TIMER);

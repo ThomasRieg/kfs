@@ -93,6 +93,33 @@ uint32_t syscall_write(t_regs *regs)
 	return (0);
 }
 
+// also removes the line from the tty.cmd
+char *read_line()
+{
+	while (1)
+	{
+		extern void handle_ps2(void);
+		extern void handle_serial(void);
+		asm volatile("hlt");
+		handle_ps2();
+		if (g_ttys[g_current_tty].cmd.index && g_ttys[g_current_tty].cmd.buffer[g_ttys[g_current_tty].cmd.index - 1] == '\r')
+		{
+			g_ttys[g_current_tty].cmd.index--;
+			char *ret = ft_vtoc(&(g_ttys[g_current_tty].cmd));
+			g_ttys[g_current_tty].cmd.index = 0;
+			return (ret);
+		}
+		handle_serial();
+		if (g_ttys[g_current_tty].cmd.index && g_ttys[g_current_tty].cmd.buffer[g_ttys[g_current_tty].cmd.index - 1] == '\r')
+		{
+			g_ttys[g_current_tty].cmd.index--;
+			char *ret = ft_vtoc(&(g_ttys[g_current_tty].cmd));
+			g_ttys[g_current_tty].cmd.index = 0;
+			return (ret);
+		}
+	}
+}
+
 void kernel_main(struct s_mb2_info *multi)
 {
 	writes("Initializing...\n");
@@ -110,24 +137,26 @@ void kernel_main(struct s_mb2_info *multi)
 	setup_pics();
 	writes("PICs configured.\n");
 
+	extern void init_active_tty(void);
+	init_active_tty();
 	enable_interrupts();
 	writes("Hardware interrupts enabled.\n");
 
 	mem_test_all();
 	pci_init_all();
 
-	uint32_t syscall_ret = syscall_call(4, "Hello world! KFS @ 42\n", strlen("Hello world! KFS @ 42\n"));
+	uint32_t syscall_ret = syscall_call(4, "Hello world! KFS @ 42\n", sizeof("Hello world! KFS @ 42\n") - 1);
 	printk("syscall returned %u\n", syscall_ret);
 	print_clock();
 	writes("\n");
 	writes("> ");
 	while (1)
 	{
-		extern void handle_ps2(void);
-		extern void handle_serial(void);
-		asm volatile("hlt");
-		// this executes after each interrupt exit
-		handle_ps2();
-		handle_serial();
+		extern void handle_command(unsigned char len, const char *cmd);
+		char *line = read_line();
+		if (!line)
+			kernel_panic("readline couldn't allocate memory in main loop\n", NULL);
+		handle_command(strlen(line), line);
+		vfree(line);
 	}
 }

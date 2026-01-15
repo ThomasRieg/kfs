@@ -4,7 +4,7 @@ LDFLAGS := -T link.ld -m elf_i386
 OBJS := main.o ps2.o net.o shell.o entry.o pic.o rtl8139.o serial.o\
 		tty/tty.o\
 		vga/vga.o\
-		libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o\
+		libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o libk/ft_vector.o\
 		gdt/gdt.o\
 		mem_page/kmap.o mem_page/paging.o mem_page/utils.o mem_page/kmmap.o mem_page/mem_tester.o\
 		pmm/pmm.o\

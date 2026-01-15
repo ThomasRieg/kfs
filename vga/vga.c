@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:33:35 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 11:35:59 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/15 15:52:00 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,7 +88,7 @@ void vga_writes(const char *str) {
 	update_cursor(g_vga_text_location / 2);
 }
 
-void clear_vga_screen()
+void vga_clear_screen()
 {
 	for (unsigned int i = 0; i < VGA_SIZE - 1; i += 2)
 	{

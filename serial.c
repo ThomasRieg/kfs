@@ -15,3 +15,8 @@ void serial1_handler(__attribute__((unused)) t_regs *regs)
 	c = inb(PORT_COM1);
 	// pic_eoi(INT_SERIAL1);
 }
+
+void serial_writes(const char *str) {
+	for (;*str;str++)
+		outb(PORT_COM1, *str);
+}

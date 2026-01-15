@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:29:07 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/08 11:31:58 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/15 15:51:49 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,6 @@ void vga_writes(const char *str);
 
 void vga_write(const char *str, unsigned int n);
 
-void clear_vga_screen();
+void vga_clear_screen();
 
 #endif

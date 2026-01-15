@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 01:56:38 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 15:51:15 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/15 15:59:50 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,7 +63,7 @@ void next_tty()
 	{
 		g_active_tty++;
 		init_active_tty();
-		clear_vga_screen();
+		vga_clear_screen();
 		writes("> ");
 	}
 }

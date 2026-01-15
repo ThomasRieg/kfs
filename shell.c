@@ -3,6 +3,7 @@
 #include "io.h"
 #include "pci.h"
 #include "net.h"
+#include "serial.h"
 #include "common.h"
 #include "mem_page/mem_paging.h"
 
@@ -100,8 +101,10 @@ void handle_command(unsigned char len, const char *cmd)
 			found = false;
 		break;
 	case 5:
-		if (memcmp(cmd, "clear", 5) == 0)
-			clear_vga_screen();
+		if (memcmp(cmd, "clear", 5) == 0) {
+			vga_clear_screen();
+			serial_writes("\33[H\33[2J\33[3J");
+		}
 		else if (memcmp(cmd, "crash", 5) == 0)
 		{
 			*((unsigned char *)4242424242) = 5;

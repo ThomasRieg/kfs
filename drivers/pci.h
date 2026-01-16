@@ -22,6 +22,7 @@ struct pci_installed {
 	unsigned char class_code;
 	unsigned char subclass;
 	unsigned char header_type;
+	unsigned char prog_if;
 };
 
 // See https://wiki.osdev.org/PCI

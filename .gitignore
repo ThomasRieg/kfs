@@ -4,3 +4,4 @@ kfs.iso
 iso
 *.d
 netdump.pcap
+disk.raw

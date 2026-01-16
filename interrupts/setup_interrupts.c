@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   setup_interrupts.c                                  :+:      :+:    :+:   */
+/*   setup_interrupts.c                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:20:35 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 14:29:07 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 12:14:02 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,8 @@ void setup_interrupts()
 	isr_add_handler(INT_PAGE_FAULT, page_fault_handler);
 	isr_add_handler(INT_SERIAL1, serial1_handler);
 	isr_add_handler(INT_NIC, rtl8139_handler);
+	isr_add_handler(INT_PRIMARY_ATA, ata_handler);
+	isr_add_handler(INT_SECONDARY_ATA, ata_handler);
 	struct descriptor_table_pointer
 	{
 		unsigned short limit;

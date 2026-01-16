@@ -36,10 +36,13 @@ struct pci_installed pci_devices[100];
 unsigned int pci_device_count = 0;
 
 void rtl_8139_init(struct pci_installed *installed);
+void ide_init(struct pci_installed *installed);
 
 void pci_init_device(struct pci_installed *installed) {
 	if (installed->vendor == VENDOR_REALTEK && installed->device == DEVICE_REALTEK_RTL8139) {
 		rtl_8139_init(installed);
+	} else if (installed->vendor == VENDOR_INTEL && installed->device == DEVICE_INTEL_82371SB_IDE) {
+		ide_init(installed);
 	}
 }
 
@@ -63,6 +66,7 @@ void pci_init_all(void) {
 					installed->class_code = class_subclass >> 8;
 					installed->subclass = class_subclass & 0xFF;
 					installed->header_type = pci_config_read_word(bus, slot, function, 14) & 0xFF;
+					installed->prog_if = pci_config_read_word(bus, slot, function, 8) >> 8;
 					if (installed->header_type == 0) {
 						installed->irq = pci_config_read_word(bus, slot, function, 0x3C) & 0xFF;
 						for (unsigned int i = 0; i < 6; i++) {
@@ -94,6 +98,7 @@ void pci_enumerate(void) {
 			unsigned short interrupt_line = installed->irq;
 			if (interrupt_line != 0xFF)
 				printk("  IRQ: %u\n", interrupt_line);
+			printk("  Prog IF: %u\n", installed->prog_if);
 			printk("  BARs: ");
 			for (unsigned int i = 0; i < 6; i++) {
 				unsigned int bar = installed->bars[i];

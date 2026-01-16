@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 18:05:47 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 04:44:30 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,6 +78,7 @@ typedef struct task
 	struct open_file open_files[10];
 	struct regs regs;
 	phys_ptr pd;
+	//TODO struct to keep track of reserved and allocated memory (used to free everything on process end and allocate pmm on page fault)
 } t_task;
 
 #endif

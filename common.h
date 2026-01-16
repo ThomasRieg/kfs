@@ -3,7 +3,6 @@
 #define COMMON_H
 
 #include "io.h"
-#include "task.h"
 
 #include <stddef.h>
 #include "interrupts/s_regs.h"

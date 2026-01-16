@@ -75,12 +75,8 @@ void rtl8139_handler(__attribute__((unused)) t_interrupt_data *regs)
 		printk("length %d\n", length);
 		struct ether *ether = (struct ether *)(start + 4);
 		handle_frame(ether);
-		const char *hex = "0123456789abcdef";
 		// print whole packet with status
-		for (unsigned int i = 0; i < length + 4; i++)
-		{
-			printk("%c%c", hex[start[i] >> 4], hex[start[i] & 0xF]);
-		}
+		hex_dump(start, length + 4);
 		outw(io_base + OFF_CAPR, start - rtl8139.receive_buffer + 4 + length - 16); // mark as read up until now
 	}
 	pic_eoi(INT_NIC);

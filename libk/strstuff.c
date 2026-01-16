@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:58:49 by thrieg            #+#    #+#             */
-/*   Updated: 2025/12/30 13:16:10 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 15:32:09 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,3 +61,10 @@ char invert_caps(char c) {
 	return c;
 }
 
+void hex_dump(unsigned char *data, unsigned int size) {
+	const char *hex = "0123456789abcdef";
+	for (unsigned int i = 0; i < size; i++)
+	{
+		printk("%c%c", hex[data[i] >> 4], hex[data[i] & 0xF]);
+	}
+}

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:48:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/09 17:12:05 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 15:32:17 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,5 +36,6 @@ int printk(const char *str, ...);
 // print stack
 void stack_dump_words(uint32_t bytes);
 void stack_trace_ebp(uint32_t max_frames);
+void hex_dump(unsigned char *data, unsigned int size);
 
 #endif

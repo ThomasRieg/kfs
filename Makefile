@@ -1,4 +1,4 @@
-CFLAGS := -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
+CFLAGS := -std=gnu2x -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
 OBJS := main.o net.o shell.o entry.o \
@@ -14,16 +14,19 @@ OBJS := main.o net.o shell.o entry.o \
 		syscalls/syscalls.o
 ISO := kfs.iso
 ELF := kfs.elf
+DISK_FILE := disk.raw
 
-QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -cdrom $(ISO) -drive id=disk,file=disk.raw,format=raw -m 128M
+QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -cdrom $(ISO) -drive id=disk,file=$(DISK_FILE),format=raw -m 128M
 
-qemu: $(ISO)
-	touch disk.raw
+qemu: $(ISO) $(DISK_FILE)
 	$(QEMU)
 
-debug: $(ISO)
+debug: $(ISO) $(DISK_FILE)
 	set -m; $(QEMU) -s -S &
 	gdb -ix .gdb_init
+
+$(DISK_FILE):
+	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) && mkfs.ext2 $(DISK_FILE)
 
 all: $(ISO)
 
@@ -45,6 +48,6 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re qemu debug
+.PHONY: all clean fclean re qemu debug $(DISK_FILE)
 
 -include $(OBJS:%.o=%.d)

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/01 01:14:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 14:23:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 19:28:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,8 +28,6 @@ extern char __kstack_top;
 #define PDE_COUNT 1024
 #define PTE_COUNT 1024
 
-static inline uint32_t align_up_u32(uint32_t x, uint32_t a) { return (x + a - 1) & ~(a - 1); }
-
 static void print_debug(void)
 {
 	printk("[paging] paging enabled\n");
@@ -49,114 +47,149 @@ static void print_debug(void)
 
 	// PMM bitmap check
 	printk("[paging] pmm bitmap: %p -> %p (%u bytes)\n",
-		   (void *)pmm_bitmap_pa_start(),
-		   (void *)pmm_bitmap_pa_end(),
-		   pmm_bitmap_pa_end() - pmm_bitmap_pa_start());
+		   (void *)pmm_bitmap_va_start(),
+		   (void *)pmm_bitmap_va_end(),
+		   pmm_bitmap_va_end() - pmm_bitmap_va_start());
 
 	// Recursive mapping sanity
 	uint32_t *pd_va = (uint32_t *)PD_VA;
-	printk("[paging] PD_VA[1023] = %p (should point to PD)\n",
+	printk("[paging] PD_VA[1023] = %p (should point to PD physical)\n",
 		   (void *)(pd_va[1023] & 0xFFFFF000));
 
 	printk("[paging] paging init OK\n");
 }
 
-// Map a single 4KB page: VA=PA identity mapping helper (paging not yet enabled, so pointers are physical)
-static void map_page_identity(uint32_t *pd, uint32_t va, uint32_t pa, uint32_t flags)
+static inline void invlpg(void *va)
 {
-	uint32_t pdi = (va >> 22) & 0x3FF;
-	uint32_t pti = (va >> 12) & 0x3FF;
+	__asm__ volatile("invlpg (%0)" : : "r"(va) : "memory");
+}
 
-	if (!(pd[pdi] & PTE_P))
+static void zero_page_va(uint32_t va)
+{
+	volatile uint32_t *p = (volatile uint32_t *)va;
+	for (uint32_t i = 0; i < PAGE_SIZE / 4; i++)
+		p[i] = 0;
+}
+
+extern uint32_t g_bootstrap_end_pa;
+static uint32_t g_bootstrap_pt_next_pa = 0;
+
+static uint32_t alloc_bootstrap_pt_pa(void)
+{
+	if (!g_bootstrap_pt_next_pa)
+		g_bootstrap_pt_next_pa = g_bootstrap_end_pa;
+
+	uint32_t pa = (g_bootstrap_pt_next_pa + (PAGE_SIZE - 1)) & 0xFFFFF000u;
+	uint32_t next = pa + PAGE_SIZE;
+
+	g_bootstrap_pt_next_pa = next;
+	return pa;
+}
+
+/* Map [pa_start, pa_end) into physmap VA=PA+KERNEL_VIRT_BASE */
+void map_range_physmap_runtime(uint32_t pa_start, uint32_t pa_end, uint32_t flags)
+{
+	pa_start &= 0xFFFFF000u;
+	pa_end = (pa_end + PAGE_SIZE - 1) & 0xFFFFF000u;
+
+	volatile uint32_t *pd = (volatile uint32_t *)PD_VA;
+
+	for (uint32_t pa = pa_start; pa < pa_end; pa += PAGE_SIZE)
 	{
-		uint32_t pt_phys = pmm_alloc_frame();
-		// must have memory for page tables; OOM here should be fatal in a kernel.
-		if (!pt_phys)
-			kernel_panic("not enough memory to allocate a page table during init_paging\n", NULL);
+		uint32_t va = pa + KERNEL_VIRT_BASE;
+		uint32_t pdi = (va >> 22) & 0x3FF;
 
-		memset((void *)pt_phys, 0, PAGE_SIZE);				// paging off => identity works
-		pd[pdi] = (pt_phys & 0xFFFFF000u) | PTE_P | PTE_RW; // supervisor RW
+		if (!(pd[pdi] & PTE_P))
+		{
+			uint32_t pt_pa = alloc_bootstrap_pt_pa();
+			if (!pt_pa)
+				for (;;)
+					__asm__ volatile("hlt"); // or kernel_panic later
+
+			/* Make sure this PT page is mapped so we can zero it.
+			   Two ways:
+			   - if identity mapping still exists for pt_pa, you can write via (void*)pt_pa
+			   - otherwise write via physmap VA: pt_pa + KERNEL_VIRT_BASE
+			*/
+			zero_page_va(pt_pa + KERNEL_VIRT_BASE);
+
+			pd[pdi] = (pt_pa & 0xFFFFF000u) | (flags & 0xFFFu) | PTE_P | PTE_RW;
+
+			/* Flush PD entry effect */
+			invlpg((void *)(PT_BASE_VA + pdi * PAGE_SIZE)); // conservative
+		}
+
+		volatile uint32_t *pte = get_pte((virt_ptr)va);
+		*pte = (pa & 0xFFFFF000u) | (flags & 0xFFFu) | PTE_P;
+		invlpg((void *)va);
 	}
-
-	uint32_t pt_phys = pd[pdi] & 0xFFFFF000u;
-	uint32_t *pt = (uint32_t *)pt_phys; // paging off identity
-	pt[pti] = (pa & 0xFFFFF000u) | (flags & 0xFFFu);
 }
 
-// Identity map [start, end) (end exclusive), page-granular
-static void idmap_range(uint32_t *pd, uint32_t start, uint32_t end, uint32_t flags)
+static inline virt_ptr pt_window_va(phys_ptr pdi)
 {
-	start &= 0xFFFFF000u;
-	end = align_up_u32(end, PAGE_SIZE);
-	for (uint32_t a = start; a < end; a += PAGE_SIZE)
-		map_page_identity(pd, a, a, flags);
+	return (virt_ptr)(PT_BASE_VA + pdi * PAGE_SIZE);
 }
 
-/*
- * paging_init(mbi):
- * - assumes paging currently OFF
- * - builds a new PD/PT structure using PMM frames
- * - identity maps enough memory to keep everything stable right after enabling paging
- * - enables paging
- * - installs recursive mapping PD[1023] so PD_VA/PT_BASE_VA work
- */
+// allocate all kernel_space PDEs so processes have valid kernel virtual address space
+static void ensure_kernel_pdes(void)
+{
+	volatile uint32_t *pd = (volatile uint32_t *)PD_VA;
+	uint32_t start = (KERNEL_VIRT_BASE >> 22) & 0x3FFu;
+
+	for (uint32_t pdi = start; pdi < 1023; pdi++)
+	{
+		if (pd[pdi] & PTE_P)
+			continue;
+
+		phys_ptr pt_pa = pmm_alloc_frame();
+		if (!pt_pa)
+			kernel_panic("OOM allocating kernel page table\n", NULL);
+
+		/* Install PDE first */
+		pd[pdi] = ((uint32_t)pt_pa & 0xFFFFF000u) | PTE_P | PTE_RW;
+
+		/* Now the PT page is reachable via the recursive PT window */
+		invlpg(pt_window_va(pdi));
+		memset(pt_window_va(pdi), 0, PAGE_SIZE);
+	}
+}
+
+static inline uint32_t read_esp(void)
+{
+	uint32_t v;
+	__asm__ volatile("movl %%esp, %0" : "=r"(v));
+	return v;
+}
+
+static void unmap_low_identity(void)
+{
+	volatile uint32_t *pd = (volatile uint32_t *)PD_VA;
+
+	uint32_t kstart = (KERNEL_VIRT_BASE >> 22) & 0x3FFu;
+
+	for (uint32_t pdi = 0; pdi < kstart; pdi++)
+	{
+		/* don't touch recursive entry */
+		if (pdi == 1023)
+			continue;
+
+		pd[pdi] = 0;
+		invlpg((void *)(PT_BASE_VA + pdi * PAGE_SIZE));
+	}
+	printk("ESP=%p\n", (void *)read_esp());
+	reload_cr3();
+}
+
+// remove the bootstrap low-va identity map and inits the pmm
 void paging_init(void *multiboot2_info)
 {
 	// 1) Init PMM first (uses physical==virtual right now)
 	pmm_init(multiboot2_info);
 
-	// 2) Allocate page directory frame
-	uint32_t pd_phys = pmm_alloc_frame();
-	if (!pd_phys)
-		kernel_panic("not enough memory to allocate the page directory during init_paging\n", NULL);
-	uint32_t *pd = (uint32_t *)pd_phys;
-	memset(pd, 0, PAGE_SIZE);
+	// allocate all kernel PDE so processes have valid addresses for all kernel_space
+	ensure_kernel_pdes();
 
-	// 3) Compute what we must identity-map to survive the switch
-	// uint32_t kernel_start = (uint32_t)(uintptr_t)&__kernel_start;
-	uint32_t kernel_end = (uint32_t)(uintptr_t)&__kernel_end;
-
-	// uint32_t stack_bot = (uint32_t)(uintptr_t)&__kstack_bottom;
-	uint32_t stack_top = (uint32_t)(uintptr_t)&__kstack_top;
-
-	// uint32_t bmp_start = pmm_bitmap_pa_start();
-	uint32_t bmp_end = pmm_bitmap_pa_end();
-
-	// multiboot2 info region
-	t_mb2_info *mbi = (t_mb2_info *)multiboot2_info;
-	uint32_t mbi_start = (uint32_t)(uintptr_t)mbi;
-	uint32_t mbi_end = mbi_start + mbi->total_size;
-
-	// VGA text buffer physical
-	// uint32_t vga_start = (uint32_t)(uintptr_t)g_vga_text_buf;
-	uint32_t vga_end = (uint32_t)(uintptr_t)g_vga_text_buf + VGA_SIZE;
-
-	// idmap_end = max of everything you need
-	uint32_t idmap_end = kernel_end;
-	if (stack_top > idmap_end)
-		idmap_end = stack_top;
-	if (bmp_end > idmap_end)
-		idmap_end = bmp_end;
-	if (mbi_end > idmap_end)
-		idmap_end = mbi_end;
-	if (vga_end > idmap_end)
-		idmap_end = vga_end;
-
-	// Make it page-aligned
-	idmap_end = align_up_u32(idmap_end, PAGE_SIZE);
-
-	// 4) Identity-map critical low memory
-	idmap_range(pd, 0x00000000u, idmap_end, PTE_P | PTE_RW);
-
-	// 5) Recursive mapping (map page directory physical addresses at the end of virtual memory)
-	pd[1023] = (pd_phys & 0xFFFFF000u) | PTE_P | PTE_RW;
-
-	// 6) Load CR3 and enable paging (CR0.PG)
-	write_cr3(pd_phys);
-
-	uint32_t cr0 = read_cr0();
-	cr0 |= 0x80000000u; // PG
-	cr0 |= 0x10000;		// WP
-	write_cr0(cr0);
+	// unmap the low-va identity map
+	unmap_low_identity();
 	print_debug();
 }

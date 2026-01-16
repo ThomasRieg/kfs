@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:35:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 17:15:21 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 19:38:04 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,8 +18,8 @@
 #include "../gdt/gdt.h"
 
 // defined in linker script:
-extern char __kernel_start;
-extern char __kernel_end;
+extern char __kernel_start_phys;
+extern char __kernel_end_phys;
 
 static inline uint32_t align_up_u32(uint32_t x, uint32_t a) { return (x + a - 1) & ~(a - 1); }
 // static inline uint32_t align_dn_u32(uint32_t x, uint32_t a)   { return x & ~(a - 1); }
@@ -122,6 +122,35 @@ static const t_mb2_tag_mmap *find_mmap_tag(const t_mb2_info *mbi)
 	return 0;
 }
 
+static uint32_t g_usable_frames = 0;
+
+static uint32_t count_usable_frames(const t_mb2_tag_mmap *mmap)
+{
+	uint64_t sum = 0;
+	if (!mmap)
+		return 0;
+
+	const uint8_t *p = (const uint8_t *)mmap + sizeof(*mmap);
+	const uint8_t *end = (const uint8_t *)mmap + mmap->size;
+
+	while (p + mmap->entry_size <= end)
+	{
+		const t_mb2_mmap_entry *e = (const t_mb2_mmap_entry *)p;
+		if (e->type == MB2_MMAP_AVAILABLE)
+		{
+			uint64_t start = align_up_u64(e->addr, PAGE_SIZE);
+			uint64_t stop = align_dn_u64(e->addr + e->len, PAGE_SIZE);
+			if (stop > start)
+				sum += (stop - start);
+		}
+		p += mmap->entry_size;
+	}
+	return (uint32_t)(sum / PAGE_SIZE);
+}
+
+extern uint32_t g_bootstrap_end_pa;
+
+// need to still have the low-va identity map from the bootstrap paging init
 void pmm_init(void *multiboot2_info)
 {
 	const t_mb2_info *mbi = (const t_mb2_info *)multiboot2_info;
@@ -131,6 +160,7 @@ void pmm_init(void *multiboot2_info)
 	uint64_t max_end = 0;
 	if (mmap)
 	{
+		g_usable_frames = count_usable_frames(mmap);
 		const uint8_t *p = (const uint8_t *)mmap + sizeof(t_mb2_tag_mmap);
 		const uint8_t *end = (const uint8_t *)mmap + mmap->size;
 
@@ -144,18 +174,22 @@ void pmm_init(void *multiboot2_info)
 		}
 	}
 
-	if (max_end < (uint64_t)(uintptr_t)&__kernel_end)
+	if (max_end < (uint64_t)(uintptr_t)&__kernel_end_phys)
 	{
-		max_end = (uint64_t)(uintptr_t)&__kernel_end;
+		max_end = (uint64_t)(uintptr_t)&__kernel_end_phys;
 	}
 
 	g_total_frames = (uint32_t)(align_up_u64(max_end, PAGE_SIZE) / PAGE_SIZE);
 	g_bitmap_bytes = (g_total_frames + 7u) / 8u;
 
 	// 2) Place bitmap right after kernel end (early boot identity mapping assumed)
-	g_bmp_start = align_up_u32((uint32_t)(uintptr_t)&__kernel_end, PAGE_SIZE);
-	g_bmp_end = align_up_u32(g_bmp_start + (uint32_t)g_bitmap_bytes, PAGE_SIZE);
+	uint32_t bmp_start_phys = align_up_u32((uint32_t)(uintptr_t)g_bootstrap_end_pa, PAGE_SIZE);
+	uint32_t bmp_end_phys = align_up_u32(bmp_start_phys + (uint32_t)g_bitmap_bytes, PAGE_SIZE);
 
+	extern void map_range_physmap_runtime(uint32_t pa_start, uint32_t pa_end, uint32_t flags);
+	map_range_physmap_runtime(bmp_start_phys, bmp_end_phys, PTE_P | PTE_RW);
+	g_bmp_start = bmp_start_phys + KERNEL_VIRT_BASE;
+	g_bmp_end = bmp_end_phys + KERNEL_VIRT_BASE;
 	g_bitmap = (uint8_t *)(uintptr_t)g_bmp_start;
 
 	// 3) Mark everything used initially
@@ -182,22 +216,24 @@ void pmm_init(void *multiboot2_info)
 			p += mmap->entry_size;
 		}
 	}
-	g_total_frames = g_free_frames; // total physical memory given by grubs before we allocate anythign for our kernel
 
 	// 5) Re-reserve critical regions
 	// - never allocate frame 0
 	mark_used_range(0, PAGE_SIZE);
 
 	// - reserve kernel image itself
-	mark_used_range((uint32_t)(uintptr_t)&__kernel_start, (uint32_t)(uintptr_t)&__kernel_end);
+	mark_used_range((uint32_t)(uintptr_t)&__kernel_start_phys, (uint32_t)(uintptr_t)&__kernel_end_phys);
+
+	// reserve the page directory and page tables allocated by boot_init
+	mark_used_range((uint32_t)(uintptr_t)&__kernel_end_phys, g_bootstrap_end_pa);
 
 	// - reserve the bitmap storage itself
-	mark_used_range(g_bmp_start, g_bmp_end);
+	mark_used_range(bmp_start_phys, bmp_end_phys);
 
 	// - reserve the VGA screen info
 	mark_used_range((uint32_t)(uintptr_t)g_vga_text_buf, (uint32_t)(uintptr_t)g_vga_text_buf + VGA_SIZE);
 
-	// should be withint the first page anyway, but let's be robust
+	// should be within the first page anyway, but let's be robust
 	mark_used_range(GDT_START, GDT_END);
 
 	// - reserve multiboot info structure region
@@ -358,6 +394,11 @@ uint32_t pmm_total_frames(void)
 	return g_total_frames;
 }
 
+uint32_t pmm_usable_frames(void)
+{
+	return g_usable_frames;
+}
+
 uint32_t pmm_free_frames(void) { return g_free_frames; }
-uint32_t pmm_bitmap_pa_start(void) { return g_bmp_start; }
-uint32_t pmm_bitmap_pa_end(void) { return g_bmp_end; }
+uint32_t pmm_bitmap_va_start(void) { return g_bmp_start; }
+uint32_t pmm_bitmap_va_end(void) { return g_bmp_end; }

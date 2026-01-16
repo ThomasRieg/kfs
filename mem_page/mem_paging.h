@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 19:37:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 14:29:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 18:29:15 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,6 +35,7 @@ void invalidate_cache(virt_ptr va);
 uint32_t *get_pte(virt_ptr va);
 
 void write_cr3(phys_ptr phys);
+void reload_cr3(void);
 
 uint32_t read_cr0(void);
 

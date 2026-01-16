@@ -11,6 +11,9 @@ typedef _Bool bool;
 #define false 0
 #define true 1
 
+#define KERNEL_PHYS_BASE 0x00200000u // must match linker
+#define KERNEL_VIRT_BASE 0xC0000000u // must match linker
+
 typedef void *virt_ptr;
 typedef uint32_t phys_ptr;
 

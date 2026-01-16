@@ -120,18 +120,19 @@ char *read_line()
 	}
 }
 
-static void print_header(void) {
+static void print_header(void)
+{
 	vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
 	vga_writes("\xC9\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBB\n");
 	writes("\xBA                                                                             \xBA\n"
-"\xBA                                                         :::      ::::::::   \xBA\n"
-"\xBA      KFS                                              :+:      :+:    :+:   \xBA\n"
-"\xBA                                                     +:+ +:+         +:+     \xBA\n"
-"\xBA      By: alier & thrieg                           +#+  +:+       +#+        \xBA\n"
-"\xBA                                                 +#+#+#+#+#+   +#+           \xBA\n"
-"\xBA      Welcome to our little kernel!                   #+#    #+#             \xBA\n"
-"\xBA      Use command `help` to get started.             ###   ########.fr       \xBA\n"
-"\xBA                                                                             \xBA\n");
+		   "\xBA                                                         :::      ::::::::   \xBA\n"
+		   "\xBA      KFS                                              :+:      :+:    :+:   \xBA\n"
+		   "\xBA                                                     +:+ +:+         +:+     \xBA\n"
+		   "\xBA      By: alier & thrieg                           +#+  +:+       +#+        \xBA\n"
+		   "\xBA                                                 +#+#+#+#+#+   +#+           \xBA\n"
+		   "\xBA      Welcome to our little kernel!                   #+#    #+#             \xBA\n"
+		   "\xBA      Use command `help` to get started.             ###   ########.fr       \xBA\n"
+		   "\xBA                                                                             \xBA\n");
 	vga_writes("\xC8\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBC\n");
 	vga_set_color(VGA_WHITE, VGA_BLACK);
 }
@@ -141,6 +142,8 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Initializing...\n");
 
 	gdt_install_basic();
+	paging_init(multi);
+
 	writes("GDT installed.\n");
 
 	setup_interrupts();
@@ -148,15 +151,15 @@ void kernel_main(struct s_mb2_info *multi)
 	init_syscalls();
 	add_syscall(4, syscall_write);
 
-	paging_init(multi);
-
 	setup_pics();
 	writes("PICs configured.\n");
 
 	extern void init_active_tty(void);
 	init_active_tty();
+
 	enable_interrupts();
 	writes("Hardware interrupts enabled.\n");
+	asm volatile("int3");
 
 	mem_test_all();
 	pci_init_all();

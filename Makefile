@@ -1,7 +1,7 @@
 CFLAGS := -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-OBJS := main.o net.o shell.o entry.o \
+OBJS := main.o net.o shell.o entry.o boot_init.o \
 		drivers/ps2.o drivers/pci.o drivers/pic.o drivers/rtl8139.o drivers/serial.o drivers/ide.o\
 		tty/tty.o\
 		vga/vga.o\

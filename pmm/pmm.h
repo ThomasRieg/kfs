@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:33:40 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 15:46:36 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 19:38:19 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,8 @@ void pmm_free_frame_from_va(virt_ptr va);
 
 uint32_t pmm_total_frames(void);
 uint32_t pmm_free_frames(void);
-uint32_t pmm_bitmap_pa_start(void);
-uint32_t pmm_bitmap_pa_end(void);
+uint32_t pmm_bitmap_va_start(void);
+uint32_t pmm_bitmap_va_end(void);
+uint32_t pmm_usable_frames(void);
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 20:24:25 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/07 13:47:00 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/16 18:29:03 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,13 @@ uint32_t read_cr0(void)
 	uint32_t v;
 	asm volatile("mov %%cr0, %0" : "=r"(v));
 	return v;
+}
+
+void reload_cr3(void)
+{
+	uint32_t cr3;
+	asm volatile("movl %%cr3, %0" : "=r"(cr3));
+	asm volatile("movl %0, %%cr3" : : "r"(cr3) : "memory");
 }
 
 void write_cr0(uint32_t v)

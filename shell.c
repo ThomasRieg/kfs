@@ -125,7 +125,7 @@ void handle_command(unsigned char len, const char *cmd)
 		{
 			extern uint32_t pmm_free_frames(void);
 			extern uint32_t pmm_usable_frames(void);
-			printk("%u physical frames left ou of %u total frames\n", pmm_free_frames(), pmm_usable_frames());
+			printk("%u physical frames left out of %u total frames\n", pmm_free_frames(), pmm_usable_frames());
 		}
 		else
 			found = false;

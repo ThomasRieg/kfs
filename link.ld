@@ -48,7 +48,7 @@ SECTIONS
 		. = ALIGN(4K);
 		__kstack_bottom = .;
 		__kstack_bottom_phys = __kstack_bottom - KERNEL_VIRT_BASE;
-		. = . + 16384;
+		. = . + 64K;
 		__kstack_top = .;
 		__kstack_top_phys = __kstack_top - KERNEL_VIRT_BASE;
 	}

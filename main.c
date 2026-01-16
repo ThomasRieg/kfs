@@ -159,7 +159,6 @@ void kernel_main(struct s_mb2_info *multi)
 
 	enable_interrupts();
 	writes("Hardware interrupts enabled.\n");
-	asm volatile("int3");
 
 	mem_test_all();
 	pci_init_all();

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 15:10:55 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/19 19:41:09 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,10 +95,3 @@ void breakpoint_handler(t_interrupt_data *regs)
 	writes("breakpoint\n");
 	print_interrupt_frame(regs);
 }
-
-void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
-{
-	// writes(".");
-	// pic_eoi(INT_TIMER);
-}
-

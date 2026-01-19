@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/19 19:10:44 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/19 20:14:00 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,7 +63,7 @@ phys_ptr copy_current_pd()
 	virt_ptr tmp = kmap(pd);
 	memset(tmp, 0, PAGE_SIZE);
 	uint32_t *pde = (uint32_t *)tmp;
-	for (uint32_t i = 0; i < 1023; i++)
+	for (uint32_t i = ((KERNEL_VIRT_BASE >> 22) & 0x3FFu); i < 1023; i++)
 	{
 		uint32_t *kernel_pde = (uint32_t *)PD_VA;
 		if ((kernel_pde[i] & PTE_P) && !(kernel_pde[i] & PTE_US))
@@ -114,4 +114,33 @@ void context_switch(t_task *next)
 	tss_set_kernel_stack((uintptr_t)&(next->k_stack[sizeof(next->k_stack)]));
 	write_cr3(next->pd);
 	switch_esp_to(next->k_esp); // then iret path restores regs
+}
+
+void schedule_next_task()
+{
+	if (!g_curr_task)
+		return;
+	t_task *next = g_curr_task->next;
+	while (next != g_curr_task)
+	{
+		if (next->status == STATUS_RUNNABLE)
+		{
+			context_switch(next);
+			return;
+		}
+		next = next->next;
+	}
+	return; // didn't find any other runnable task, don't context switch (continue current)
+}
+
+static uint32_t g_tick;
+
+void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
+{
+	g_tick++;
+	if (g_tick >= NB_TICKS_PER_TASK)
+	{
+		g_tick = 0;
+		schedule_next_task();
+	}
 }

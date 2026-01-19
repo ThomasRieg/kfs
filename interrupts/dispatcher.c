@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:37:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/19 18:47:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/19 20:08:34 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,12 +20,15 @@ static t_isr_handler g_isr_handlers[256];
 
 void isr_dispatch_c(t_interrupt_data *regs)
 {
-	tss_set_kernel_stack((uintptr_t)&(g_curr_task->k_stack[sizeof(g_curr_task->k_stack)]));
+	if (g_curr_task)
+	{
+		g_curr_task->k_esp = (uintptr_t)regs;
+	}
 	if (g_isr_handlers[regs->int_no])
 	{
-		g_isr_handlers[regs->int_no](regs);
 		if (regs->int_no >= PIC_OFFSET && regs->int_no < (PIC_OFFSET + 16))
-			pic_eoi((unsigned char)(regs->int_no & 0xFF));
+			pic_eoi((unsigned char)(regs->int_no & 0xFF)); // send before handler in case of a context switch in the handler
+		g_isr_handlers[regs->int_no](regs);
 	}
 	else
 	{

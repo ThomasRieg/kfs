@@ -6,13 +6,7 @@
 
 .section .boot, "ax"
 _start:
-	movl $0xB8000, %edi
-    movb $'A', (%edi)
-    movb $0x0F, 1(%edi)
     movl $__kstack_top_phys, %esp
-	movl $0xB8000, %edi
-    movb $'B', (%edi)
-    movb $0x0F, 1(%edi)
     pushl %ebx
     call boot_main_low
 

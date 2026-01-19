@@ -16,7 +16,7 @@ ISO := kfs.iso
 ELF := kfs.elf
 DISK_FILE := disk.raw
 
-QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -cdrom $(ISO) -drive id=disk,file=$(DISK_FILE),format=raw -m 256M
+QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 256M
 
 qemu: $(ISO) $(DISK_FILE)
 	$(QEMU)
@@ -25,8 +25,13 @@ debug: $(ISO) $(DISK_FILE)
 	set -m; $(QEMU) -s -S &
 	gdb -ix .gdb_init
 
+# yes.
 $(DISK_FILE):
-	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) && mkfs.ext2 $(DISK_FILE)
+	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
+		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
+		OFFSET=$$(parted -s $(DISK_FILE) unit B print \
+  | awk '/^ 1/ { gsub("B","",$$2); print $$2 }') &&\
+		mkfs.ext2 -F -E offset=$$OFFSET $(DISK_FILE)
 
 all: $(ISO)
 

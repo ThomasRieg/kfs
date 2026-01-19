@@ -205,11 +205,10 @@ void ext2(struct drive *drive, unsigned int lba_start, unsigned int total_sector
 		return;
 	union ext2_super_block sb;
 	ide_read_sector(drive, lba_start + 2, sb.buf);
-	ide_read_sector(drive, lba_start + 3, sb.buf + 1024);
+	ide_read_sector(drive, lba_start + 3, sb.buf + 512);
 
 	printk("ext2 header: total inodes %u, total blocks %u, blocks reserved for SU %u last mount time %u", sb.total_inodes,
 			sb.total_blocks, sb.reserved_blocks, sb.last_mount);
-
 }
 
 void ide_init(struct pci_installed *installed) {

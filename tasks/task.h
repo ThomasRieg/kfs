@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 04:44:30 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/19 17:27:27 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,19 +55,6 @@ struct open_file
 	};
 };
 
-struct regs
-{
-	unsigned int eax;
-	unsigned int ebx;
-	unsigned int ecx;
-	unsigned int edx;
-	unsigned int esi;
-	unsigned int edi;
-	unsigned int ebp;
-	unsigned int esp;
-	unsigned int eip;
-};
-
 typedef struct task
 {
 	enum task_status status;
@@ -76,9 +63,12 @@ typedef struct task
 	unsigned int user_id;
 	unsigned int pending_signals;
 	struct open_file open_files[10];
-	struct regs regs;
 	phys_ptr pd;
-	//TODO struct to keep track of reserved and allocated memory (used to free everything on process end and allocate pmm on page fault)
+	uint32_t k_esp;
+	uint8_t k_stack[8096]; // stack tss will returns to on interrupt
+						   // TODO struct to keep track of reserved and allocated memory (used to free everything on process end and allocate pmm on page fault)
 } t_task;
+
+extern t_task *g_curr_task;
 
 #endif

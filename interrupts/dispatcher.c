@@ -6,18 +6,21 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:37:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 16:38:44 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/19 18:47:04 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "interrupts.h"
 #include "../libk/libk.h"
 #include "../drivers/pic.h"
+#include "../tasks/task.h"
+#include "../gdt/gdt.h"
 
 static t_isr_handler g_isr_handlers[256];
 
 void isr_dispatch_c(t_interrupt_data *regs)
 {
+	tss_set_kernel_stack((uintptr_t)&(g_curr_task->k_stack[sizeof(g_curr_task->k_stack)]));
 	if (g_isr_handlers[regs->int_no])
 	{
 		g_isr_handlers[regs->int_no](regs);

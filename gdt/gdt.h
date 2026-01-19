@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/24 00:04:29 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 17:14:15 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/19 19:34:19 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,10 @@
 #define GDT_H
 
 #define GDT_START 0x800 // physical address, add KERNEL_VIRT_BASE to access it after paging_init
-#define GDT_END GDT_START + (7 * sizeof(t_gdt_entry_32))
+#define GDT_NB_ENTRY 8
+#define GDT_END GDT_START + (GDT_NB_ENTRY * sizeof(t_gdt_entry_32))
+
+#include "../common.h"
 
 // Selectors (index * 8):
 // 0x00 null
@@ -24,6 +27,7 @@
 // 0x20 user data
 // 0x28 user code
 // 0x30 user stack
+// 0x38 tss
 enum
 {
 	GDT_SEL_NULL = 0x00,
@@ -33,6 +37,7 @@ enum
 	GDT_SEL_UDATA = 0x20,
 	GDT_SEL_UCODE = 0x28,
 	GDT_SEL_USTACK = 0x30,
+	GDT_SEL_TSS = 0x38,
 };
 
 typedef struct s_gdt_entry_32
@@ -50,6 +55,36 @@ typedef struct s_gdt_ptr_32
 	unsigned short limit;
 	unsigned int base;
 } __attribute__((packed)) t_gdt_ptr_32;
+
+typedef struct __attribute__((packed)) s_tss32
+{
+	uint32_t prev_tss;
+
+	uint32_t esp0;
+	uint32_t ss0;
+
+	uint32_t esp1;
+	uint32_t ss1;
+
+	uint32_t esp2;
+	uint32_t ss2;
+
+	uint32_t cr3;
+	uint32_t eip;
+	uint32_t eflags;
+
+	uint32_t eax, ecx, edx, ebx;
+	uint32_t esp, ebp, esi, edi;
+
+	uint32_t es, cs, ss, ds, fs, gs;
+
+	uint32_t ldt;
+	uint16_t trap;
+	uint16_t iomap_base;
+} t_tss32;
+
+void tss_init(void);
+void tss_set_kernel_stack(uint32_t esp0);
 
 void gdt_install_basic(void);
 

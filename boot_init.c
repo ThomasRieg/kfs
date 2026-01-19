@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 16:14:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 18:50:19 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/19 15:49:48 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,10 +128,6 @@ uint32_t g_bootstrap_end_pa = 0;
  */
 __attribute__((section(".boot"))) void boot_main_low(void *mbi)
 {
-	asm volatile("movl $0xB8000, %edi");
-	asm volatile("movb $'C', (%edi)");
-	asm volatile("movb $0x0F, 1(%edi)");
-
 	/* 1) Choose scratch memory after kernel end (physical), aligned */
 	uint32_t kernel_start_pa = (uint32_t)(uintptr_t)&__kernel_start_phys;
 	uint32_t kernel_end_pa = (uint32_t)(uintptr_t)&__kernel_end_phys;

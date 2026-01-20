@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   memstuff.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:50:39 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 01:48:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 15:25:22 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -155,51 +155,51 @@ phys_ptr get_phys_ptr(virt_ptr va)
 
 static inline uint32_t align_down_u32(uint32_t x, uint32_t a)
 {
-    return x & ~(a - 1u);
+	return x & ~(a - 1u);
 }
 
 static inline uint32_t align_up_u32(uint32_t x, uint32_t a)
 {
-    return (x + a - 1u) & ~(a - 1u);
+	return (x + a - 1u) & ~(a - 1u);
 }
 
 #include "../mem_page/mem_defines.h"
 #include "../mem_page/mem_paging.h"
 
-//returns true if process have access to a zone
+// returns true if process have access to a zone
 bool user_range_ok(virt_ptr uaddr, uint32_t size, bool write)
 {
-    if (size == 0)
-        return 1;
+	if (size == 0)
+		return 1;
 
-    if (uaddr >= KERNEL_VIRT_BASE)
-        return 0;
+	if ((uintptr_t)uaddr >= KERNEL_VIRT_BASE)
+		return 0;
 
-    uint32_t end = (uintptr_t)uaddr + size;
-    if (end < (uintptr_t)uaddr)           // overflow
-        return 0;
-    if (end > KERNEL_VIRT_BASE)           // crosses into kernel
-        return 0;
+	uint32_t end = (uintptr_t)uaddr + size;
+	if (end < (uintptr_t)uaddr) // overflow
+		return 0;
+	if (end > KERNEL_VIRT_BASE) // crosses into kernel
+		return 0;
 
-    uint32_t start_page = align_down_u32((uintptr_t)uaddr, PAGE_SIZE);
-    uint32_t end_page   = align_up_u32(end, PAGE_SIZE);
+	uint32_t start_page = align_down_u32((uintptr_t)uaddr, PAGE_SIZE);
+	uint32_t end_page = align_up_u32(end, PAGE_SIZE);
 
-    for (uint32_t va = start_page; va < end_page; va += PAGE_SIZE)
-    {
-        uint32_t *pte = get_pte((virt_ptr)va);
-        if (!pte)
-            return 0;
+	for (uint32_t va = start_page; va < end_page; va += PAGE_SIZE)
+	{
+		uint32_t *pte = get_pte((virt_ptr)va);
+		if (!pte)
+			return 0;
 
-        uint32_t p = *pte;
+		uint32_t p = *pte;
 
-        // Must be mapped and user-accessible
-        if (!(p & PTE_P))
-            return 0;
-        if (!(p & PTE_US))
-            return 0;
+		// Must be mapped and user-accessible
+		if (!(p & PTE_P))
+			return 0;
+		if (!(p & PTE_US))
+			return 0;
 
-        if (write && !(p & PTE_RW))
-            return 0;
-    }
-    return 1;
+		if (write && !(p & PTE_RW))
+			return 0;
+	}
+	return 1;
 }

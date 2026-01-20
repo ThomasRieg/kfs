@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 01:23:30 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 15:35:50 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 #include "../mem_page/mem_defines.h"
 #include "../libk/libk.h"
 #include "../gdt/gdt.h"
+#include "../vmalloc/vmalloc.h"
 
 t_task *g_curr_task = 0;
 static uint32_t g_next_pid;
@@ -75,7 +76,7 @@ phys_ptr copy_current_pd()
 	return (pd);
 }
 
-//task has to be allocated by vmalloc
+// task has to be allocated by vmalloc
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id)
 {
 	task->pending_signals = 0;
@@ -146,15 +147,15 @@ void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
 	}
 }
 
-//does not free the task struct itself
-void cleanup_task(t_task *task)
+// does not free the task struct itself
+void cleanup_task(__attribute__((unused)) t_task *task)
 {
-	//TODO implement (clean up memory, fd and everything
+	// TODO implement (clean up memory, fd and everything
 }
 
-//call whean reaping a zombie task that already has been called in cleanup_task
-static void task_reap_zombie(t_task *t)
+// call whean reaping a zombie task that already has been called in cleanup_task
+void task_reap_zombie(t_task *t)
 {
-	//TODO link prev task to next task in scheduler linked list
-    vfree(t);
+	// TODO link prev task to next task in scheduler linked list
+	vfree(t);
 }

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/08 00:19:00 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 19:40:07 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/19 20:29:59 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -498,14 +498,14 @@ void mem_test_all(void)
 
 void fill_memory(void)
 {
-	virt_ptr *alloc_array = vmalloc(100000 * sizeof(virt_ptr));
+	virt_ptr *alloc_array = vmalloc(1000000 * sizeof(virt_ptr));
 	if (!alloc_array)
 	{
 		printk("couldn't allocate enough memory to setup fill_memory\n");
 		return;
 	}
 	uint32_t nb_alloc = 0;
-	while (nb_alloc < 100000)
+	while (nb_alloc < 1000000)
 	{
 		alloc_array[nb_alloc] = kmmap(0, 1, PTE_RW);
 		if (alloc_array[nb_alloc])

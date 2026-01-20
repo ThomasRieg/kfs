@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 01:23:50 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 15:33:57 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,10 +17,10 @@
 #define NB_TICKS_PER_TASK 500 // nb of timer irq before we context switch to next task
 
 typedef void (*t_sig_handler)(int);
-#define SIG_IGN 1 //ingore this signal
-#define SIG_DFL 0 //default behavior (stop process)
+#define SIG_IGN 1 // ingore this signal
+#define SIG_DFL 0 // default behavior (stop process)
 
-#define SIGCHLD 17 //lsit here https://man7.org/linux/man-pages/man7/signal.7.html
+#define SIGCHLD 17 // lsit here https://man7.org/linux/man-pages/man7/signal.7.html
 
 enum open_file_type
 {
@@ -68,15 +68,15 @@ struct open_file
 	};
 };
 
-//task objects have to be allocated with vmalloc
+// task objects have to be allocated with vmalloc
 typedef struct task
 {
 	enum task_status status;
 	enum wait_reason wait_reason;
 	unsigned int task_id;
-	struct task *parent_task;
-	struct task *children;          // head of linked list
-	struct task *next_sibling;      // link in parent list
+	struct task *parent_task;  // should NEVER be null, put init if parent dies (except for init)
+	struct task *children;	   // head of linked list
+	struct task *next_sibling; // link in parent list
 	unsigned int uid;
 	unsigned int euid;
 	unsigned int suid;
@@ -87,14 +87,15 @@ typedef struct task
 	uint32_t k_esp;
 	uint8_t k_stack[8096]; // stack tss will returns to on interrupt
 	t_sig_handler sig_handlers[32];
-	struct task *next;	   // circular linked list, TODO do better
-						   // TODO struct to keep track of reserved and allocated memory (used to free everything on process end and allocate pmm on page fault)
+	struct task *next; // circular linked list, TODO do better
+					   // TODO struct to keep track of reserved and allocated memory (used to free everything on process end and allocate pmm on page fault)
 } t_task;
 
 extern t_task *g_curr_task;
 
 void schedule_next_task();
+void context_switch(t_task *next);
 void cleanup_task(t_task *task);
-static void task_reap_zombie(t_task *t);
+void task_reap_zombie(t_task *t);
 
 #endif

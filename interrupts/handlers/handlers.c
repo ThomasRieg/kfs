@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   handlers.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 17:03:23 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 23:42:30 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,13 +81,14 @@ void double_fault_handler(t_interrupt_data *regs)
 #include "../../tasks/task.h"
 #include "../../pmm/pmm.h"
 #include "../../mem_page/mem_paging.h"
+#include "../../mmap/mmap.h"
 
 static t_vma *find_vma(t_mm *mm, uintptr_t va)
 {
 	if (!mm)
 		return 0;
 
-	/* Your list is sorted by start, so you can early-exit */
+	//list sorted by increasing address
 	for (t_vma *v = mm->vma_list; v; v = v->next)
 	{
 		if (va < (uintptr_t)v->start)
@@ -106,12 +107,33 @@ t_vma *vma_for_address(t_mm *proc_memory, uintptr_t va)
 	return find_vma(proc_memory, page_align_down(va));
 }
 
+static inline uint32_t get_vma_flags(t_vma *vma)
+{
+	uint32_t flags = PTE_P
+	if (!(vma->prots & PROT_NONE))
+		flags |= PTE_US;
+	if (vma->prots & PROT_WRITE)
+		flags |= PTE_RW;
+	//READ and EXEC are implied if PROT_NONE is not specified
+	return (flags);
+}
+
+static inline bool is_user_mode_fault(const t_interrupt_data *r)
+{
+    return ((r->err_code & 0x4u) != 0); // U/S bit
+}
+
+static inline bool is_present_fault(const t_interrupt_data *r)
+{
+    return ((r->err_code & 0x1u) != 0); // P bit (page-protection violation)
+}
+
 void page_fault_handler(t_interrupt_data *regs)
 {
 	disable_interrupts();
 	unsigned int virtual_address;
 	asm volatile("mov %%cr2, %0" : "=r"(virtual_address));
-	if (!g_curr_task || !(regs->err_code & 0x4))
+	if (!g_curr_task || !is_user_mode_fault(regs))
 	{
 		// page fault inside kernel code
 		writes("page fault :(\n");
@@ -122,14 +144,14 @@ void page_fault_handler(t_interrupt_data *regs)
 			asm volatile("hlt");
 	}
 	t_vma *vma = vma_for_address(&g_curr_task->proc_memory, virtual_address);
-	if (vma)
+	uint32_t *pte = get_pte(virtual_address);
+	uint32_t *pde = get_pde(virtual_address);
+	if (vma && !is_present_fault(regs) && (!pte || !(*pte & PTE_P)))
 	{
-		if ((uintptr_t)get_pte(virtual_address) & PTE_P)
-			goto page_fault_handler_error; // already mapped, another error
 		phys_ptr frame = pmm_alloc_frame();
 		if (!frame)
 			kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
-		if (!((uintptr_t)get_pte(virtual_address) & PTE_P))
+		if (!(*pde & PTE_P))
 		{
 			// allocate the page table itself
 			phys_ptr pde_frame = pmm_alloc_frame();
@@ -138,13 +160,19 @@ void page_fault_handler(t_interrupt_data *regs)
 				pmm_free_frame(frame);
 				kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
 			}
-			map_page(pde_frame, get_pde(virtual_address), PTE_P | PTE_RW | PTE_US); // set permissive flags
+			map_page(pde_frame, pde, PTE_US | PTE_RW | PTE_P); // set permissive flags
+			uint32_t *page_table = (uint32_t *)(uintptr_t)(PT_BASE_VA + PDE_INDEX(virtual_address) * PAGE_SIZE);
+			invalidate_cache(page_table);
+			memset(page_table, 0, PAGE_SIZE);
+			pte = get_pte(virtual_address); //pte was null, because no pde, now we need to set it before the rest of the code
 		}
-		map_page(frame, get_pte(virtual_address), PTE_P | PTE_RW | PTE_US); // TODO get the flags from the t_mm
+		map_page(frame, pte, get_vma_flags(vma));
+		virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
+		invalidate_cache(virtual_address_page_start);
+		memset(virtual_address_page_start, 0, PAGE_SIZE);
 	}
 	else
 	{
-	page_fault_handler_error:
 		// TODO handle just killing the process, schedule another one and return
 		writes("page fault :(\n");
 		printk("error code: %u\n", regs->err_code);

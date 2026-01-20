@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   utils.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 20:24:25 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 16:55:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 23:22:34 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ uint32_t *get_pte(virt_ptr va)
 	if (!(*pde & PTE_P))
 		return NULL;
 
-	/* Now PT window page for this PDE is mapped; safe to access */
+	// Now PT window page for this PDE is mapped; safe to access
 	uint32_t *pt = (uint32_t *)(uintptr_t)(PT_BASE_VA + PDE_INDEX(va) * PAGE_SIZE);
 	return &pt[PTE_INDEX(va)];
 }
@@ -46,6 +46,11 @@ void unmap_page(virt_ptr ptr, virt_ptr pte)
 {
 	*(uint32_t *)pte &= ~PTE_P;
 	invalidate_cache(ptr);
+}
+
+virt_ptr page_align_down(virt_ptr virtual_address)
+{
+	return ((virt_ptr)((uintptr_t)virtual_address - ((uintptr_t)virtual_address % PAGE_SIZE)));
 }
 
 void write_cr3(phys_ptr phys)

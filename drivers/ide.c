@@ -1,6 +1,8 @@
 #include "pci.h"
 #include "../tty/tty.h"
 #include "../libk/libk.h"
+#include "ide.h"
+#include "../ext2.h"
 
 enum ata_reg {
 	// port offsets of ATA registers
@@ -100,14 +102,7 @@ _Static_assert(offsetof(union ata_ident, max_lba) == 120, "incorrect ata_ident s
 _Static_assert(offsetof(union ata_ident, command_sets) == 164, "incorrect ata_ident struct");
 _Static_assert(offsetof(union ata_ident, max_lba_ext) == 200, "incorrect ata_ident struct");
 
-struct drive {
-	// IO ports
-	unsigned int base;
-	unsigned int ctrl;
-	bool slave;
-};
-
-static void ide_read_sector(struct drive *drive, unsigned int lba48, unsigned char buffer[512]) {
+void ide_read_sector(struct ide_drive *drive, unsigned int lba48, unsigned char buffer[512]) {
 	unsigned int base = drive->base;
 	outb(base + ATA_REG_HDDEVSEL, 0xE0 | (drive->slave << 4));
 
@@ -169,48 +164,6 @@ const char *partition_type_str(unsigned char type) {
 	return "unknown";
 }
 
-union ext2_super_block {
-	struct {
-		unsigned int total_inodes;
-		unsigned int total_blocks;
-		unsigned int reserved_blocks; // for root only
-		unsigned int free_blocks;
-		unsigned int free_inodes;
-		unsigned int starting_block;
-		unsigned int block_size; // << 1024
-		unsigned int fragment_size; // << 1024
-		unsigned int blocks_in_group;
-		unsigned int fragments_in_group;
-		unsigned int inodes_in_group;
-		unsigned int last_mount;
-		unsigned int last_written;
-		unsigned short mounts_since_check; // fsck
-		unsigned short mounts_allowed_before_check;
-		unsigned short signature;
-		unsigned short state;
-		unsigned short error_action;
-		unsigned short minor_ver;
-		unsigned int last_check;
-		unsigned int forced_check_interval;
-		unsigned int operating_system;
-		unsigned int major_ver;
-		unsigned short reserved_uid;
-		unsigned short reserved_gid;
-	};
-	unsigned char buf[1024];
-};
-
-void ext2(struct drive *drive, unsigned int lba_start, unsigned int total_sectors) {
-	if (total_sectors < 3)
-		return;
-	union ext2_super_block sb;
-	ide_read_sector(drive, lba_start + 2, sb.buf);
-	ide_read_sector(drive, lba_start + 3, sb.buf + 512);
-
-	printk("ext2 header: total inodes %u, total blocks %u, blocks reserved for SU %u last mount time %u", sb.total_inodes,
-			sb.total_blocks, sb.reserved_blocks, sb.last_mount);
-}
-
 void ide_init(struct pci_installed *installed) {
 	if (installed->prog_if & 1) {
 		printk("IDE controller not in compatibility mode!!\n");
@@ -219,7 +172,7 @@ void ide_init(struct pci_installed *installed) {
 		unsigned int base_primary_channel_ctrl = 0x3F6;
 		unsigned int base_secondary_channel = 0x170;
 		unsigned int base_secondary_channel_ctrl = 0x376;
-		struct drive drive;
+		struct ide_drive drive;
 		for (unsigned int i = 0; i < 2; i++) {
 			unsigned int base = i == 0 ? base_primary_channel : base_secondary_channel;
 			unsigned int ctrl = i == 0 ? base_primary_channel_ctrl : base_secondary_channel_ctrl;

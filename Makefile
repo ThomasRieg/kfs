@@ -1,7 +1,7 @@
 CFLAGS := -std=gnu2x -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
-OBJS := main.o net.o shell.o entry.o boot_init.o \
+OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 		drivers/ps2.o drivers/pci.o drivers/pic.o drivers/rtl8139.o drivers/serial.o drivers/ide.o\
 		tty/tty.o\
 		vga/vga.o\
@@ -29,11 +29,12 @@ debug: $(ISO) $(DISK_FILE)
 
 # yes.
 $(DISK_FILE):
+	mkdir -p root root/{etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
 		OFFSET=$$(parted -s $(DISK_FILE) unit B print \
   | awk '/^ 1/ { gsub("B","",$$2); print $$2 }') &&\
-		mkfs.ext2 -F -E offset=$$OFFSET $(DISK_FILE)
+		mkfs.ext2 -d root -F -E offset=$$OFFSET $(DISK_FILE) 9M
 
 all: $(ISO)
 

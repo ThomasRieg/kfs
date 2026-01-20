@@ -150,6 +150,12 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("Interrupt Descriptor Table loaded.\n");
 	init_syscalls();
 	add_syscall(4, syscall_write);
+	add_syscall(1, syscall_exit);
+	add_syscall(2, syscall_fork);
+	add_syscall(114, syscall_wait4);
+	add_syscall(199, syscall_getuid);
+	add_syscall(48, syscall_signal);
+	add_syscall(37, syscall_kill);
 
 	setup_pics();
 	writes("PICs configured.\n");

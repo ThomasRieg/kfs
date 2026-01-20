@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   stubs_declaration.h                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:07:36 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/12 14:29:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 01:33:05 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -291,7 +291,7 @@ static inline void idt_install_all_stubs(t_idt_entry_32 idt[256])
 			idt[i] = DEF_INTERRUPT(isr_stub_2);
 			break;
 		case 3:
-			idt[i] = DEF_INTERRUPT(isr_stub_3);
+			idt[i] = DEF_USER_INTERRUPT(isr_stub_3); //callable from ring 3
 			break;
 		case 4:
 			idt[i] = DEF_INTERRUPT(isr_stub_4);
@@ -522,7 +522,7 @@ static inline void idt_install_all_stubs(t_idt_entry_32 idt[256])
 			idt[i] = DEF_INTERRUPT(isr_stub_79);
 			break;
 		case 80:
-			idt[i] = DEF_INTERRUPT(isr_stub_80);
+			idt[i] = DEF_USER_INTERRUPT(isr_stub_80); //callable from ring 3
 			break;
 		case 81:
 			idt[i] = DEF_INTERRUPT(isr_stub_81);

@@ -16,6 +16,7 @@
 #include "s_regs.h"
 
 #define IDT_PRESENT_AND_GATE_32_INT 0x8e
+#define IDT_PRESENT_AND_GATE_32_INT_DPL_3 0xee
 
 typedef struct s_idt_entry_32
 {
@@ -28,6 +29,16 @@ typedef struct s_idt_entry_32
 
 // selector 16 = kernel code in GDT
 #define DEF_INTERRUPT(handler)                          \
+	(t_idt_entry_32)                                    \
+	{                                                   \
+		.selector = 16,                                 \
+		.type_attributes = IDT_PRESENT_AND_GATE_32_INT, \
+		.offset_1 = ((unsigned int)&handler) & 0xFFFF,  \
+		.offset_2 = ((unsigned int)&handler) >> 16,     \
+	}
+
+// selector 16 = kernel code in GDT
+#define DEF_USER_INTERRUPT(handler)                          \
 	(t_idt_entry_32)                                    \
 	{                                                   \
 		.selector = 16,                                 \

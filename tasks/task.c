@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/19 20:14:00 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 01:23:30 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,12 +75,13 @@ phys_ptr copy_current_pd()
 	return (pd);
 }
 
+//task has to be allocated by vmalloc
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id)
 {
 	task->pending_signals = 0;
 	task->task_id = g_next_pid++;
 	task->parent_task = parent;
-	task->user_id = user_id;
+	task->uid = user_id;
 	task->pd = copy_current_pd();
 	if (!task->pd)
 		return (false);
@@ -143,4 +144,17 @@ void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
 		g_tick = 0;
 		schedule_next_task();
 	}
+}
+
+//does not free the task struct itself
+void cleanup_task(t_task *task)
+{
+	//TODO implement (clean up memory, fd and everything
+}
+
+//call whean reaping a zombie task that already has been called in cleanup_task
+static void task_reap_zombie(t_task *t)
+{
+	//TODO link prev task to next task in scheduler linked list
+    vfree(t);
 }

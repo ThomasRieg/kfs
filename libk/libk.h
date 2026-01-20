@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   libk.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:48:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 15:32:17 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/20 01:48:24 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@ void *memmove(void *dest, const void *src, unsigned int bytes);
 int memcmp(const void *s1, const void *s2, unsigned int n);
 void *memchr(const void *s, int c, unsigned int n);
 phys_ptr get_phys_ptr(virt_ptr va); // will pagefault if va is not mapped
+bool user_range_ok(virt_ptr uaddr, uint32_t size, bool write);
 
 char *strchr(const char *s, int c);
 unsigned int strlen(const char *s);

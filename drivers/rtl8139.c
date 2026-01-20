@@ -89,7 +89,7 @@ void rtl_8139_transmit(void *frame, unsigned int size) {
 
 	unsigned int io_base = rtl8139.io_base;
 	memcpy(send_buffer, frame, size);
-	outl(io_base + OFF_TSAD0 + buffer_i * 4, (unsigned int)send_buffer); // transmit start, for now physical = virtual
+	outl(io_base + OFF_TSAD0 + buffer_i * 4, (unsigned int)send_buffer - KERNEL_VIRT_BASE); // transmit start
 	outl(io_base + OFF_TSD0 + buffer_i * 4, size);
 }
 
@@ -120,7 +120,7 @@ void rtl_8139_init(struct pci_installed *installed)
 		// wait for software reset to happen.
 	}
 
-	outl(io_base + OFF_RBSTART, (unsigned int)&rtl8139.receive_buffer[0]); // receive buffer start
+	outl(io_base + OFF_RBSTART, (unsigned int)&rtl8139.receive_buffer[0] - KERNEL_VIRT_BASE); // receive buffer start
 	outw(io_base + OFF_IMR, 0xffff);							   // receive all interrupts
 	outl(io_base + OFF_TCR, 1 << 15);							   // Append Ethernet CRC
 	outl(io_base + OFF_RCR, 0xf | (1 << 7));					   // Accept all packets, overflow instead of wrap around

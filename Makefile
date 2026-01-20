@@ -17,6 +17,7 @@ OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 ISO := kfs.iso
 ELF := kfs.elf
 DISK_FILE := disk.raw
+SHELL := /bin/bash # for brace expansions
 
 QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 4096M
 
@@ -29,7 +30,8 @@ debug: $(ISO) $(DISK_FILE)
 
 # yes.
 $(DISK_FILE):
-	mkdir -p root root/{etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
+	rm -rf root
+	mkdir -vp root root/{etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
 		OFFSET=$$(parted -s $(DISK_FILE) unit B print \

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 19:37:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 18:29:15 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 16:55:54 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,8 +31,9 @@ void unmap_page(virt_ptr ptr, virt_ptr pte);
 // after changing a page table entry we must invalidate the cache
 void invalidate_cache(virt_ptr va);
 
-// assumes page directory is in page directory's last entry (pd[1023]), assumes va is mapped (or it will page fault) returns the page table entry describing the virtual address va
+// assumes page directory is in page directory's last entry (pd[1023]), returns the page table entry describing the virtual address va or NULL if pde idn't mapped
 uint32_t *get_pte(virt_ptr va);
+uint32_t *get_pde(virt_ptr va);
 
 void write_cr3(phys_ptr phys);
 void reload_cr3(void);

@@ -6,21 +6,25 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 15:33:57 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 16:13:49 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef TASK_H
 #define TASK_H
 
-#define TASK_STACK_SIZE 100	  // pages as unit
-#define NB_TICKS_PER_TASK 500 // nb of timer irq before we context switch to next task
+#include "../mem_page/mem_defines.h"
+
+#define TASK_STACK_SIZE 100u * PAGE_SIZE
+#define TASK_VA_ENTRYPOINT 0x200000u
+#define TASK_STACK_TOP KERNEL_VIRT_BASE - 16u
+#define NB_TICKS_PER_TASK 500u // nb of timer irq before we context switch to next task
 
 typedef void (*t_sig_handler)(int);
-#define SIG_IGN 1 // ingore this signal
-#define SIG_DFL 0 // default behavior (stop process)
+#define SIG_IGN 1u // ingore this signal
+#define SIG_DFL 0u // default behavior (stop process)
 
-#define SIGCHLD 17 // lsit here https://man7.org/linux/man-pages/man7/signal.7.html
+#define SIGCHLD 17u // lsit here https://man7.org/linux/man-pages/man7/signal.7.html
 
 enum open_file_type
 {
@@ -68,7 +72,35 @@ struct open_file
 	};
 };
 
-// task objects have to be allocated with vmalloc
+typedef enum e_vma_backing
+{
+	VMA_ANON = 0,
+	VMA_FILE = 1, // future
+	VMA_DEV = 2,  // future (MMIO)
+} t_vma_backing;
+
+typedef struct s_vma
+{
+	virt_ptr start; // inclusive, page-aligned
+	virt_ptr end;	// exclusive, page-aligned
+
+	uint32_t prot;	// PROT_READ/WRITE/EXEC
+	uint32_t flags; // MAP_PRIVATE/MAP_SHARED/MAP_FIXED/...
+	t_vma_backing backing;
+
+	struct s_vma *next;
+} t_vma;
+
+typedef struct s_mm
+{
+	t_vma *vma_list; // sorted linked list
+	virt_ptr user_stack_top;
+	virt_ptr user_stack_bot;
+
+	uint32_t resident_pages; // optional stats/counters
+} t_mm;
+
+// task objects have to be allocated with vmalloc (or preferably vcalloc)
 typedef struct task
 {
 	enum task_status status;
@@ -88,7 +120,7 @@ typedef struct task
 	uint8_t k_stack[8096]; // stack tss will returns to on interrupt
 	t_sig_handler sig_handlers[32];
 	struct task *next; // circular linked list, TODO do better
-					   // TODO struct to keep track of reserved and allocated memory (used to free everything on process end and allocate pmm on page fault)
+	t_mm proc_memory;
 } t_task;
 
 extern t_task *g_curr_task;

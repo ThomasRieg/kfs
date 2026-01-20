@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/19 19:41:09 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 17:03:23 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,16 +78,82 @@ void double_fault_handler(t_interrupt_data *regs)
 		asm volatile("hlt");
 }
 
+#include "../../tasks/task.h"
+#include "../../pmm/pmm.h"
+#include "../../mem_page/mem_paging.h"
+
+static t_vma *find_vma(t_mm *mm, uintptr_t va)
+{
+	if (!mm)
+		return 0;
+
+	/* Your list is sorted by start, so you can early-exit */
+	for (t_vma *v = mm->vma_list; v; v = v->next)
+	{
+		if (va < (uintptr_t)v->start)
+			return 0;
+		if (va >= (uintptr_t)v->start && va < (uintptr_t)v->end)
+			return v;
+	}
+	return 0;
+}
+
+/* If you want the VMA in the PF handler to get prot/flags */
+t_vma *vma_for_address(t_mm *proc_memory, uintptr_t va)
+{
+	if (va >= (uintptr_t)KERNEL_VIRT_BASE)
+		return 0;
+	return find_vma(proc_memory, page_align_down(va));
+}
+
 void page_fault_handler(t_interrupt_data *regs)
 {
-	writes("page fault :(\n");
-	printk("error code: %u\n", regs->err_code);
+	disable_interrupts();
 	unsigned int virtual_address;
 	asm volatile("mov %%cr2, %0" : "=r"(virtual_address));
-	printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
-	print_interrupt_frame(regs);
-	while (1)
-		asm volatile("hlt");
+	if (!g_curr_task || !(regs->err_code & 0x4))
+	{
+		// page fault inside kernel code
+		writes("page fault :(\n");
+		printk("error code: %u\n", regs->err_code);
+		printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
+		print_interrupt_frame(regs);
+		while (1)
+			asm volatile("hlt");
+	}
+	t_vma *vma = vma_for_address(&g_curr_task->proc_memory, virtual_address);
+	if (vma)
+	{
+		if ((uintptr_t)get_pte(virtual_address) & PTE_P)
+			goto page_fault_handler_error; // already mapped, another error
+		phys_ptr frame = pmm_alloc_frame();
+		if (!frame)
+			kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+		if (!((uintptr_t)get_pte(virtual_address) & PTE_P))
+		{
+			// allocate the page table itself
+			phys_ptr pde_frame = pmm_alloc_frame();
+			if (!pde_frame)
+			{
+				pmm_free_frame(frame);
+				kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+			}
+			map_page(pde_frame, get_pde(virtual_address), PTE_P | PTE_RW | PTE_US); // set permissive flags
+		}
+		map_page(frame, get_pte(virtual_address), PTE_P | PTE_RW | PTE_US); // TODO get the flags from the t_mm
+	}
+	else
+	{
+	page_fault_handler_error:
+		// TODO handle just killing the process, schedule another one and return
+		writes("page fault :(\n");
+		printk("error code: %u\n", regs->err_code);
+		printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
+		print_interrupt_frame(regs);
+		while (1)
+			asm volatile("hlt");
+	}
+	enable_interrupts();
 }
 
 void breakpoint_handler(t_interrupt_data *regs)

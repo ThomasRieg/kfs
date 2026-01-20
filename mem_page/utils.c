@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 20:24:25 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 18:29:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/20 16:55:22 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,10 +15,21 @@
 #include "mem_defines.h"
 #include "../common.h"
 
+uint32_t *get_pde(virt_ptr va)
+{
+	volatile uint32_t *pd = (volatile uint32_t *)(uintptr_t)PD_VA;
+	return (uint32_t *)&pd[PDE_INDEX(va)];
+}
+
 uint32_t *get_pte(virt_ptr va)
 {
-	uint32_t *table = (uint32_t *)(PT_BASE_VA + (PDE_INDEX(va) * 0x1000u));
-	return &table[PTE_INDEX(va)];
+	uint32_t *pde = get_pde(va);
+	if (!(*pde & PTE_P))
+		return NULL;
+
+	/* Now PT window page for this PDE is mapped; safe to access */
+	uint32_t *pt = (uint32_t *)(uintptr_t)(PT_BASE_VA + PDE_INDEX(va) * PAGE_SIZE);
+	return &pt[PTE_INDEX(va)];
 }
 
 void invalidate_cache(virt_ptr va)

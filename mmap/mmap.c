@@ -6,23 +6,12 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:25:31 by thrieg            #+#    #+#             */
-<<<<<<< HEAD
-/*   Updated: 2026/01/20 22:33:56 by thrieg           ###   ########.fr       */
-=======
-/*   Updated: 2026/01/21 02:15:15 by thrieg           ###   ########.fr       */
->>>>>>> WIP
+/*   Updated: 2026/01/21 22:48:16 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "mmap.h"
 #include "../common.h"
-<<<<<<< HEAD
-
-void *mmap(void *addr, uint32_t lengthint, int prot, int flags, int fd, uint32_t offset)
-{
-    if (offset || fd > 0)
-        return (MAP_FAILED); //not supported yet, add it when (if) we add memory with fd backing
-=======
 #include "../tasks/task.h"
 #include "../vmalloc/vmalloc.h"
 #include "../mem_page/mem_paging.h"
@@ -156,5 +145,4 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
     g_curr_task->proc_memory.reserved_pages += length / PAGE_SIZE;
     enable_interrupts();
     return (available_start);
->>>>>>> WIP
 }

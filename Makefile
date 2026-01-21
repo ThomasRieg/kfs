@@ -5,7 +5,7 @@ OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 		drivers/ps2.o drivers/pci.o drivers/pic.o drivers/rtl8139.o drivers/serial.o drivers/ide.o\
 		tty/tty.o\
 		vga/vga.o\
-		libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o libk/ft_vector.o\
+		libk/vec.o libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o libk/ft_vector.o\
 		gdt/gdt.o\
 		mem_page/kmap.o mem_page/paging.o mem_page/utils.o mem_page/kmmap.o mem_page/mem_tester.o\
 		pmm/pmm.o\
@@ -31,7 +31,8 @@ debug: $(ISO) $(DISK_FILE)
 # yes.
 $(DISK_FILE):
 	rm -rf root
-	mkdir -vp root root/{etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
+	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
+	cp userspace/init root/bin
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
 		OFFSET=$$(parted -s $(DISK_FILE) unit B print \

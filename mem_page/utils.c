@@ -6,7 +6,11 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 20:24:25 by thrieg            #+#    #+#             */
+<<<<<<< Updated upstream
 /*   Updated: 2026/01/20 16:55:22 by thrieg           ###   ########.fr       */
+=======
+/*   Updated: 2026/01/21 00:24:16 by thrieg           ###   ########.fr       */
+>>>>>>> Stashed changes
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +52,21 @@ void unmap_page(virt_ptr ptr, virt_ptr pte)
 	invalidate_cache(ptr);
 }
 
+<<<<<<< Updated upstream
+=======
+virt_ptr page_align_down(virt_ptr virtual_address)
+{
+	return ((virt_ptr)((uintptr_t)virtual_address - ((uintptr_t)virtual_address % PAGE_SIZE)));
+}
+virt_ptr page_align_up(virt_ptr virtual_address)
+{
+	if ((uintptr_t)virtual_address % PAGE_SIZE)
+		return (page_align_down((virt_ptr)((uintptr_t)virtual_address + PAGE_SIZE)));
+	else
+		return (virtual_address);
+}
+
+>>>>>>> Stashed changes
 void write_cr3(phys_ptr phys)
 {
 	asm volatile("mov %0, %%cr3" ::"r"(phys) : "memory");

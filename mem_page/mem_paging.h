@@ -6,7 +6,11 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 19:37:32 by thrieg            #+#    #+#             */
+<<<<<<< Updated upstream
 /*   Updated: 2026/01/20 16:55:54 by thrieg           ###   ########.fr       */
+=======
+/*   Updated: 2026/01/21 00:25:18 by thrieg           ###   ########.fr       */
+>>>>>>> Stashed changes
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,6 +39,13 @@ void invalidate_cache(virt_ptr va);
 uint32_t *get_pte(virt_ptr va);
 uint32_t *get_pde(virt_ptr va);
 
+<<<<<<< Updated upstream
+=======
+//returns the pointer to the first byte of the page
+virt_ptr page_align_down(virt_ptr virtual_address);
+virt_ptr page_align_up(virt_ptr virtual_address);
+
+>>>>>>> Stashed changes
 void write_cr3(phys_ptr phys);
 void reload_cr3(void);
 

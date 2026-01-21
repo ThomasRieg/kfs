@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 16:14:20 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 00:53:42 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,9 +143,103 @@ void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
 	}
 }
 
-// does not free the task struct itself
-void cleanup_task(__attribute__((unused)) t_task *task)
+
+
+// Returns true if the PT for pdi has no present PTEs
+static bool pt_is_empty(uint32_t pdi)
 {
+    volatile uint32_t *pt = (volatile uint32_t *)(uintptr_t)(PT_BASE_VA + pdi * PAGE_SIZE);
+    for (uint32_t i = 0; i < 1024; i++)
+    {
+        if (pt[i] & PTE_P)
+            return false;
+    }
+    return true;
+}
+
+
+//Also frees now-empty PT frames
+static void free_vma_range_pages(uintptr_t start, uintptr_t end)
+{
+    start = align_down(start);
+    end   = align_up(end);
+
+    // Track which PDE indices we touched
+    uint8_t touched_pde[1024] = {0};
+
+    for (uintptr_t va = start; va < end; va += PAGE_SIZE)
+    {
+        if (va >= (uintptr_t)KERNEL_VIRT_BASE)
+            break;
+
+        uint32_t pdi = PDE_INDEX(va);
+
+        uint32_t *pte = get_pte((virt_ptr)va);
+        if (!pte)
+            continue;
+
+        uint32_t entry = *pte;
+        if (!(entry & PTE_P))
+            continue;
+
+        phys_ptr pa = (phys_ptr)(entry & 0xFFFFF000u);
+
+        *pte = 0;
+        invalidate_cache((void *)va);
+
+        pmm_free_frame(pa);
+
+        touched_pde[pdi] = 1;
+
+        //if (task && task->proc_memory.resident_pages)
+        //    task->proc_memory.resident_pages--;
+    }
+
+    volatile uint32_t *pd = (volatile uint32_t *)PD_VA;
+
+    for (uint32_t pdi = 0; pdi < ((KERNEL_VIRT_BASE >> 22) & 0x3FFu); pdi++)
+    {
+        if (!touched_pde[pdi])
+            continue;
+
+        uint32_t pde = pd[pdi];
+        if (!(pde & PTE_P))
+            continue;
+
+		//should be ensured by loop condition already
+        if (pdi == 1023)
+            continue;
+
+        if (!pt_is_empty(pdi))
+            continue;
+
+        phys_ptr pt_pa = (phys_ptr)(pde & 0xFFFFF000u);
+
+        pd[pdi] = 0;
+        // invalidate the PT window page itself
+        invalidate_cache((void *)(uintptr_t)(PT_BASE_VA + pdi * PAGE_SIZE));
+        pmm_free_frame(pt_pa);
+    }
+}
+
+void free_vmas(t_task *task)
+{
+	t_vma *curr = task->proc_memory.vma_list;
+	while (curr)
+	{
+		t_vma *next = curr->next;
+		free_vma_range_pages(curr->start, curr->end);
+		vfree(curr);
+		curr = next;
+	}
+	task->proc_memory.vma_list = NULL;
+}
+// does not free the task struct itself
+void cleanup_task(t_task *task)
+{
+	disable_interrupts();
+	free_vmas(task);
+	enable_interrupts();
 	// TODO implement (clean up memory, fd and everything
 }
 

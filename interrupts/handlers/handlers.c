@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 22:48:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 22:56:02 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,7 +104,7 @@ t_vma *vma_for_address(t_mm *proc_memory, uintptr_t va)
 {
 	if (va >= (uintptr_t)KERNEL_VIRT_BASE)
 		return 0;
-	return find_vma(proc_memory, page_align_down(va));
+	return find_vma(proc_memory, (uintptr_t)page_align_down((virt_ptr)va));
 }
 
 static inline uint32_t get_vma_flags(t_vma *vma)
@@ -144,8 +144,8 @@ void page_fault_handler(t_interrupt_data *regs)
 			asm volatile("hlt");
 	}
 	t_vma *vma = vma_for_address(&g_curr_task->proc_memory, virtual_address);
-	uint32_t *pte = get_pte(virtual_address);
-	uint32_t *pde = get_pde(virtual_address);
+	uint32_t *pte = get_pte((virt_ptr)virtual_address);
+	uint32_t *pde = get_pde((virt_ptr)virtual_address);
 	if (vma && !is_present_fault(regs) && (!pte || !(*pte & PTE_P)))
 	{
 		phys_ptr frame = pmm_alloc_frame();
@@ -164,7 +164,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			uint32_t *page_table = (uint32_t *)(uintptr_t)(PT_BASE_VA + PDE_INDEX(virtual_address) * PAGE_SIZE);
 			invalidate_cache(page_table);
 			memset(page_table, 0, PAGE_SIZE);
-			pte = get_pte(virtual_address); //pte was null, because no pde, now we need to set it before the rest of the code
+			pte = get_pte((virt_ptr)virtual_address); //pte was null, because no pde, now we need to set it before the rest of the code
 			g_curr_task->proc_memory.physical_pages++;
 		}
 		map_page(frame, pte, get_vma_flags(vma));

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:25:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 22:48:16 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 23:05:02 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,7 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
     if (length >= (KERNEL_VIRT_BASE - USERLAND_HEAP_START_VA))
         return (MAP_FAILED); //not enough memory left
     if ((uintptr_t)addr < USERLAND_HEAP_START_VA)
-        addr = USERLAND_HEAP_START_VA;
+        addr = (virt_ptr)USERLAND_HEAP_START_VA;
     if (length % PAGE_SIZE)
         length = (length / PAGE_SIZE + 1) * PAGE_SIZE; //align up lenght to page_size
     addr = page_align_up(addr);

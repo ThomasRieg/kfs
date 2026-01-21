@@ -1,6 +1,6 @@
 #include "drivers/ide.h"
 
-void ext2(struct ide_drive *drive, unsigned int lba_start, unsigned int total_sectors);
+void ext2_test(struct ide_partition *partition);
 
 union ext2_super_block {
 	struct {
@@ -29,6 +29,24 @@ union ext2_super_block {
 		unsigned int major_ver;
 		unsigned short reserved_uid;
 		unsigned short reserved_gid;
+		// only present if major_ver >= 1
+		unsigned int first_non_reserved_inode;
+		unsigned short inode_size;
+		unsigned short this_block_group; // Block group that this SB is part of (backups)
+		unsigned int optional_features;
+		unsigned int required_features;
+		unsigned int ro_features;
+		unsigned char fs_id[16];
+		unsigned char volume_name[16];
+		unsigned char last_mount_point[64];
+		unsigned int compression_algorithms;
+		unsigned char preallocate_blocks_files;
+		unsigned char preallocate_blocks_dirs;
+		unsigned short _unused;
+		unsigned char journal_id[16];
+		unsigned int journal_inode;
+		unsigned int journal_device;
+		unsigned int orphan_inode_head;
 	};
 	unsigned char buf[1024];
-};
+} __attribute__((packed));

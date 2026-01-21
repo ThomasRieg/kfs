@@ -43,7 +43,7 @@ enum interrupt
 	INT_SYSCALLS = 0x80u,
 };
 
-void kernel_panic(const char *message, t_interrupt_data *regs);
+__attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_data *regs);
 
 static inline void disable_interrupts(void)
 {

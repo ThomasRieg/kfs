@@ -144,7 +144,7 @@ struct mbr_partition {
 	unsigned char ending_head;
 	unsigned short ending_sector: 6;
 	unsigned short ending_cylnder: 10;
-	unsigned int relative_selector;
+	unsigned int first_sector_lba;
 	unsigned int total_sectors;
 } __attribute__((packed));
 
@@ -217,14 +217,19 @@ void ide_init(struct pci_installed *installed) {
 					ide_read_sector(&drive, 0, sector);
 					if (sector[510] == 0x55 && sector[511] == 0xAA) {
 						// probably MBR
-						struct mbr_partition *partition = (struct mbr_partition *)&sector[0x1BE];
+						struct mbr_partition *partition_entry = (struct mbr_partition *)&sector[0x1BE];
 						for (unsigned int i = 0; i < 4; i++) {
-							unsigned short type = partition[i].system_id;
+							unsigned short type = partition_entry[i].system_id;
 							if (type == 0)
 								continue;
-							printk("partition %u: type %u %s, total sectors %u\n", i, type, partition_type_str(type), partition[i].total_sectors);
+							struct ide_partition partition = {
+								.drive = &drive,
+								.first_sector = partition_entry[i].first_sector_lba,
+								.sector_count = partition_entry[i].total_sectors
+							};
+							printk("partition %u: type %u %s, total sectors %u\n", i, type, partition_type_str(type), partition_entry[i].total_sectors);
 							if (type == PART_LINUX) {
-								ext2(&drive, partition[i].relative_selector, partition[i].total_sectors);
+								ext2_test(&partition);
 							}
 						}
 					}

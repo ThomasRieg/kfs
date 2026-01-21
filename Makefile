@@ -11,8 +11,9 @@ OBJS := main.o net.o shell.o entry.o boot_init.o \
 		pmm/pmm.o\
 		vmalloc/init_state.o vmalloc/vcalloc.o vmalloc/vfree.o vmalloc/vmalloc.o vmalloc/vrealloc.o vmalloc/kmalloc.o\
 		interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o\
-		syscalls/syscalls.o syscalls/syscall_functions/process_basics.o \
-		tasks/task.o
+		syscalls/syscalls.o syscalls/syscall_functions/process_basics.o\
+		tasks/task.o\
+		mmap/mmap.o
 ISO := kfs.iso
 ELF := kfs.elf
 DISK_FILE := disk.raw

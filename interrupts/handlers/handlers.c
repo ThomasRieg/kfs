@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 23:42:30 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 22:34:54 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,7 +109,7 @@ t_vma *vma_for_address(t_mm *proc_memory, uintptr_t va)
 
 static inline uint32_t get_vma_flags(t_vma *vma)
 {
-	uint32_t flags = PTE_P
+	uint32_t flags = PTE_P;
 	if (!(vma->prots & PROT_NONE))
 		flags |= PTE_US;
 	if (vma->prots & PROT_WRITE)
@@ -165,11 +165,13 @@ void page_fault_handler(t_interrupt_data *regs)
 			invalidate_cache(page_table);
 			memset(page_table, 0, PAGE_SIZE);
 			pte = get_pte(virtual_address); //pte was null, because no pde, now we need to set it before the rest of the code
+			g_curr_task->proc_memory.physical_pages++;
 		}
 		map_page(frame, pte, get_vma_flags(vma));
 		virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
 		invalidate_cache(virtual_address_page_start);
 		memset(virtual_address_page_start, 0, PAGE_SIZE);
+		g_curr_task->proc_memory.physical_pages++;
 	}
 	else
 	{

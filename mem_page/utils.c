@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 20:24:25 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 23:22:34 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 22:39:40 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,14 @@ void unmap_page(virt_ptr ptr, virt_ptr pte)
 virt_ptr page_align_down(virt_ptr virtual_address)
 {
 	return ((virt_ptr)((uintptr_t)virtual_address - ((uintptr_t)virtual_address % PAGE_SIZE)));
+}
+
+virt_ptr page_align_up(virt_ptr virtual_address)
+{
+	if ((uintptr_t)virtual_address % PAGE_SIZE)
+		return (page_align_down((virt_ptr)((uintptr_t)virtual_address + PAGE_SIZE)));
+	else
+		return (virtual_address);
 }
 
 void write_cr3(phys_ptr phys)

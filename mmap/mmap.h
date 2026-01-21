@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:24:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 22:29:47 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 22:38:00 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,12 +32,11 @@ enum e_mmap_flag
 
     MAP_ANONYMOUS = 0x20,
     MAP_FIXED = 0x10, //only posix (required) flag
-    MAP_GROWSDOWN = 0x100,
 };
 
 #define MAP_FAILED ((void *)-1)
 
-void *syscall_mmap(void *addr, uint32_t lengthint, int prot, int flags, int fd, uint32_t offset);
+void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset);
 int syscall_munmap(void *addr, size_t length);
 
 /*Return Value

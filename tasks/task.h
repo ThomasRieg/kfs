@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 16:13:49 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 02:21:56 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,9 +15,9 @@
 
 #include "../mem_page/mem_defines.h"
 
-#define TASK_STACK_SIZE 100u * PAGE_SIZE
+#define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
-#define TASK_STACK_TOP KERNEL_VIRT_BASE - 16u
+#define TASK_STACK_TOP KERNEL_VIRT_BASE
 #define NB_TICKS_PER_TASK 500u // nb of timer irq before we context switch to next task
 
 typedef void (*t_sig_handler)(int);
@@ -84,7 +84,7 @@ typedef struct s_vma
 	virt_ptr start; // inclusive, page-aligned
 	virt_ptr end;	// exclusive, page-aligned
 
-	uint32_t prot;	// PROT_READ/WRITE/EXEC
+	uint32_t prots;	// PROT_READ/WRITE/EXEC
 	uint32_t flags; // MAP_PRIVATE/MAP_SHARED/MAP_FIXED/...
 	t_vma_backing backing;
 
@@ -97,7 +97,8 @@ typedef struct s_mm
 	virt_ptr user_stack_top;
 	virt_ptr user_stack_bot;
 
-	uint32_t resident_pages; // optional stats/counters
+	uint32_t reserved_pages; // optional stats/counters
+	uint32_t physical_pages; // optional stats/counters
 } t_mm;
 
 // task objects have to be allocated with vmalloc (or preferably vcalloc)

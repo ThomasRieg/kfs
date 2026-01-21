@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:48:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 01:48:24 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 14:57:04 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,5 +38,7 @@ int printk(const char *str, ...);
 void stack_dump_words(uint32_t bytes);
 void stack_trace_ebp(uint32_t max_frames);
 void hex_dump(unsigned char *data, unsigned int size);
+
+#include "vec.h"
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:25:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 02:02:46 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 02:15:15 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,6 +74,8 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
     void *original_addr = addr;
     if (offset || fd > 0)
         return (MAP_FAILED); //not supported yet, add it when (if) we add memory with fd backing
+    if (!!(flags & MAP_PRIVATE) == !!(flags & MAP_SHARED))
+        return (MAP_FAILED); // both 0 or both 1
     if (!length)
         return (MAP_FAILED); //0 lenght mapping not allowed
     if ((uintptr_t)addr >= KERNEL_VIRT_BASE)

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 01:19:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 02:21:56 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,9 +15,9 @@
 
 #include "../mem_page/mem_defines.h"
 
-#define TASK_STACK_SIZE 100u * PAGE_SIZE
+#define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
-#define TASK_STACK_TOP KERNEL_VIRT_BASE - 16u
+#define TASK_STACK_TOP KERNEL_VIRT_BASE
 #define NB_TICKS_PER_TASK 500u // nb of timer irq before we context switch to next task
 
 typedef void (*t_sig_handler)(int);

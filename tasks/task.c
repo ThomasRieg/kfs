@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 00:53:42 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 02:22:20 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include "../libk/libk.h"
 #include "../gdt/gdt.h"
 #include "../vmalloc/vmalloc.h"
+#include "../mmap/mmap.h"
 
 t_task *g_curr_task = 0;
 static uint32_t g_next_pid;
@@ -86,8 +87,13 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id)
 	task->pd = copy_current_pd();
 	if (!task->pd)
 		return (false);
-	task->proc_memory.user_stack_top = TASK_STACK_TOP;
-	task->proc_memory.user_stack_bot = TASK_STACK_TOP - TASK_STACK_SIZE;
+	task->proc_memory.user_stack_bot = mmap((TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0);
+	if (task->proc_memory.user_stack_bot == MAP_FAILED)
+	{
+		pmm_free_frame(task->pd);
+		return (false);
+	}
+	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 	// TODO ELF parsing goes here
 	build_initial_user_frame(task, 0x00200000, (uintptr_t)(task->proc_memory.user_stack_top)); // TODO entrypoint = ELF entrypoint
 	task->status = STATUS_RUNNABLE;

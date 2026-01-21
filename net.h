@@ -79,6 +79,33 @@ struct tcp {
 	unsigned short urgent_pointer;
 };
 
+struct udp {
+	unsigned short src_port;
+	unsigned short dst_port;
+	unsigned short length;
+	unsigned short checksum;
+};
+
+struct dns_header {
+	unsigned short id;
+	unsigned short qr:						1;
+	unsigned short opcode:					4;
+	unsigned short authoritative_answer:	1;
+	unsigned short truncation:				1;
+	unsigned short recursion_desired:		1;
+	unsigned short recursion_available:		1;
+	unsigned short z:						1;
+	unsigned short rcode:					4;
+	unsigned short question_count;
+	unsigned short answer_count;
+	unsigned short ns_count;
+	unsigned short rr_count;
+};
+
+struct dns_question {
+	struct dns_header header;
+};
+
 struct tcp_ipv4_frame {
 	struct ether ether;
 	struct ipv4 ipv4;

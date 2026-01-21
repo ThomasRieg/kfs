@@ -7,9 +7,13 @@
 #include <stddef.h>
 #include "interrupts/s_regs.h"
 
+#if __STDC_VERSION__ < 202311l
+
 typedef _Bool bool;
 #define false 0
 #define true 1
+
+#endif
 
 #define KERNEL_PHYS_BASE 0x00200000u // must match linker
 #define KERNEL_VIRT_BASE 0xC0000000u // must match linker

@@ -38,13 +38,13 @@ typedef struct s_idt_entry_32
 	}
 
 // selector 16 = kernel code in GDT
-#define DEF_USER_INTERRUPT(handler)                          \
-	(t_idt_entry_32)                                    \
-	{                                                   \
-		.selector = 16,                                 \
-		.type_attributes = IDT_PRESENT_AND_GATE_32_INT, \
-		.offset_1 = ((unsigned int)&handler) & 0xFFFF,  \
-		.offset_2 = ((unsigned int)&handler) >> 16,     \
+#define DEF_USER_INTERRUPT(handler)                           \
+	(t_idt_entry_32)                                          \
+	{                                                         \
+		.selector = 16,                                       \
+		.type_attributes = IDT_PRESENT_AND_GATE_32_INT_DPL_3, \
+		.offset_1 = ((unsigned int)&handler) & 0xFFFF,        \
+		.offset_2 = ((unsigned int)&handler) >> 16,           \
 	}
 
 typedef void (*t_isr_handler)(t_interrupt_data *r);

@@ -34,7 +34,7 @@ __attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_dat
 {
 	disable_interrupts();
 	vga_set_color(VGA_RED, VGA_BLACK);
-	if (!regs)
+	if (regs)
 		print_cpu_state(regs);
 	stack_dump_words(0);
 	writes("/!\\Kernel Panic/!\\\n");

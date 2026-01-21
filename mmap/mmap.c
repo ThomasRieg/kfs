@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:25:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 01:53:50 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/21 02:02:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,10 +61,12 @@ void *find_first_available(void *start, uint32_t len, t_mm *mm, t_vma **prev, t_
         *prev = curr;
         curr = curr->next;
     }
-    if ((KERNEL_VIRT_BASE - len > (uintptr_t)start))
-        return (start);
+    if (((uintptr_t)start + (uintptr_t)len) < (uintptr_t)start)
+        return NULL; // overflow
+    if (((uintptr_t)start + (uintptr_t)len) <= (uintptr_t)KERNEL_VIRT_BASE)
+        return start;
     else
-        return (NULL);
+        return NULL;
 }
 
 void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset)

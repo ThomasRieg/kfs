@@ -223,7 +223,7 @@ void ide_init(struct pci_installed *installed) {
 							if (type == 0)
 								continue;
 							struct ide_partition partition = {
-								.drive = &drive,
+								.drive = drive,
 								.first_sector = partition_entry[i].first_sector_lba,
 								.sector_count = partition_entry[i].total_sectors
 							};

@@ -10,7 +10,7 @@ struct ide_drive {
 };
 
 struct ide_partition {
-	struct ide_drive *drive;
+	struct ide_drive drive;
 	unsigned int first_sector;
 	unsigned int sector_count;
 };

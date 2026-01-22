@@ -13,6 +13,7 @@
 #include "multiboot2.h"
 #include "interrupts/interrupts.h"
 #include "syscalls/syscalls.h"
+#include "ext2.h"
 
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
@@ -173,6 +174,10 @@ void kernel_main(struct s_mb2_info *multi)
 	printk("syscall returned %u\n", syscall_ret);
 	print_clock();
 	writes("\n");
+
+	struct VecU8 init_binary = read_full_file("/bin/init");
+	hex_dump(init_binary.data, init_binary.length);
+	VecU8_destruct(&init_binary);
 
 	print_header();
 	writes("> ");

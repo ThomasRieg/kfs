@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 02:21:56 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/22 16:22:31 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #define TASK_H
 
 #include "../mem_page/mem_defines.h"
+#include "../libk/vec.h"
 
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
@@ -130,5 +131,6 @@ void schedule_next_task();
 void context_switch(t_task *next);
 void cleanup_task(t_task *task);
 void task_reap_zombie(t_task *t);
+bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary);
 
 #endif

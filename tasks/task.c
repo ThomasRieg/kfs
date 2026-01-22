@@ -6,12 +6,13 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 23:04:24 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/22 16:30:22 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../common.h"
 #include "task.h"
+#include "elf.h"
 #include "../pmm/pmm.h"
 #include "../mem_page/mem_paging.h"
 #include "../mem_page/mem_defines.h"
@@ -78,8 +79,17 @@ phys_ptr copy_current_pd()
 }
 
 // task has to be allocated by vmalloc
-bool setup_process(t_task *task, t_task *parent, uint32_t user_id)
+bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary)
 {
+	if (binary->length < sizeof(struct elf_header)) return false;
+
+	struct elf_header *header = (struct elf_header *)binary->data;
+	if (memcmp(header->signature, "\x7F""ELF", 4) != 0) return false;
+	if (header->bits != 0x01 || header->endianness != 0x01 || header->target != 0x03
+			|| header->header_version != 0x01
+			|| header->abi != 0x00 || header->abi_version != 0x00 || header->type != 0x02) return false;
+	if (header->program_hdrs_offset + header->program_header_count * header->program_header_size > binary->length) return false;
+
 	task->pending_signals = 0;
 	task->task_id = g_next_pid++;
 	task->parent_task = parent;
@@ -94,8 +104,17 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id)
 		return (false);
 	}
 	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
-	// TODO ELF parsing goes here
-	build_initial_user_frame(task, 0x00200000, (uintptr_t)(task->proc_memory.user_stack_top)); // TODO entrypoint = ELF entrypoint
+	{
+		struct elf_program_header *base = (struct elf_program_header *)(binary->data + header->program_hdrs_offset);
+		for (unsigned short i = 0; i < header->program_header_count; i++) {
+			if (base[i].type == 0x01 && base[i].file_offset + base[i].file_size < binary->length) {
+				mmap((void*)base[i].virt_addr, base[i].mem_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0);
+				memcpy((void*)base[i].virt_addr, binary->data + base[i].file_offset, base[i].file_size);
+			}
+		}
+	}
+
+	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top));
 	task->status = STATUS_RUNNABLE;
 	return (true);
 }

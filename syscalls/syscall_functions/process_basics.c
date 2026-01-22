@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 15:35:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/22 16:23:27 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -148,9 +148,8 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
 // void
 uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 {
-	extern bool setup_process(t_task * task, t_task * parent, uint32_t user_id);
 	t_task *task = vmalloc(sizeof(*task));
-	setup_process(task, g_curr_task, g_curr_task->uid);
+	setup_process(task, g_curr_task, g_curr_task->uid, &((struct VecU8){}));
 	// TODO copy memory pages and stack, add different ret value in child
 	return (0);
 }

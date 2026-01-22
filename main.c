@@ -14,6 +14,7 @@
 #include "interrupts/interrupts.h"
 #include "syscalls/syscalls.h"
 #include "ext2.h"
+#include "tasks/task.h"
 
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
@@ -138,63 +139,6 @@ static void print_header(void)
 	vga_set_color(VGA_WHITE, VGA_BLACK);
 }
 
-struct elf_header {
-	unsigned char signature[4];
-	unsigned char bits;
-	unsigned char endianness;
-	unsigned char header_version;
-	unsigned char abi;
-	unsigned char abi_version;
-	unsigned char _padding[6];
-	unsigned char id_size;
-	unsigned short type;
-	unsigned short target;
-	unsigned int version;
-	unsigned int entrypoint;
-	unsigned int program_hdrs_offset;
-	unsigned int section_hdrs_offset;
-	unsigned int flags;
-	unsigned short header_size;
-	unsigned short program_header_size;
-	unsigned short program_header_count;
-	unsigned short section_header_size;
-	unsigned short section_header_count;
-	unsigned short symbol_section_index;
-};
-
-struct elf_program_header {
-	unsigned int type;
-	unsigned int file_offset;
-	unsigned int virt_addr;
-	unsigned int phys_addr;
-	unsigned int file_size;
-	unsigned int mem_size;
-	unsigned int flags;
-	unsigned int align;
-};
-
-void elf_test(const struct VecU8 *binary) {
-	if (binary->length < sizeof(struct elf_header)) return;
-
-	struct elf_header *header = (struct elf_header *)binary->data;
-	if (memcmp(header->signature, "\x7F""ELF", 4) != 0) return;
-	if (header->bits != 0x01 || header->endianness != 0x01 || header->target != 0x03
-			|| header->header_version != 0x01
-			|| header->abi != 0x00 || header->abi_version != 0x00 || header->type != 0x02) return;
-	if (header->program_hdrs_offset + header->program_header_count * header->program_header_size > binary->length) return;
-
-	vga_set_color(VGA_LIGHT_GREEN, VGA_LIGHT_BLUE);
-	printk("program header size %u, struct size %u\n", header->program_header_size, sizeof(struct elf_program_header));
-	printk("entrypoint: %p\n", header->entrypoint);
-	struct elf_program_header *base = (struct elf_program_header *)(binary->data + header->program_hdrs_offset);
-	for (unsigned short i = 0; i < header->program_header_count; i++) {
-		printk("program header %u: type %u, flags %u, offset %u, virt %p, phys %p, file sz %u, memsz %u, align %u\n",
-				i, base[i].type, base[i].flags, base[i].file_offset, base[i].virt_addr, base[i].phys_addr, base[i].file_size,
-				base[i].mem_size, base[i].align);
-	}
-	vga_set_color(VGA_WHITE, VGA_BLACK);
-}
-
 void kernel_main(struct s_mb2_info *multi)
 {
 	writes("Initializing...\n");
@@ -233,7 +177,10 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("\n");
 
 	struct VecU8 init_binary = read_full_file("/bin/init");
-	elf_test(&init_binary);
+	t_task *init_task = vmalloc(sizeof(t_task));
+	if (!init_task || !setup_process(init_task, NULL, 0, &init_binary)) {
+		printk("couldn't launch init");
+	}
 	VecU8_destruct(&init_binary);
 
 	print_header();

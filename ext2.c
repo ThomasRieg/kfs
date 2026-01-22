@@ -78,9 +78,9 @@ void ext2_read_block(union ext2_super_block *sb, struct ide_partition *partition
 
 #define ROOT_INODE 2
 
-static void print_block_group_descriptor(struct ext2_block_group_descriptor *descriptor) {
+/*static void print_block_group_descriptor(struct ext2_block_group_descriptor *descriptor) {
 	printk("block usage bitmap BA %x, inode usage bitmap BA %x, start inode table BA %x, unallocated blocks %u, unallocated inodes %u, directory count %u\n", descriptor->ba_block_usage_bitmap, descriptor->ba_inode_usage_bitmap, descriptor->ba_start_inode_table, descriptor->unallocated_blocks, descriptor->unallocated_inodes, descriptor->directory_count);
-}
+}*/
 
 #define MODE_FIFO 0x1
 #define MODE_CHAR 0x2
@@ -124,11 +124,14 @@ void format_mode(unsigned char out[11], unsigned short mode) {
 struct VecU8 ext2_read_inode(union ext2_super_block *sb, struct ide_partition *partition, struct ext2_inode_extended *inode) {
 	struct VecU8 out;
 	VecU8_init(&out);
-
-	printk("%u\n", inode->base.size);
+	VecU8_reserve(&out, inode->base.size);
+	//printk("reading inode contents of size %u\n", inode->base.size);
 
 	for (unsigned short i = 0; i < sizeof(inode->base.block_pointers)/sizeof(inode->base.block_pointers[0]) && out.length < inode->base.size; i++) {
-		if (!VecU8_reserve(&out, sb->block_size)) return out;
+		if (!VecU8_reserve(&out, sb->block_size)) {
+			VecU8_destruct(&out);
+			out.length = 0;
+		}
 		ext2_read_block(sb, partition, &out.data[out.length], inode->base.block_pointers[i]);
 		out.length += (out.length + sb->block_size > inode->base.size) ? (inode->base.size - out.length - sb->block_size) : sb->block_size;
 	}
@@ -138,11 +141,86 @@ struct VecU8 ext2_read_inode(union ext2_super_block *sb, struct ide_partition *p
 	return out;
 }
 
-static void print_inode(struct ext2_inode_extended *inode) {
+struct ext2_inode_extended ext2_get_inode(union ext2_super_block *sb, struct ide_partition *partition, unsigned int inode) {
+	unsigned int group = (inode - 1) / sb->inodes_in_group;
+	unsigned int group_index = (inode - 1) % sb->inodes_in_group;
+	unsigned int containing_block = group_index * sb->inode_size / sb->block_size;
+	unsigned int table_block_index = group_index % (sb->block_size / sb->inode_size);
+	//printk("inode %u's structure is in entry #%u of table block #%u in block group #%u\n", inode, table_block_index, containing_block, group);
+
+	unsigned char group_desc_block[4096];
+	ext2_read_block(sb, partition, group_desc_block, group * sb->blocks_in_group + 1);
+	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)group_desc_block;
+	//print_block_group_descriptor(descriptor);
+
+	/*unsigned char block_inode_bitmap[4096];
+	ext2_read_block(sb, partition, block_inode_bitmap, descriptor->ba_inode_usage_bitmap);*/
+	// TODO: check if inode is present in bitmap before reading struct or is it useless?
+
+	unsigned char block_inode_table[4096];
+	ext2_read_block(sb, partition, block_inode_table, descriptor->ba_start_inode_table + containing_block);
+	struct ext2_inode_extended inode_struct = ((struct ext2_inode_extended *)block_inode_table)[table_block_index];
+	return inode_struct;
+}
+
+/*static void print_inode(struct ext2_inode_extended *inode) {
 	unsigned char modestr[11];
 	format_mode(modestr, inode->base.mode);
 	printk("%s %u %u:%u %u\n", modestr, inode->base.hard_link_count, inode->base.uid, inode->base.gid, inode->base.size);
+}*/
+
+unsigned int ext2_find_absolute(union ext2_super_block *sb, struct ide_partition *partition, const char *path) {
+	if (*path != '/')
+		return 0;
+	const char *current_char;
+	const char *component_start = path + 1;
+	unsigned int inode_nr = ROOT_INODE;
+	struct ext2_inode_extended current_inode = ext2_get_inode(sb, partition, ROOT_INODE);
+
+	do {
+		//print_inode(&current_inode);
+		while (*component_start == '/') {
+			component_start++;
+		}
+		current_char = component_start;
+		while (*current_char && *current_char != '/') {
+			current_char++;
+		}
+		unsigned int component_length = current_char - component_start;
+		if (component_length > 0) {
+			if ((current_inode.base.mode >> 12) != MODE_DIRECTORY)
+				return 0;
+			else {
+				// lookup directory entry
+				struct VecU8 file_contents = ext2_read_inode(sb, partition, &current_inode);
+
+				unsigned int found_inode_nr = 0;
+				struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;
+				while (direntry->inode) {
+					//printk("%u %u - ", direntry->type_indicator, direntry->inode);
+					//write((const char *)direntry->name,  direntry->name_length);
+					//writes("\n");
+					if (direntry->name_length == component_length && memcmp(direntry->name, component_start, component_length) == 0) {
+						found_inode_nr = direntry->inode;
+						break;
+					}
+					direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
+				}
+				VecU8_destruct(&file_contents);
+				if (found_inode_nr) {
+					inode_nr = found_inode_nr;
+					current_inode = ext2_get_inode(sb, partition, found_inode_nr);
+				} else
+					return 0;
+			}
+		} else
+			break;
+		component_start = current_char;
+	} while (1);
+
+	return inode_nr;
 }
+
 
 void ext2_test(struct ide_partition *partition) {
 	if (partition->sector_count < 3)
@@ -159,10 +237,6 @@ void ext2_test(struct ide_partition *partition) {
 	ext2_print_sb(&sb);
 	if (sb.major_ver != 1 || sb.block_size != 4096)
 		return;
-	unsigned int root_dir_group = (ROOT_INODE - 1) / sb.inodes_in_group;
-	unsigned int group_index = (ROOT_INODE - 1) / sb.inodes_in_group;
-	unsigned int containing_block = group_index * sb.inode_size / sb.block_size;
-	printk("root dir group %u containing block %u\n", root_dir_group, containing_block);
 
 	// verify that block group 2 has same super block
 	/*union ext2_super_block sb2;
@@ -172,22 +246,8 @@ void ext2_test(struct ide_partition *partition) {
 	ide_read_sector(drive, sector_sb2 + 1, sb2.buf + 512);
 	ext2_print_sb(&sb2);*/
 
-	unsigned char block[4096];
-	ext2_read_block(&sb, partition, block, 1);
-
-	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
-	print_block_group_descriptor(descriptor);
-
-	unsigned char block_inode_bitmap[4096];
-	ext2_read_block(&sb, partition, block_inode_bitmap, descriptor->ba_inode_usage_bitmap);
-
-	unsigned char block_inode_table[4096];
-	ext2_read_block(&sb, partition, block_inode_table, descriptor->ba_start_inode_table);
-	struct ext2_inode_extended *inode = (struct ext2_inode_extended *)block_inode_table;
-
-	for (unsigned short i = 0; i < 16; i++)
-		print_inode(&inode[i]);
-	struct VecU8 file_contents = ext2_read_inode(&sb, partition, inode + ROOT_INODE - 1);
+	struct ext2_inode_extended root_dir = ext2_get_inode(&sb, partition, ROOT_INODE);
+	struct VecU8 file_contents = ext2_read_inode(&sb, partition, &root_dir);
 
 	struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;
 	while (direntry->inode) {
@@ -196,5 +256,10 @@ void ext2_test(struct ide_partition *partition) {
 		writes("\n");
 		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
 	}
+	printk("'/bin/init' is inode %u\n", ext2_find_absolute(&sb, partition, "/bin/init"));
+	printk("'//////bin/init' is inode %u\n", ext2_find_absolute(&sb, partition, "//////bin/init"));
+	printk("'//////bin////init' is inode %u\n", ext2_find_absolute(&sb, partition, "//////bin////init"));
+	printk("'//////bin////init/' is inode %u\n", ext2_find_absolute(&sb, partition, "//////bin////init/"));
+	printk("'/' is inode %u\n", ext2_find_absolute(&sb, partition, "/"));
 	VecU8_destruct(&file_contents);
 }

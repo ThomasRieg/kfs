@@ -188,7 +188,7 @@ static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extend
 			out.length = 0;
 		}
 		ext2_read_block(fs, &out.data[out.length], inode->base.block_pointers[i]);
-		out.length += (out.length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out.length - fs->sb.block_size) : fs->sb.block_size;
+		out.length += (out.length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out.length) : fs->sb.block_size;
 	}
 	if (out.length != inode->base.size) {
 		kernel_panic("direct block pointers are not sufficient for inode", 0);

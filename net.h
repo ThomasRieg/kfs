@@ -11,10 +11,12 @@ struct ipv4 {
 	unsigned char dst_ipv4[4];
 } __attribute__((packed));
 
-struct icmp {
-	unsigned short code;
+struct icmp_echo {
+	unsigned char type;
+	unsigned char code;
 	unsigned short checksum;
-	unsigned char data[4];
+	unsigned short identifier;
+	unsigned short sequence_number;
 } __attribute__((packed));
 
 struct ether {
@@ -38,7 +40,7 @@ struct arp_eth_ipv4 {
 struct icmp_ipv4_frame {
 	struct ether ether;
 	struct ipv4 ipv4;
-	struct icmp icmp;
+	struct icmp_echo icmp;
 } __attribute__((packed));
 
 struct arp_ipv4_frame {
@@ -127,4 +129,4 @@ void rtl_8139_transmit(void *frame, unsigned int size);
 unsigned char *arp_lookup(unsigned char ipv4[4]);
 void handle_frame(struct ether *ether);
 void arp_print_table(void);
-unsigned short checksum(unsigned short *buf, unsigned int word_count, unsigned int except_word);
+unsigned short internet_checksum(unsigned char *buf, unsigned int word_count, unsigned int except_word);

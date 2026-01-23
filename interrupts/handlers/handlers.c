@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 
 #include "../interrupts.h"
-#include "../../scancode.h"
 #include "../../tty/tty.h"
 #include "../../libk/libk.h"
 

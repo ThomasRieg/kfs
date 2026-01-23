@@ -18,6 +18,11 @@ ISO := kfs.iso
 ELF := kfs.elf
 DISK_FILE := disk.raw
 SHELL := /bin/bash # for brace expansions
+GRUB_MKRESCUE := grub-mkrescue
+
+ifeq (, $(shell which $(GRUB_MKRESCUE) 2>/dev/null))
+	GRUB_MKRESCUE := grub2-mkrescue
+endif
 
 QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 4096M
 
@@ -49,7 +54,7 @@ $(ISO): $(ELF) grub.cfg
 	mkdir -p iso/boot/grub
 	cp $(ELF) iso/boot
 	cp grub.cfg iso/boot/grub
-	grub-mkrescue -o $@ iso
+	$(GRUB_MKRESCUE) -o $@ iso
 
 clean:
 	find -name '*.d' -delete

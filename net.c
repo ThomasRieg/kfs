@@ -5,14 +5,15 @@
 struct arp_eth_ipv4_cache_entry arp_cache[10];
 unsigned int arp_cache_entry_count = 0;
 
-unsigned short checksum(unsigned short *buf, unsigned int word_count, unsigned int except_word) {
+unsigned short internet_checksum(unsigned char *buf, unsigned int word_count, unsigned int except_word) {
 	unsigned short sum = 0;
-	for (unsigned int i = 0; i < word_count; i++) {
+	for (unsigned int i = 0, j = 0; i < word_count; i++, j += 2) {
 		if (i == except_word) continue;
-		unsigned int tmp = buf[i] + sum;
-		sum = tmp & 0xFFFF + (tmp >> 16);
+		unsigned int tmp = ((unsigned int)buf[j] << 8) + buf[j + 1] + sum;
+		tmp = (tmp & 0xFFFF) + (tmp >> 16);
+		sum = (tmp & 0xFFFF) + (tmp >> 16);
 	}
-	return sum;
+	return ~sum;
 }
 
 static void arp_update_cache(struct arp_eth_ipv4 *arp) {

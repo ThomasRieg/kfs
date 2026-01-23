@@ -7,6 +7,15 @@
 #include "common.h"
 #include "mem_page/mem_paging.h"
 
+// only valid for low-endian
+/*static unsigned int u32_host_to_be(unsigned int a) {
+	return (a >> 24) | ((a & 0xFF) << 24) | ((a & 0xFF00) << 8) | ((a & 0xFF0000) >> 8);
+}*/
+
+static unsigned short u16_host_to_be(unsigned short a) {
+	return (a >> 8) | (a << 8);
+}
+
 void net_test(void)
 {
 	const unsigned char *gateway_mac = arp_lookup(rtl8139.gateway_ipv4);
@@ -20,41 +29,28 @@ void net_test(void)
 	struct icmp_ipv4_frame frame;
 	memcpy(frame.ether.dst_mac, gateway_mac, 6);
 	memcpy(frame.ether.src_mac, rtl8139.mac, 6);
-	frame.ether.ether_type = 0x0080;
-	frame.ipv4.version_ihl = 0x54;
-	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
+	frame.ether.ether_type = ETH_IPV4;
+	frame.ipv4.version_ihl = 0x45;
+	frame.ipv4.dscp_ecn = 0;
+	frame.ipv4.total_length = u16_host_to_be(sizeof(struct ipv4) + sizeof(struct icmp_echo));
 	frame.ipv4.ident = 0;
+	frame.ipv4.flags_frag_offset = 0;
 	frame.ipv4.ttl = 64;
 	frame.ipv4.prot = 1;
-	memcpy(frame.ipv4.dst_ipv4, "\x01\x01\x01\x01", 4); // 1.1.1.1
+	memcpy(frame.ipv4.dst_ipv4, rtl8139.gateway_ipv4, 4);
 	memcpy(frame.ipv4.src_ipv4, rtl8139.ipv4, 4);
-	unsigned short ipv4_sum = checksum((unsigned short *)&frame.ipv4, 10, 5);
-	unsigned short icmp_sum = checksum((unsigned short *)&frame.icmp, 4, 1);
-	frame.ipv4.header_sum = ipv4_sum >> 8;
-	frame.ipv4.header_sum = ipv4_sum & 0xFF;
-	frame.icmp.checksum = icmp_sum >> 8;
-	frame.icmp.checksum = icmp_sum & 0xFF;
+	frame.icmp.type = 8;
+	frame.icmp.code = 0;
 
-	//////////////////////////////// TCP test
-	/*struct tcp_ipv4_frame frame;
-	memcpy(frame.ether.dst_mac, dst_mac, 6);
-	memcpy(frame.ether.src_mac, our_mac, 6);
-	frame.ether.ether_type = 0x0080;
-	frame.ipv4.version_ihl = 0x54;
-	frame.ipv4.total_length = sizeof(struct ipv4) + sizeof(struct icmp);
-	frame.ipv4.ident = 0;
-	frame.ipv4.ttl = 64;
-	frame.ipv4.prot = 1;
-	memcpy(frame.ipv4.dst_ipv4, dst_ipv4, 6);
-	memcpy(frame.ipv4.src_ipv4, our_ipv4, 6);
-	unsigned short ipv4_sum = checksum((unsigned short *)&frame.ipv4, 10, 5);
-	unsigned short icmp_sum = checksum((unsigned short *)&frame.icmp, 4, 1);
-	frame.ipv4.header_sum = ipv4_sum >> 8;
-	frame.ipv4.header_sum = ipv4_sum & 0xFF;
-	frame.icmp.checksum = icmp_sum >> 8;
-	frame.icmp.checksum = icmp_sum & 0xFF;*/
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++) {
+		frame.icmp.identifier = 0;
+		frame.icmp.sequence_number = u16_host_to_be(i);
+		unsigned short ipv4_sum = internet_checksum((unsigned char *)&frame.ipv4, 10, 5);
+		unsigned short icmp_sum = internet_checksum((unsigned char *)&frame.icmp, 4, 1);
+		frame.ipv4.header_sum = u16_host_to_be(ipv4_sum);
+		frame.icmp.checksum = u16_host_to_be(icmp_sum);
 		rtl_8139_transmit(&frame, sizeof(frame));
+	}
 }
 
 void handle_command(unsigned char len, const char *cmd)

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 14:09:22 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 15:07:55 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,6 +114,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->pd = copy_current_pd();
 	if (!task->pd)
 		return (false);
+	task->proc_memory.heap_current = (void *)0x08100000; // temporary
 	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
 	if (task->proc_memory.user_stack_bot == MAP_FAILED)
 	{

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 13:53:16 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 14:54:57 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,6 +98,7 @@ typedef struct s_mm
 	virt_ptr user_stack_top;
 	virt_ptr user_stack_bot;
 
+	virt_ptr heap_current;   // used by brk
 	uint32_t reserved_pages; // optional stats/counters
 	uint32_t physical_pages; // optional stats/counters
 } t_mm;

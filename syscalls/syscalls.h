@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 14:01:00 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 15:10:34 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,5 +33,8 @@ uint32_t syscall_kill(t_interrupt_data *regs);
 uint32_t syscall_fork(t_interrupt_data *regs);
 uint32_t syscall_archprctl(__attribute__((unused))t_interrupt_data *regs);
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs);
+
+uint32_t syscall_get_thread_area(__attribute__((unused))t_interrupt_data *regs);
+uint32_t syscall_set_thread_area(__attribute__((unused))t_interrupt_data *regs);
 
 #endif

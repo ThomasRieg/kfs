@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 14:28:10 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 15:31:58 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include "../../vmalloc/vmalloc.h"
 #include "../../libk/libk.h"
 #include "../../mmap/mmap.h"
+#include "../../mem_page/mem_paging.h"
 #include "../../errno.h"
 
 // 199
@@ -48,9 +49,33 @@ uint32_t syscall_archprctl(__attribute__((unused))t_interrupt_data *regs)
 uint32_t syscall_brk(__attribute__((unused))t_interrupt_data *regs)
 {
 	printk("brk %x\n", regs->ebx);
-	//void *a = mmap(0, regs->ebx, PROT_READ | PROT_WRITE, MAP_PRIVATE, -1, 0, &g_curr_task->proc_memory);
-	//return ((unsigned int)a);
-	return -ENOMEM;
+	unsigned int old_brk = (unsigned int)g_curr_task->proc_memory.heap_current;
+	if (regs->ebx == 0)
+		return old_brk;
+	unsigned int new_brk = (unsigned int)page_align_up((void *)regs->ebx);
+	if (new_brk < old_brk)
+		return -EINVAL; // TODO: support deallocation
+	unsigned int size = (unsigned int)page_align_up((void *)(new_brk - old_brk));
+	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED) {
+		printk("couldn't allocate brk");
+		return -ENOMEM;
+	}
+	g_curr_task->proc_memory.heap_current = (void *)new_brk;
+	return new_brk;
+}
+
+uint32_t syscall_get_thread_area(__attribute__((unused))t_interrupt_data *regs)
+{
+	printk("get thread area %p\n", regs->ebx);
+	return (0);
+}
+
+uint32_t syscall_set_thread_area(__attribute__((unused))t_interrupt_data *regs)
+{
+	// TODO: set up selector in the GDT for process (must be choosable by user-space)
+	printk("set thread area %p\n", regs->ebx);
+	return (-EINVAL);
+	return (0);
 }
 
 static t_task *find_zombie_child(t_task *parent, int pid)

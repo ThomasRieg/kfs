@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   s_regs.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 14:25:18 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 17:07:11 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 00:09:27 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,10 +28,10 @@ typedef struct __attribute__((packed)) s_interrupt_data
 	uint32_t eax;
 
 	/* segment registers saved by common stub (int_entrypoint.s)*/
-	uint32_t ds;
-	uint32_t es;
-	uint32_t fs;
 	uint32_t gs;
+	uint32_t fs;
+	uint32_t es;
+	uint32_t ds;
 
 	/* pushed by micro-stub (isr_stubs.s) */
 	uint32_t int_no;

@@ -177,7 +177,7 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("\n");
 
 	struct VecU8 init_binary = read_full_file("/bin/init");
-	t_task *init_task = vmalloc(sizeof(t_task));
+	t_task *init_task = vcalloc(1, sizeof(t_task));
 	if (!init_task || !setup_process(init_task, NULL, 0, &init_binary)) {
 		printk("couldn't launch init");
 	}

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:24:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 22:48:01 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/22 23:34:19 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #define MMAP_H
 
 #include "../common.h"
+#include "../tasks/task.h"
 
 #define USERLAND_HEAP_START_VA 0x200000u 
 
@@ -36,7 +37,7 @@ enum e_mmap_flag
 
 #define MAP_FAILED ((void *)-1)
 
-void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset);
+void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset, t_mm *mm);
 int syscall_munmap(void *addr, size_t length);
 
 /*Return Value

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/22 16:30:22 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 00:28:16 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,13 +33,13 @@ static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_st
 	ktop -= sizeof(t_interrupt_data);
 	t_interrupt_data *f = (t_interrupt_data *)ktop;
 
-	memset(f, 0, sizeof(*f));
+	memset(f, 42, sizeof(*f));
 
 	uint32_t udata = (GDT_SEL_UDATA | 3);
-	f->ds = udata;
-	f->es = udata;
-	f->fs = udata;
 	f->gs = udata;
+	f->fs = udata;
+	f->es = udata;
+	f->ds = udata;
 
 	// Discarded before iret anyway
 	f->int_no = 0;
@@ -54,6 +54,8 @@ static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_st
 	f->ss = udata;
 
 	t->k_esp = (uint32_t)f;
+	printk("task kesp %X\n", t->k_esp);
+	printk("task eip %X\n", f->eip);
 }
 
 // will copy the ring0 pages cr3 currently loaded on the cpu
@@ -81,13 +83,16 @@ phys_ptr copy_current_pd()
 // task has to be allocated by vmalloc
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary)
 {
+	printk("0\n");
 	if (binary->length < sizeof(struct elf_header)) return false;
 
 	struct elf_header *header = (struct elf_header *)binary->data;
 	if (memcmp(header->signature, "\x7F""ELF", 4) != 0) return false;
+	printk("0.5\n");
 	if (header->bits != 0x01 || header->endianness != 0x01 || header->target != 0x03
 			|| header->header_version != 0x01
 			|| header->abi != 0x00 || header->abi_version != 0x00 || header->type != 0x02) return false;
+	printk("0.75\n");
 	if (header->program_hdrs_offset + header->program_header_count * header->program_header_size > binary->length) return false;
 
 	task->pending_signals = 0;
@@ -95,27 +100,36 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->parent_task = parent;
 	task->uid = user_id;
 	task->pd = copy_current_pd();
+	printk("1\n");
 	if (!task->pd)
 		return (false);
-	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0);
+	printk("2\n");
+	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
 	if (task->proc_memory.user_stack_bot == MAP_FAILED)
 	{
 		pmm_free_frame(task->pd);
 		return (false);
 	}
+	printk("3\n");
+	g_curr_task = task; //temporary
+	write_cr3(task->pd); //temporary
 	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 	{
 		struct elf_program_header *base = (struct elf_program_header *)(binary->data + header->program_hdrs_offset);
 		for (unsigned short i = 0; i < header->program_header_count; i++) {
 			if (base[i].type == 0x01 && base[i].file_offset + base[i].file_size < binary->length) {
-				mmap((void*)base[i].virt_addr, base[i].mem_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0);
+				mmap((void*)base[i].virt_addr, base[i].mem_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
 				memcpy((void*)base[i].virt_addr, binary->data + base[i].file_offset, base[i].file_size);
 			}
 		}
 	}
-
+	printk("4\n");
 	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top));
+	printk("5\n");
 	task->status = STATUS_RUNNABLE;
+	printk("6\n");
+	context_switch(task);
+	
 	return (true);
 }
 

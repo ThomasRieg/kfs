@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:25:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 23:05:02 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/22 23:30:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,7 +69,8 @@ void *find_first_available(void *start, uint32_t len, t_mm *mm, t_vma **prev, t_
         return NULL;
 }
 
-void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset)
+//mm is task.mproc_memory (g_curr_task->proc_memory)
+void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset, t_mm *mm)
 {
     void *original_addr = addr;
     if (offset || fd > 0)
@@ -79,7 +80,7 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
     if (!length)
         return (MAP_FAILED); //0 lenght mapping not allowed
     if ((uintptr_t)addr >= KERNEL_VIRT_BASE)
-        return (MAP_FAILED); //g_curr_task safe to use with interrupts disabled because everytime this process is called it g_curr_task must be the same
+        return (MAP_FAILED);
     if (length >= (KERNEL_VIRT_BASE - USERLAND_HEAP_START_VA))
         return (MAP_FAILED); //not enough memory left
     if ((uintptr_t)addr < USERLAND_HEAP_START_VA)
@@ -107,18 +108,18 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
             return (MAP_FAILED); //start changed, therefore invalid (not alligned, too low...)
         }
 
-        if (vma_overlaps(&g_curr_task->proc_memory, start, end))
+        if (vma_overlaps(mm, start, end))
         {
             enable_interrupts();
             return (MAP_FAILED); //zone already reserved, TODO apparently posix wants us to just override the entry/entries that reserved this zone, idk if it's worth doing
         }
 
-        find_insert_pos(&g_curr_task->proc_memory, start, &prev, &next);
+        find_insert_pos(mm, start, &prev, &next);
         available_start = original_addr;
     }
     else
     {
-        available_start = find_first_available(addr, length, &g_curr_task->proc_memory, &prev, &next);
+        available_start = find_first_available(addr, length, mm, &prev, &next);
         if (!available_start)
         {
             enable_interrupts();
@@ -134,7 +135,7 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
     if (prev)
         prev->next = new;
     else
-        g_curr_task->proc_memory.vma_list = new;
+        mm->vma_list = new;
     new->next = next;
     new->prots = prot;
     new->flags = flags;
@@ -142,7 +143,7 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
     new->start = available_start;
     new->end = (virt_ptr)((uintptr_t)available_start + length);
 
-    g_curr_task->proc_memory.reserved_pages += length / PAGE_SIZE;
+    mm->reserved_pages += length / PAGE_SIZE;
     enable_interrupts();
     return (available_start);
 }

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/21 22:56:02 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/22 23:51:50 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -118,10 +118,10 @@ static inline uint32_t get_vma_flags(t_vma *vma)
 	return (flags);
 }
 
-static inline bool is_user_mode_fault(const t_interrupt_data *r)
+/*static inline bool is_user_mode_fault(const t_interrupt_data *r)
 {
     return ((r->err_code & 0x4u) != 0); // U/S bit
-}
+}*/
 
 static inline bool is_present_fault(const t_interrupt_data *r)
 {
@@ -133,7 +133,7 @@ void page_fault_handler(t_interrupt_data *regs)
 	disable_interrupts();
 	unsigned int virtual_address;
 	asm volatile("mov %%cr2, %0" : "=r"(virtual_address));
-	if (!g_curr_task || !is_user_mode_fault(regs))
+	if (!g_curr_task)
 	{
 		// page fault inside kernel code
 		writes("page fault :(\n");
@@ -148,6 +148,7 @@ void page_fault_handler(t_interrupt_data *regs)
 	uint32_t *pde = get_pde((virt_ptr)virtual_address);
 	if (vma && !is_present_fault(regs) && (!pte || !(*pte & PTE_P)))
 	{
+		printk("debug, allocated new zone at %x\n", virtual_address);
 		phys_ptr frame = pmm_alloc_frame();
 		if (!frame)
 			kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)

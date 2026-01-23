@@ -15,6 +15,7 @@
 #include "syscalls/syscalls.h"
 #include "ext2.h"
 #include "tasks/task.h"
+#include "errno.h"
 
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
@@ -69,29 +70,44 @@ unsigned char from_cmos(enum cmos_register reg)
 	return bcd(inb(PORT_CMOS_DATA));
 }
 
-// print clock from CMOS
-void print_clock(void)
+
+uint32_t syscall_read(t_interrupt_data *regs)
 {
+	printk("reading from fd %u\n", regs->ebx);
+	return (0);
+}
+
+uint32_t syscall_write(t_interrupt_data *regs)
+{
+	if (regs->ebx > 3)
+		return (-EBADF);
+
+	write((void *)regs->ecx, regs->edx);
+	return (0);
+}
+
+uint32_t syscall_clock_gettime(t_interrupt_data *regs)
+{
+	if (regs->ebx > 0)
+		return (-EINVAL);
+
+	struct timespec {
+		unsigned int tv_sec;
+		unsigned int tv_nsec;
+	};
+
 	unsigned int century = from_cmos(RTC_USUAL_CENTURY);
-	unsigned int year = from_cmos(RTC_YEAR);
+	unsigned int year = century * 100 + from_cmos(RTC_YEAR);
 	unsigned int month = from_cmos(RTC_MONTH);
 	unsigned int day = from_cmos(RTC_DAY);
 	unsigned int hour = from_cmos(RTC_HOUR);
 	unsigned int minute = from_cmos(RTC_MINUTE);
 	unsigned int second = from_cmos(RTC_SECOND);
-
-	uint8_t orig_background;
-	uint8_t orig_foreground;
-	vga_get_color(&orig_foreground, &orig_background);
-	vga_set_color(VGA_WHITE, VGA_LIGHT_RED);
-	printk("datetime is %u:%u:%u %u/%u/%u\n", hour, minute, second, day, month, century * 100 + year);
-	vga_set_color(orig_foreground, orig_background);
-}
-
-// showcase function for kfs-4 bonuses, not the actual write syscall
-uint32_t syscall_write(t_interrupt_data *regs)
-{
-	write((void *)regs->ebx, regs->ecx);
+	struct timespec *dst = (struct timespec *)regs->ecx;
+	// TODO: gregorian calendar calculator
+	unsigned int seconds_since_epoch = (year - 1970) * 31536000 + ((month - 1) * 30 + day) * 86400 + hour * 3600 + minute * 60 + second;
+	dst->tv_sec = seconds_since_epoch;
+	dst->tv_nsec = 0;
 	return (0);
 }
 
@@ -151,13 +167,15 @@ void kernel_main(struct s_mb2_info *multi)
 	setup_interrupts();
 	writes("Interrupt Descriptor Table loaded.\n");
 	init_syscalls();
-	add_syscall(4, syscall_write);
 	add_syscall(1, syscall_exit);
 	add_syscall(2, syscall_fork);
+	add_syscall(3, syscall_read);
+	add_syscall(4, syscall_write);
+	add_syscall(37, syscall_kill);
+	add_syscall(48, syscall_signal);
 	add_syscall(114, syscall_wait4);
 	add_syscall(199, syscall_getuid);
-	add_syscall(48, syscall_signal);
-	add_syscall(37, syscall_kill);
+	add_syscall(265, syscall_clock_gettime);
 
 	setup_pics();
 	writes("PICs configured.\n");
@@ -171,15 +189,10 @@ void kernel_main(struct s_mb2_info *multi)
 	mem_test_all();
 	pci_init_all();
 
-	uint32_t syscall_ret = syscall_call(4, "Hello world! KFS @ 42\n", sizeof("Hello world! KFS @ 42\n") - 1);
-	printk("syscall returned %u\n", syscall_ret);
-	print_clock();
-	writes("\n");
-
 	struct VecU8 init_binary = read_full_file("/bin/init");
 	t_task *init_task = vcalloc(1, sizeof(t_task));
 	if (!init_task || !setup_process(init_task, NULL, 0, &init_binary)) {
-		printk("couldn't launch init");
+		printk("couldn't launch init\n");
 	}
 	VecU8_destruct(&init_binary);
 

@@ -1,3 +1,4 @@
-LDFLAGS := -nostdlib -m32 -no-pie
+CFLAGS := -static
+LDFLAGS := -m32 -no-pie
 
-init: init.s
+init: init.c

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 00:57:26 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 11:22:29 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
 #define TASK_STACK_TOP KERNEL_VIRT_BASE - PAGE_SIZE
-#define NB_TICKS_PER_TASK 500u // nb of timer irq before we context switch to next task
+#define NB_TICKS_PER_TASK 1u // nb of timer irq before we context switch to next task
 
 typedef void (*t_sig_handler)(int);
 #define SIG_IGN 1u // ingore this signal

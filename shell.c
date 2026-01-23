@@ -7,8 +7,6 @@
 #include "common.h"
 #include "mem_page/mem_paging.h"
 
-void print_clock(void);
-
 void net_test(void)
 {
 	const unsigned char *gateway_mac = arp_lookup(rtl8139.gateway_ipv4);
@@ -120,10 +118,6 @@ void handle_command(unsigned char len, const char *cmd)
 				   "- vga: print all colour combinations\n"
 				   "- free: print how many physical memory frames are left\n"
 				   "- fill-memory: memory tester, tries to allocate the entire available memory and memset it to 0\n");
-		}
-		else if (memcmp(cmd, "date", 4) == 0)
-		{
-			print_clock();
 		}
 		else if (memcmp(cmd, "free", 4) == 0)
 		{

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 10:42:00 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 12:14:22 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,7 +104,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	if (memcmp(header->signature, "\x7F""ELF", 4) != 0) return false;
 	if (header->bits != 0x01 || header->endianness != 0x01 || header->target != 0x03
 			|| header->header_version != 0x01
-			|| header->abi != 0x00 || header->abi_version != 0x00 || header->type != 0x02) return false;
+			|| (header->abi != 0x00 && header->abi != 0x03) || header->abi_version != 0x00 || header->type != 0x02) return false;
 	if (header->program_hdrs_offset + header->program_header_count * header->program_header_size > binary->length) return false;
 
 	task->pending_signals = 0;
@@ -121,6 +121,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 		return (false);
 	}
 	g_curr_task = task; //temporary
+	task->next = task;  // temporary
 	write_cr3(task->pd); //temporary
 	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 	{

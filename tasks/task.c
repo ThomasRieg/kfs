@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 00:28:16 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 01:17:03 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,8 @@ static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_st
 	f->ss = udata;
 
 	t->k_esp = (uint32_t)f;
+	printk("IRET frame: eip=%p cs=%x eflags=%x useresp=%p ss=%x\n",
+           f->eip, f->cs, f->eflags, f->useresp, f->ss);
 	printk("task kesp %X\n", t->k_esp);
 	printk("task eip %X\n", f->eip);
 }
@@ -78,6 +80,19 @@ phys_ptr copy_current_pd()
 	kunmap();
 	enable_interrupts();
 	return (pd);
+}
+
+
+__attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *frame)
+{
+    __asm__ volatile(
+        "movl %0, %%esp \n"
+        "jmp isr_common_epilogue \n"
+        :
+        : "r"(frame)
+        : "memory"
+    );
+    __builtin_unreachable();
 }
 
 // task has to be allocated by vmalloc
@@ -128,7 +143,11 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	printk("5\n");
 	task->status = STATUS_RUNNABLE;
 	printk("6\n");
-	context_switch(task);
+	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));
+	printk("kstack top=%p bot=%p\n",
+       &task->k_stack[sizeof(task->k_stack)],
+       &task->k_stack[0]);
+	iret_from_frame((t_interrupt_data *)task->k_esp);
 	
 	return (true);
 }

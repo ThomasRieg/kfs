@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/22 23:51:50 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 01:28:31 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -131,6 +131,8 @@ static inline bool is_present_fault(const t_interrupt_data *r)
 void page_fault_handler(t_interrupt_data *regs)
 {
 	disable_interrupts();
+	//printk("debug, printing interupt frame\n");
+	//print_interrupt_frame(regs);
 	unsigned int virtual_address;
 	asm volatile("mov %%cr2, %0" : "=r"(virtual_address));
 	if (!g_curr_task)

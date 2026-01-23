@@ -6,7 +6,7 @@
 #    By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/01/11 23:37:01 by thrieg            #+#    #+#              #
-#    Updated: 2026/01/12 01:07:02 by thrieg           ###   ########.fr        #
+#    Updated: 2026/01/23 00:39:34 by thrieg           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,6 +14,7 @@
     .text
 
     .global isr_common_stub
+    .global isr_common_epilogue
 isr_common_stub:
 
     # --- Save segment registers ---
@@ -37,6 +38,7 @@ isr_common_stub:
     call isr_dispatch_c
     add esp, 4
 
+isr_common_epilogue:
     # --- Restore registers & segments ---
     popa
     pop gs

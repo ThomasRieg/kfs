@@ -3,8 +3,8 @@
 
 _start:
 	mov $4, %eax
-	mov hi, %ebx
-	mov $5, %ecx
+	mov $hi, %ebx
+	mov $6, %ecx
 	int $0x80
 	mov $1, %eax
 	int $0x80
@@ -12,4 +12,4 @@ _start:
 .section .rodata
 
 hi:
-.asciz "hello"
+.asciz "hello\n"

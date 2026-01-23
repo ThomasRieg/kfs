@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   process_basics.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/22 16:23:27 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 02:06:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -159,6 +159,9 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 {
 	disable_interrupts(); // doesn't need to reenable because parent's task will override cpu flags
+
+	if (!g_curr_task->parent_task)
+		kernel_panic("parentless process trying to exit, no process left?\n", regs);
 
 	g_curr_task->exit_code = regs->ebx;
 	g_curr_task->status = STATUS_ZOMBIE;

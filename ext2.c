@@ -182,7 +182,7 @@ static bool ext2_read_from_bp_block(struct VecU8 *out, struct ext2_fs *fs, struc
 		unsigned int block_pointers[1024];
 	} singly_indirect;
 	ext2_read_block(fs, singly_indirect.buf, bp);
-	for (unsigned short i = 0; i < 1024 && out->length < inode->base.size; i++) {
+	for (unsigned short i = 0; i < fs->sb.block_size / 4 && out->length < inode->base.size; i++) {
 		if (!VecU8_reserve(out, fs->sb.block_size)) {
 			VecU8_destruct(out);
 			out->length = 0;
@@ -324,7 +324,7 @@ void ext2_test(struct ide_partition *partition) {
 	sb.block_size = 1024 << sb.block_size;
 
 	ext2_print_sb(&sb);
-	if (sb.major_ver != 1 || sb.block_size != 4096)
+	if (sb.major_ver != 1 || sb.block_size > 4096)
 		return;
 
 	// Only the last discovered ext2 partition will be available.

@@ -176,20 +176,24 @@ void fs_format_mode(unsigned char out[11], unsigned short mode) {
 	out[10] = 0;
 }
 
-static bool ext2_read_from_bp_block(struct VecU8 *out, struct ext2_fs *fs, struct ext2_inode_extended *inode, unsigned int bp) {
+static bool ext2_read_from_indirect_block(struct VecU8 *out, struct ext2_fs *fs, struct ext2_inode_extended *inode, unsigned int bp, unsigned int level) {
 	union {
 		unsigned char buf[4096];
 		unsigned int block_pointers[1024];
-	} singly_indirect;
-	ext2_read_block(fs, singly_indirect.buf, bp);
+	} indirect;
+	ext2_read_block(fs, indirect.buf, bp);
 	for (unsigned short i = 0; i < fs->sb.block_size / 4 && out->length < inode->base.size; i++) {
-		if (!VecU8_reserve(out, fs->sb.block_size)) {
-			VecU8_destruct(out);
-			out->length = 0;
+		if (level == 0) {
+			if (!VecU8_reserve(out, fs->sb.block_size)) {
+				VecU8_destruct(out);
+				out->length = 0;
+				return false;
+			}
+			ext2_read_block(fs, &out->data[out->length], indirect.block_pointers[i]);
+			out->length += (out->length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out->length) : fs->sb.block_size;
+		} else if (!ext2_read_from_indirect_block(out, fs, inode, indirect.block_pointers[i], level - 1)) {
 			return false;
 		}
-		ext2_read_block(fs, &out->data[out->length], singly_indirect.block_pointers[i]);
-		out->length += (out->length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out->length) : fs->sb.block_size;
 	}
 	return true;
 }
@@ -210,10 +214,18 @@ static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extend
 		out.length += (out.length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out.length) : fs->sb.block_size;
 	}
 	if (out.length != inode->base.size) {
-		if (!ext2_read_from_bp_block(&out, fs, inode, inode->base.singly_indirect_bp))
+		if (!ext2_read_from_indirect_block(&out, fs, inode, inode->base.singly_indirect_bp, 0))
 			return out;
-		if (out.length != inode->base.size)
-			kernel_panic("direct + singly indirect block pointers are not sufficient for inode", 0);
+		if (out.length != inode->base.size) {
+			if (!ext2_read_from_indirect_block(&out, fs, inode, inode->base.doubly_indirect_bp, 1))
+				return out;
+			if (out.length != inode->base.size) {
+				if (!ext2_read_from_indirect_block(&out, fs, inode, inode->base.triply_indirect_bp, 2))
+					return out;
+				if (out.length != inode->base.size)
+					kernel_panic("ext2: not enough blocks available for inode size???", 0);
+			}
+		}
 	}
 	return out;
 }
@@ -226,7 +238,11 @@ static struct ext2_inode_extended ext2_get_inode(struct ext2_fs *fs, unsigned in
 	//printk("inode %u's structure is in entry #%u of table block #%u in block group #%u\n", inode, table_block_index, containing_block, group);
 
 	unsigned char group_desc_block[4096];
-	ext2_read_block(fs, group_desc_block, group * fs->sb.blocks_in_group + 1);
+
+	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
+	// otherwise, padding and SB are in one block and group desc table starts at block 1
+	ext2_read_block(fs, group_desc_block, group * fs->sb.blocks_in_group + fs->sb.block_size == 1024 ? 2 : 1);
+	// TODO: read descriptor of the proper group
 	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)group_desc_block;
 	//print_block_group_descriptor(descriptor);
 
@@ -273,7 +289,7 @@ static unsigned int ext2_find_absolute(struct ext2_fs *fs, const char *path) {
 
 				unsigned int found_inode_nr = 0;
 				struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;
-				while (direntry->inode) {
+				while ((unsigned char *)direntry < file_contents.data + file_contents.length && direntry->inode) {
 					//printk("%u %u - ", direntry->type_indicator, direntry->inode);
 					//write((const char *)direntry->name,  direntry->name_length);
 					//writes("\n");
@@ -344,7 +360,7 @@ void ext2_test(struct ide_partition *partition) {
 	struct VecU8 file_contents = ext2_read_inode(&ext2_mounted, &root_dir);
 
 	struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;
-	while (direntry->inode) {
+	while ((unsigned char *)direntry < file_contents.data + file_contents.length && direntry->inode) {
 		printk("%u %u - ", direntry->type_indicator, direntry->inode);
 		write((const char *)direntry->name,  direntry->name_length);
 		writes("\n");

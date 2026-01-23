@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 02:06:46 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 14:28:10 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,12 +14,43 @@
 #include "../../tasks/task.h"
 #include "../../vmalloc/vmalloc.h"
 #include "../../libk/libk.h"
+#include "../../mmap/mmap.h"
+#include "../../errno.h"
 
 // 199
 // void
 uint32_t syscall_getuid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	return (g_curr_task->uid);
+}
+
+uint32_t syscall_getgid(__attribute__((unused))t_interrupt_data *regs)
+{
+	return (g_curr_task->gid);
+}
+
+uint32_t syscall_geteuid32(__attribute__((unused))t_interrupt_data *regs)
+{
+	return (g_curr_task->euid);
+}
+
+uint32_t syscall_getegid32(__attribute__((unused))t_interrupt_data *regs)
+{
+	return (g_curr_task->egid);
+}
+
+uint32_t syscall_archprctl(__attribute__((unused))t_interrupt_data *regs)
+{
+	printk("arch prctl %x %x\n", regs->ebx, regs->ecx);
+	return (-EINVAL);
+}
+
+uint32_t syscall_brk(__attribute__((unused))t_interrupt_data *regs)
+{
+	printk("brk %x\n", regs->ebx);
+	//void *a = mmap(0, regs->ebx, PROT_READ | PROT_WRITE, MAP_PRIVATE, -1, 0, &g_curr_task->proc_memory);
+	//return ((unsigned int)a);
+	return -ENOMEM;
 }
 
 static t_task *find_zombie_child(t_task *parent, int pid)

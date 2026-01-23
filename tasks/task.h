@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 11:22:29 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 13:53:16 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,6 +114,8 @@ typedef struct task
 	unsigned int uid;
 	unsigned int euid;
 	unsigned int suid;
+	unsigned int gid;
+	unsigned int egid;
 	unsigned int exit_code;
 	unsigned int pending_signals;
 	struct open_file open_files[10];

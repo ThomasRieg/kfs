@@ -172,10 +172,15 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(3, syscall_read);
 	add_syscall(4, syscall_write);
 	add_syscall(37, syscall_kill);
+	add_syscall(45, syscall_brk);
 	add_syscall(48, syscall_signal);
 	add_syscall(114, syscall_wait4);
 	add_syscall(199, syscall_getuid);
+	add_syscall(200, syscall_getgid);
+	add_syscall(201, syscall_geteuid32);
+	add_syscall(202, syscall_getegid32);
 	add_syscall(265, syscall_clock_gettime);
+	add_syscall(384, syscall_archprctl);
 
 	setup_pics();
 	writes("PICs configured.\n");

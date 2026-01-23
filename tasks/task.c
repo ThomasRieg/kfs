@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 12:25:57 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 14:09:22 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,7 +50,7 @@ static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_st
 	f->cs = (GDT_SEL_UCODE | 3);
 	f->eflags = 0x202u; // IF=1 + reserved bit
 
-	f->useresp = user_stack_top;
+	f->useresp = user_stack_top - 16; // TODO: put argc, envp etc in stack
 	f->ss = udata;
 
 	t->k_esp = (uint32_t)f;
@@ -82,7 +82,6 @@ phys_ptr copy_current_pd()
 	return (pd);
 }
 
-
 __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *frame)
 {
     __asm__ volatile(
@@ -110,7 +109,8 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->pending_signals = 0;
 	task->task_id = g_next_pid++;
 	task->parent_task = parent;
-	task->uid = user_id;
+	task->uid = task->euid = task->suid = user_id;
+	task->gid = task->egid = user_id;
 	task->pd = copy_current_pd();
 	if (!task->pd)
 		return (false);

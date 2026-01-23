@@ -176,6 +176,24 @@ void fs_format_mode(unsigned char out[11], unsigned short mode) {
 	out[10] = 0;
 }
 
+static bool ext2_read_from_bp_block(struct VecU8 *out, struct ext2_fs *fs, struct ext2_inode_extended *inode, unsigned int bp) {
+	union {
+		unsigned char buf[4096];
+		unsigned int block_pointers[1024];
+	} singly_indirect;
+	ext2_read_block(fs, singly_indirect.buf, bp);
+	for (unsigned short i = 0; i < 1024 && out->length < inode->base.size; i++) {
+		if (!VecU8_reserve(out, fs->sb.block_size)) {
+			VecU8_destruct(out);
+			out->length = 0;
+			return false;
+		}
+		ext2_read_block(fs, &out->data[out->length], singly_indirect.block_pointers[i]);
+		out->length += (out->length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out->length) : fs->sb.block_size;
+	}
+	return true;
+}
+
 static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extended *inode) {
 	struct VecU8 out;
 	VecU8_init(&out);
@@ -192,21 +210,8 @@ static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extend
 		out.length += (out.length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out.length) : fs->sb.block_size;
 	}
 	if (out.length != inode->base.size) {
-		union {
-			unsigned char buf[4096];
-			unsigned int block_pointers[1024];
-		} singly_indirect;
-		ext2_read_block(fs, singly_indirect.buf, inode->base.singly_indirect_bp);
-		for (unsigned short i = 0; i < 1024 && out.length < inode->base.size; i++) {
-			if (!VecU8_reserve(&out, fs->sb.block_size)) {
-				VecU8_destruct(&out);
-				out.length = 0;
-				return out;
-			}
-			ext2_read_block(fs, &out.data[out.length], singly_indirect.block_pointers[i]);
-			out.length += (out.length + fs->sb.block_size > inode->base.size) ? (inode->base.size - out.length) : fs->sb.block_size;
-		}
-
+		if (!ext2_read_from_bp_block(&out, fs, inode, inode->base.singly_indirect_bp))
+			return out;
 		if (out.length != inode->base.size)
 			kernel_panic("direct + singly indirect block pointers are not sufficient for inode", 0);
 	}

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 12:14:22 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/23 12:25:57 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,7 +128,11 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 		struct elf_program_header *base = (struct elf_program_header *)(binary->data + header->program_hdrs_offset);
 		for (unsigned short i = 0; i < header->program_header_count; i++) {
 			if (base[i].type == 0x01 && base[i].file_offset + base[i].file_size < binary->length) {
-				mmap((void*)base[i].virt_addr, base[i].mem_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
+				void *virt = page_align_down((void*)base[i].virt_addr);
+				unsigned int to_add = base[i].virt_addr - (unsigned int)virt;
+				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory) == MAP_FAILED) {
+					kernel_panic("couldn't map for process", 0);
+				}
 				memcpy((void*)base[i].virt_addr, binary->data + base[i].file_offset, base[i].file_size);
 			}
 		}

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   dispatcher.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:37:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/19 20:08:34 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 01:45:14 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,8 @@ static t_isr_handler g_isr_handlers[256];
 
 void isr_dispatch_c(t_interrupt_data *regs)
 {
+	if ((regs->err_code & 3) == 3)
+		printk("received interrupt %u from user mode! \n", regs->int_no);
 	if (g_curr_task)
 	{
 		g_curr_task->k_esp = (uintptr_t)regs;

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:07:36 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 01:33:05 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 01:34:07 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -522,7 +522,7 @@ static inline void idt_install_all_stubs(t_idt_entry_32 idt[256])
 			idt[i] = DEF_INTERRUPT(isr_stub_79);
 			break;
 		case 80:
-			idt[i] = DEF_USER_INTERRUPT(isr_stub_80); //callable from ring 3
+			idt[i] = DEF_INTERRUPT(isr_stub_80);
 			break;
 		case 81:
 			idt[i] = DEF_INTERRUPT(isr_stub_81);
@@ -666,7 +666,7 @@ static inline void idt_install_all_stubs(t_idt_entry_32 idt[256])
 			idt[i] = DEF_INTERRUPT(isr_stub_127);
 			break;
 		case 128:
-			idt[i] = DEF_INTERRUPT(isr_stub_128);
+			idt[i] = DEF_USER_INTERRUPT(isr_stub_128);
 			break;
 		case 129:
 			idt[i] = DEF_INTERRUPT(isr_stub_129);

@@ -91,7 +91,6 @@ void print_clock(void)
 // showcase function for kfs-4 bonuses, not the actual write syscall
 uint32_t syscall_write(t_interrupt_data *regs)
 {
-	write("hello from userspace\n", 22);
 	write((void *)regs->ebx, regs->ecx);
 	return (0);
 }

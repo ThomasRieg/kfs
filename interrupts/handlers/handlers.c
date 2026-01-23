@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 01:37:33 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 10:46:47 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -148,7 +148,7 @@ void page_fault_handler(t_interrupt_data *regs)
 	uint32_t *pde = get_pde((virt_ptr)virtual_address);
 	if (vma && !is_present_fault(regs) && (!pte || !(*pte & PTE_P)))
 	{
-		printk("debug, allocated new zone at %x\n", virtual_address);
+		//printk("debug, allocated new zone at %x\n", virtual_address);
 		phys_ptr frame = pmm_alloc_frame();
 		if (!frame)
 			kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
@@ -179,6 +179,8 @@ void page_fault_handler(t_interrupt_data *regs)
 		// TODO handle just killing the process, schedule another one and return
 		writes("page fault :(\n");
 		printk("error code: %u\n", regs->err_code);
+		if (regs->err_code & 4)
+			printk("while in userspace\n");
 		printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
 		print_interrupt_frame(regs);
 		while (1)

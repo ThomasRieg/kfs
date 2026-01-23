@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 01:17:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/23 10:42:00 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,10 +54,10 @@ static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_st
 	f->ss = udata;
 
 	t->k_esp = (uint32_t)f;
-	printk("IRET frame: eip=%p cs=%x eflags=%x useresp=%p ss=%x\n",
+	/*printk("IRET frame: eip=%p cs=%x eflags=%x useresp=%p ss=%x\n",
            f->eip, f->cs, f->eflags, f->useresp, f->ss);
 	printk("task kesp %X\n", t->k_esp);
-	printk("task eip %X\n", f->eip);
+	printk("task eip %X\n", f->eip);*/
 }
 
 // will copy the ring0 pages cr3 currently loaded on the cpu
@@ -98,16 +98,13 @@ __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *f
 // task has to be allocated by vmalloc
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary)
 {
-	printk("0\n");
 	if (binary->length < sizeof(struct elf_header)) return false;
 
 	struct elf_header *header = (struct elf_header *)binary->data;
 	if (memcmp(header->signature, "\x7F""ELF", 4) != 0) return false;
-	printk("0.5\n");
 	if (header->bits != 0x01 || header->endianness != 0x01 || header->target != 0x03
 			|| header->header_version != 0x01
 			|| header->abi != 0x00 || header->abi_version != 0x00 || header->type != 0x02) return false;
-	printk("0.75\n");
 	if (header->program_hdrs_offset + header->program_header_count * header->program_header_size > binary->length) return false;
 
 	task->pending_signals = 0;
@@ -115,17 +112,14 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->parent_task = parent;
 	task->uid = user_id;
 	task->pd = copy_current_pd();
-	printk("1\n");
 	if (!task->pd)
 		return (false);
-	printk("2\n");
 	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
 	if (task->proc_memory.user_stack_bot == MAP_FAILED)
 	{
 		pmm_free_frame(task->pd);
 		return (false);
 	}
-	printk("3\n");
 	g_curr_task = task; //temporary
 	write_cr3(task->pd); //temporary
 	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
@@ -138,15 +132,12 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 			}
 		}
 	}
-	printk("4\n");
 	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top));
-	printk("5\n");
 	task->status = STATUS_RUNNABLE;
-	printk("6\n");
 	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));
-	printk("kstack top=%p bot=%p\n",
+	/*printk("kstack top=%p bot=%p\n",
        &task->k_stack[sizeof(task->k_stack)],
-       &task->k_stack[0]);
+       &task->k_stack[0]);*/
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 	
 	return (true);

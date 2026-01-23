@@ -22,6 +22,7 @@ SHELL := /bin/bash # for brace expansions
 QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 4096M
 
 qemu: $(ISO) $(DISK_FILE)
+	$(MAKE) -C userspace
 	$(QEMU)
 
 debug: $(ISO) $(DISK_FILE)

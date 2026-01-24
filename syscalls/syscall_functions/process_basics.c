@@ -17,6 +17,7 @@
 #include "../../mmap/mmap.h"
 #include "../../mem_page/mem_paging.h"
 #include "../../errno.h"
+#include "../../tty/tty.h"
 
 // 199
 // void
@@ -95,7 +96,7 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	t_dt_ptr_32 gp;
 	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
 	gp.base = (unsigned int)gdt;
-	dt_set_entry(gdt, 8, desc->base_addr, desc->limit, ACCESS_PRESENT | ACCESS_READ | ACCESS_RING3 | ACCESS_CODE_OR_DATA, FLAG_PROTECTED_32BITS); // 0x40
+	dt_set_entry(gdt, 8, desc->base_addr, desc->limit, ACCESS_PRESENT | ACCESS_READ | ACCESS_RING3 | ACCESS_CODE_OR_DATA, FLAG_PROTECTED_32BITS | FLAG_PAGE_GRANULARITY); // 0x40
 	asm volatile(
 		"lgdt %0\n"
 		 : : "m"(gp));
@@ -107,6 +108,31 @@ uint32_t syscall_set_tid_address(t_interrupt_data *regs) {
 	printk("stub syscall #%u\n", regs->eax);
 	// TODO: return task ID
 	return (-ENOSYS);
+}
+
+uint32_t syscall_mprotect(__attribute__((unused))t_interrupt_data *regs) {
+	// lie otherwise glibc won't proceed :)
+	return (0);
+}
+
+struct iovec {
+	void *iov_base;
+	unsigned int iov_len;
+};
+
+uint32_t syscall_writev(t_interrupt_data *regs) {
+	printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
+	struct iovec *iovecs = (struct iovec *)regs->ecx;
+	for (unsigned int i = 0; i < regs->edx; i++) {
+		write(iovecs[i].iov_base, iovecs[i].iov_len);
+		//printk("%u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
+	}
+	return (0);
+}
+
+uint32_t syscall_fstatat(t_interrupt_data *regs) {
+	printk("fstatat %u %s %p %u\n", regs->ebx, regs->ecx, regs->edx, regs->esi);
+	return (0);
 }
 
 static t_task *find_zombie_child(t_task *parent, int pid)

@@ -6,7 +6,7 @@ OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 		tty/tty.o\
 		vga/vga.o\
 		libk/vec.o libk/print_stack.o libk/memstuff.o libk/convertstuff.o libk/strstuff.o libk/printk.o libk/ft_vector.o\
-		gdt/gdt.o\
+		dt/dt.o\
 		mem_page/kmap.o mem_page/paging.o mem_page/utils.o mem_page/kmmap.o mem_page/mem_tester.o\
 		pmm/pmm.o\
 		vmalloc/init_state.o vmalloc/vcalloc.o vmalloc/vfree.o vmalloc/vmalloc.o vmalloc/vrealloc.o vmalloc/kmalloc.o\
@@ -24,7 +24,10 @@ ifeq (, $(shell which $(GRUB_MKRESCUE) 2>/dev/null))
 	GRUB_MKRESCUE := grub2-mkrescue
 endif
 
-QEMU := qemu-system-i386 -chardev stdio,id=char0 -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 4096M
+#SERIAL_BACKEND := -chardev socket,path=./serial,server=on,id=char0
+SERIAL_BACKEND := -chardev stdio,id=char0
+
+QEMU := qemu-system-i386 $(SERIAL_BACKEND) -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 4096M
 
 qemu: $(ISO) $(DISK_FILE)
 	$(QEMU)

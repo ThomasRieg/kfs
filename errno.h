@@ -1,4 +1,5 @@
 // From https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/errno-base.h#L13
+// https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/errno.h#L18
 
 #define	EPERM		 1	/* Operation not permitted */
 #define	ENOENT		 2	/* No such file or directory */
@@ -34,3 +35,4 @@
 #define	EPIPE		32	/* Broken pipe */
 #define	EDOM		33	/* Math argument out of domain of func */
 #define	ERANGE		34	/* Math result not representable */
+#define	ENOSYS		38	/* Invalid system call number */

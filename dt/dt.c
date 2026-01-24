@@ -10,14 +10,14 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "gdt.h"
+#include "dt.h"
 #include "../common.h"
 #include "../mem_page/mem_defines.h"
 #include "../libk/libk.h"
 
 static t_tss32 g_tss;
 
-static inline void gdt_set_entry(volatile t_gdt_entry_32 *gdt,
+void dt_set_entry(volatile t_dt_entry_32 *dt,
 								 int i,
 								 unsigned int base,
 								 unsigned int limit,
@@ -25,15 +25,15 @@ static inline void gdt_set_entry(volatile t_gdt_entry_32 *gdt,
 								 unsigned char flags)
 {
 	// limit is 20-bit when using 4K granularity (we pass 0xFFFFF for 4GB-1)
-	gdt[i].limit_low = (unsigned short)(limit & 0xFFFF);
-	gdt[i].base_low = (unsigned short)(base & 0xFFFF);
-	gdt[i].base_mid = (unsigned char)((base >> 16) & 0xFF);
-	gdt[i].access = access;
-	gdt[i].gran = (unsigned char)(((limit >> 16) & 0x0F) | (flags & 0xF0));
-	gdt[i].base_high = (unsigned char)((base >> 24) & 0xFF);
+	dt[i].limit_low = (unsigned short)(limit & 0xFFFF);
+	dt[i].base_low = (unsigned short)(base & 0xFFFF);
+	dt[i].base_mid = (unsigned char)((base >> 16) & 0xFF);
+	dt[i].access = access;
+	dt[i].gran = (unsigned char)(((limit >> 16) & 0x0F) | (flags << 4));
+	dt[i].base_high = (unsigned char)((base >> 24) & 0xFF);
 }
 
-static inline void gdt_flush(const t_gdt_ptr_32 *gp)
+static inline void gdt_flush(const t_dt_ptr_32 *gp)
 {
 	// Load GDTR, then reload CS with a far jump, then reload data segments.
 	asm volatile(
@@ -55,11 +55,11 @@ static inline void gdt_flush(const t_gdt_ptr_32 *gp)
 		: "ax", "memory");
 }
 
-static inline void gdt_set_tss(volatile t_gdt_entry_32 *gdt, int i, uint32_t base, uint32_t limit)
+static inline void gdt_set_tss(volatile t_dt_entry_32 *gdt, int i, uint32_t base, uint32_t limit)
 {
 	// access = 0x89 : present, ring0, system, type=9 (32-bit available TSS)
 	// flags  = 0x00 : byte granularity
-	gdt_set_entry(gdt, i, base, limit, 0x89, 0x00);
+	dt_set_entry(gdt, i, base, limit, ACCESS_PRESENT | ACCESS_TYPE_32BIT_AVAILABLE_TSS, 0x00);
 }
 
 static inline void tss_flush(uint16_t sel)
@@ -95,27 +95,20 @@ void tss_set_kernel_stack(uint32_t esp0)
 void gdt_install_basic(void)
 {
 	// place the GDT at address 0x800 as subject asked
-	volatile t_gdt_entry_32 *gdt_phys = (volatile t_gdt_entry_32 *)GDT_START;
+	volatile t_dt_entry_32 *gdt_phys = (volatile t_dt_entry_32 *)GDT_START;
 
-	// "flat" segments: base=0, limit=0xFFFFF with 4K granularity + 32-bit
-	// flags: 0xC0 => G=1 (4K), D=1 (32-bit)
+	// "flat" segments: cover the whole 4 GiB space
 	const unsigned int base = 0x00000000;
 	const unsigned int limit = 0x000FFFFF;
-	const unsigned char flags = 0xC0;
+	const unsigned char flags = FLAG_PAGE_GRANULARITY | FLAG_PROTECTED_32BITS;
 
-	// Access bytes:
-	// 0x9A = kernel code (present, ring0, code, readable)
-	// 0x92 = kernel data (present, ring0, data, writable)
-	// 0xFA = user code   (present, ring3, code, readable)
-	// 0xF2 = user data   (present, ring3, data, writable)
-
-	gdt_set_entry(gdt_phys, 0, 0, 0, 0, 0);				  // null
-	gdt_set_entry(gdt_phys, 1, base, limit, 0x92, flags); // kernel data  -> 0x08
-	gdt_set_entry(gdt_phys, 2, base, limit, 0x9A, flags); // kernel code  -> 0x10
-	gdt_set_entry(gdt_phys, 3, base, limit, 0x92, flags); // kernel stack -> 0x18
-	gdt_set_entry(gdt_phys, 4, base, limit, 0xF2, flags); // user data    -> 0x20
-	gdt_set_entry(gdt_phys, 5, base, limit, 0xFA, flags); // user code    -> 0x28
-	gdt_set_entry(gdt_phys, 6, base, limit, 0xF2, flags); // user stack   -> 0x30
+	dt_set_entry(gdt_phys, 0, 0, 0, 0, 0);				  // null
+	dt_set_entry(gdt_phys, 1, base, limit, ACCESS_PRESENT | ACCESS_CODE_OR_DATA | ACCESS_WRITE, flags); // kernel data  -> 0x08
+	dt_set_entry(gdt_phys, 2, base, limit, ACCESS_PRESENT | ACCESS_CODE_OR_DATA | ACCESS_READ | ACCESS_EXEC, flags); // kernel code  -> 0x10
+	dt_set_entry(gdt_phys, 3, base, limit, ACCESS_PRESENT | ACCESS_CODE_OR_DATA | ACCESS_WRITE, flags); // kernel stack -> 0x18
+	dt_set_entry(gdt_phys, 4, base, limit, ACCESS_PRESENT | ACCESS_RING3 | ACCESS_CODE_OR_DATA | ACCESS_WRITE, flags); // user data    -> 0x20
+	dt_set_entry(gdt_phys, 5, base, limit, ACCESS_PRESENT | ACCESS_RING3 | ACCESS_CODE_OR_DATA | ACCESS_READ | ACCESS_EXEC, flags); // user code    -> 0x28
+	dt_set_entry(gdt_phys, 6, base, limit, ACCESS_PRESENT | ACCESS_RING3 | ACCESS_CODE_OR_DATA | ACCESS_WRITE, flags); // user stack   -> 0x30
 	tss_init();
 
 	// entry 7 = TSS descriptor
@@ -123,8 +116,8 @@ void gdt_install_basic(void)
 
 	extern void map_range_physmap_runtime(uint32_t pa_start, uint32_t pa_end, uint32_t flags);
 
-	t_gdt_ptr_32 gp;
-	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_gdt_entry_32) - 1);
+	t_dt_ptr_32 gp;
+	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
 	gp.base = (unsigned int)gdt_phys + KERNEL_VIRT_BASE;
 	map_range_physmap_runtime(GDT_START, GDT_END, PTE_P | PTE_RW);
 	gdt_flush(&gp);

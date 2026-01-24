@@ -34,7 +34,8 @@ uint32_t syscall_fork(t_interrupt_data *regs);
 uint32_t syscall_archprctl(__attribute__((unused))t_interrupt_data *regs);
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs);
 
-uint32_t syscall_get_thread_area(__attribute__((unused))t_interrupt_data *regs);
-uint32_t syscall_set_thread_area(__attribute__((unused))t_interrupt_data *regs);
+uint32_t syscall_get_thread_area(t_interrupt_data *regs);
+uint32_t syscall_set_thread_area(t_interrupt_data *regs);
+uint32_t syscall_set_tid_address(t_interrupt_data *regs);
 
 #endif

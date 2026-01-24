@@ -14,10 +14,30 @@
 #define GDT_H
 
 #define GDT_START 0x800 // physical address, add KERNEL_VIRT_BASE to access it after paging_init
-#define GDT_NB_ENTRY 8
-#define GDT_END GDT_START + (GDT_NB_ENTRY * sizeof(t_gdt_entry_32))
+#define GDT_NB_ENTRY 9
+#define GDT_END GDT_START + (GDT_NB_ENTRY * sizeof(t_dt_entry_32))
 
 #include "../common.h"
+
+enum dt_flag {
+	FLAG_LONG_64BITS = 2,
+	FLAG_PROTECTED_32BITS = 4,
+	FLAG_PAGE_GRANULARITY = 8 // 4 KiB
+};
+
+enum dt_access {
+	ACCESS_ACCESSED = 1,
+	ACCESS_READ = 2, // code segments
+	ACCESS_WRITE = 2, // data segments
+	ACCESS_DC = 4,
+	ACCESS_EXEC = 8,
+	ACCESS_CODE_OR_DATA = 16,
+	ACCESS_RING3 = 3 << 5,
+	ACCESS_PRESENT = 1 << 7,
+	ACCESS_TYPE_LDT = 0x2,
+	ACCESS_TYPE_32BIT_AVAILABLE_TSS = 0x9,
+
+};
 
 // Selectors (index * 8):
 // 0x00 null
@@ -40,7 +60,7 @@ enum
 	GDT_SEL_TSS = 0x38,
 };
 
-typedef struct s_gdt_entry_32
+typedef struct s_dt_entry_32
 {
 	unsigned short limit_low;
 	unsigned short base_low;
@@ -48,13 +68,13 @@ typedef struct s_gdt_entry_32
 	unsigned char access;
 	unsigned char gran; // high 4 bits = flags, low 4 bits = limit_high
 	unsigned char base_high;
-} __attribute__((packed)) t_gdt_entry_32;
+} __attribute__((packed)) t_dt_entry_32;
 
-typedef struct s_gdt_ptr_32
+typedef struct s_dt_ptr_32
 {
 	unsigned short limit;
 	unsigned int base;
-} __attribute__((packed)) t_gdt_ptr_32;
+} __attribute__((packed)) t_dt_ptr_32;
 
 typedef struct __attribute__((packed)) s_tss32
 {
@@ -86,6 +106,12 @@ typedef struct __attribute__((packed)) s_tss32
 void tss_init(void);
 void tss_set_kernel_stack(uint32_t esp0);
 
+void dt_set_entry(volatile t_dt_entry_32 *dt,
+					 int i,
+					 unsigned int base,
+					 unsigned int limit,
+					 unsigned char access,
+					 unsigned char flags);
 void gdt_install_basic(void);
 
 #endif

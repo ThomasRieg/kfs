@@ -14,7 +14,6 @@
 #include "../libk/libk.h"
 #include "../drivers/pic.h"
 #include "../tasks/task.h"
-#include "../gdt/gdt.h"
 
 static t_isr_handler g_isr_handlers[256];
 

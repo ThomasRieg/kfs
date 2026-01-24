@@ -40,13 +40,13 @@ uint32_t syscall_getegid32(__attribute__((unused))t_interrupt_data *regs)
 	return (g_curr_task->egid);
 }
 
-uint32_t syscall_archprctl(__attribute__((unused))t_interrupt_data *regs)
+uint32_t syscall_archprctl(t_interrupt_data *regs)
 {
 	printk("arch prctl %x %x\n", regs->ebx, regs->ecx);
 	return (-EINVAL);
 }
 
-uint32_t syscall_brk(__attribute__((unused))t_interrupt_data *regs)
+uint32_t syscall_brk(t_interrupt_data *regs)
 {
 	printk("brk %x\n", regs->ebx);
 	unsigned int old_brk = (unsigned int)g_curr_task->proc_memory.heap_current;
@@ -64,18 +64,49 @@ uint32_t syscall_brk(__attribute__((unused))t_interrupt_data *regs)
 	return new_brk;
 }
 
-uint32_t syscall_get_thread_area(__attribute__((unused))t_interrupt_data *regs)
+struct user_desc {
+	unsigned int entry_number;
+	unsigned int base_addr;
+	unsigned int limit;
+	unsigned int seg_32bit: 1;
+	unsigned int contents: 2;
+	unsigned int read_exec_only: 1;
+	unsigned int limit_in_pages: 1;
+	unsigned int seg_not_present: 1;
+	unsigned int useable: 1;
+};
+
+uint32_t syscall_get_thread_area(t_interrupt_data *regs)
 {
 	printk("get thread area %p\n", regs->ebx);
 	return (0);
 }
 
-uint32_t syscall_set_thread_area(__attribute__((unused))t_interrupt_data *regs)
+uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 {
-	// TODO: set up selector in the GDT for process (must be choosable by user-space)
-	printk("set thread area %p\n", regs->ebx);
-	return (-EINVAL);
+	// https://github.com/lattera/glibc/blob/895ef79e04a953cac1493863bcae29ad85657ee1/sysdeps/i386/nptl/tls.h#L217
+
+	struct user_desc *desc = (struct user_desc *)regs->ebx;
+	printk("set thread area %p\n", desc);
+
+	desc->entry_number = 8; // entry #8 in GDT
+	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE+GDT_START);
+
+	t_dt_ptr_32 gp;
+	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
+	gp.base = (unsigned int)gdt;
+	dt_set_entry(gdt, 8, desc->base_addr, desc->limit, ACCESS_PRESENT | ACCESS_READ | ACCESS_RING3 | ACCESS_CODE_OR_DATA, FLAG_PROTECTED_32BITS); // 0x40
+	asm volatile(
+		"lgdt %0\n"
+		 : : "m"(gp));
 	return (0);
+}
+
+// dummy used by all non-implemented syscalls at the moment
+uint32_t syscall_set_tid_address(t_interrupt_data *regs) {
+	printk("stub syscall #%u\n", regs->eax);
+	// TODO: return task ID
+	return (-ENOSYS);
 }
 
 static t_task *find_zombie_child(t_task *parent, int pid)

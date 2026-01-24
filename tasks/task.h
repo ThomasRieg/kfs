@@ -15,6 +15,7 @@
 
 #include "../mem_page/mem_defines.h"
 #include "../libk/vec.h"
+#include "../dt/dt.h"
 
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u

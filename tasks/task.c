@@ -17,7 +17,7 @@
 #include "../mem_page/mem_paging.h"
 #include "../mem_page/mem_defines.h"
 #include "../libk/libk.h"
-#include "../gdt/gdt.h"
+#include "../dt/dt.h"
 #include "../vmalloc/vmalloc.h"
 #include "../mmap/mmap.h"
 
@@ -144,6 +144,17 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	/*printk("kstack top=%p bot=%p\n",
        &task->k_stack[sizeof(task->k_stack)],
        &task->k_stack[0]);*/
+	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE+GDT_START);
+
+	t_dt_ptr_32 gp;
+	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
+	// clears entry possibly set for previous process
+	// TODO: save and switch on context switch
+	gp.base = (unsigned int)gdt;
+	dt_set_entry(gdt, 8, 0, 0, 0, 0);
+	asm volatile(
+		"lgdt %0\n"
+		 : : "m"(gp));
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 	
 	return (true);

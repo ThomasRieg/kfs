@@ -15,7 +15,7 @@
 #include "../libk/libk.h"
 #include "../mem_page/mem_defines.h"
 #include "../vga/vga.h"
-#include "../gdt/gdt.h"
+#include "../dt/dt.h"
 
 // defined in linker script:
 extern char __kernel_start_phys;

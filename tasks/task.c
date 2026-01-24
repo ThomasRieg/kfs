@@ -50,7 +50,17 @@ static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_st
 	f->cs = (GDT_SEL_UCODE | 3);
 	f->eflags = 0x202u; // IF=1 + reserved bit
 
-	f->useresp = user_stack_top - 16; // TODO: put argc, envp etc in stack
+	// ELF auxiliary vectors
+	user_stack_top -= 16;
+	unsigned int random_auxv_addr = user_stack_top; // yes, the "random" bytes are all zero
+	// memory is initialized to zero by mmap = NULL auxv
+	user_stack_top -= sizeof(struct elf_auxiliary_vector);
+	user_stack_top -= sizeof(struct elf_auxiliary_vector);
+	struct elf_auxiliary_vector *random_auxv = (struct elf_auxiliary_vector *)user_stack_top;
+	random_auxv->type = ELF_AT_RANDOM;
+	random_auxv->value = random_auxv_addr;
+	user_stack_top -= 3 * sizeof(unsigned int); // argc, argv[0] = NULL, envp[0] = NULL
+	f->useresp = user_stack_top;
 	f->ss = udata;
 
 	t->k_esp = (uint32_t)f;

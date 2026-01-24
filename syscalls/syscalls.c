@@ -13,6 +13,7 @@
 #include "syscalls.h"
 #include "../interrupts/interrupts.h"
 #include "../libk/libk.h"
+#include "../errno.h"
 #include <stdarg.h>
 
 static t_syscall_func g_syscall_handlers[1000];
@@ -20,15 +21,13 @@ static t_syscall_func g_syscall_handlers[1000];
 void syscall_dispatcher(t_interrupt_data *regs)
 {
 	if (regs->eax >= (sizeof(g_syscall_handlers) / sizeof(t_syscall_func)))
-		kernel_panic("tried to overflow g_syscall_handlers tab (called a syscall with a too high number)\n", regs); // TODO handle in the kfs that asks for syscalls
-	if (g_syscall_handlers[regs->eax])
-	{
+		regs->eax = -ENOSYS;
+	else if (g_syscall_handlers[regs->eax])
 		regs->eax = g_syscall_handlers[regs->eax](regs);
-	}
 	else
 	{
+		regs->eax = -ENOSYS;
 		printk("received unhandled syscall %u\n", regs->eax);
-		kernel_panic("unhandled syscall", regs); // TODO handle in the kfs that asks for syscalls
 	}
 }
 

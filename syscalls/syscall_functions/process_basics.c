@@ -65,6 +65,11 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	return new_brk;
 }
 
+uint32_t syscall_mmap2(t_interrupt_data *regs)
+{
+	return (unsigned int)mmap((void *)regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp, &g_curr_task->proc_memory);
+}
+
 struct user_desc {
 	unsigned int entry_number;
 	unsigned int base_addr;
@@ -105,7 +110,7 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 
 // dummy used by all non-implemented syscalls at the moment
 uint32_t syscall_set_tid_address(t_interrupt_data *regs) {
-	printk("stub syscall #%u\n", regs->eax);
+	printk("stub syscall #%u at eip %p\n", regs->eax, regs->eip);
 	// TODO: return task ID
 	return (-ENOSYS);
 }
@@ -130,8 +135,24 @@ uint32_t syscall_writev(t_interrupt_data *regs) {
 	return (0);
 }
 
+#define AT_EMPTY_PATH 0x1000
+
+uint32_t syscall_statx(t_interrupt_data *regs) {
+	unsigned int flags = regs->edx;
+	void *buffer = (void*)regs->edi;
+	printk("statx at eip %p: %u %s %u %u %p\n", regs->eip, regs->ebx, regs->ecx, flags, regs->esi, buffer);
+	if (*(unsigned char *)regs->ecx == 0 && !(flags & AT_EMPTY_PATH))
+		return (-ENOENT);
+	memset(buffer, 0, 256);
+	return (0);
+}
+
 uint32_t syscall_fstatat(t_interrupt_data *regs) {
-	printk("fstatat %u %s %p %u\n", regs->ebx, regs->ecx, regs->edx, regs->esi);
+	unsigned int flags = regs->esi;
+	printk("fstatat at eip %p: %u %s %p %u\n", regs->eip, regs->ebx, regs->ecx, regs->edx, flags);
+	if (*(unsigned char *)regs->ecx == 0 && !(flags & AT_EMPTY_PATH))
+		return (-ENOENT);
+	memset((void *)regs->edx, 0, 88);
 	return (0);
 }
 

@@ -202,6 +202,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(125, syscall_mprotect);
 	add_syscall(146, syscall_writev);
 	add_syscall(191, syscall_set_tid_address); // TODO: implement
+	add_syscall(192, syscall_mmap2);
 	add_syscall(199, syscall_getuid);
 	add_syscall(200, syscall_getgid);
 	add_syscall(201, syscall_geteuid32);
@@ -215,7 +216,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(305, syscall_set_tid_address); // TODO: implement
 	add_syscall(311, syscall_set_tid_address); // TODO: implement
 	add_syscall(355, syscall_set_tid_address); // TODO: implement
-	add_syscall(383, syscall_set_tid_address); // TODO: implement
+	add_syscall(383, syscall_statx);
 	add_syscall(386, syscall_set_tid_address); // TODO: implement
 	add_syscall(384, syscall_archprctl);
 	add_syscall(403, syscall_set_tid_address); // TODO: implement

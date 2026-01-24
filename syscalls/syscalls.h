@@ -40,5 +40,7 @@ uint32_t syscall_set_tid_address(t_interrupt_data *regs);
 uint32_t syscall_writev(t_interrupt_data *regs);
 uint32_t syscall_mprotect(__attribute__((unused))t_interrupt_data *regs);
 uint32_t syscall_fstatat(t_interrupt_data *regs);
+uint32_t syscall_statx(t_interrupt_data *regs);
+uint32_t syscall_mmap2(t_interrupt_data *regs);
 
 #endif

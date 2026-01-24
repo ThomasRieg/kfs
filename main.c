@@ -156,6 +156,31 @@ static void print_header(void)
 
 void kernel_main(struct s_mb2_info *multi)
 {
+
+	writes("CPU vendor: ");
+	unsigned int highest_val;
+	char vendor_1[4], vendor_2[4], vendor_3[4];
+	asm("cpuid" : "=a"(highest_val), "=b"(vendor_1), "=d"(vendor_2), "=c"(vendor_3) : "a"(0));
+	write(vendor_1, 4);
+	write(vendor_2, 4);
+	write(vendor_3, 4);
+	writes("\n");
+	unsigned int model;
+	unsigned int brand_clflush_apic;
+	unsigned int feature_1, feature_2;
+	asm("cpuid" : "=a"(model), "=b"(brand_clflush_apic), "=d"(feature_1), "=c"(feature_2) : "a"(1));
+	if (feature_1 & (1 << 25)) {
+		printk("SSE supported, enabling\n");
+		unsigned int cr0, cr4;
+		asm("mov %%cr0, %0\n"
+			"mov %%cr4, %1": "=r"(cr0), "=r"(cr4));
+		cr0 &= 0xFFFFFFFB; // disable floating-point coprocessor emulation
+		cr0 |= 0x2; // set coprocessor monitoring
+		cr4 |= 3 << 9; // enable FXSAVE and FXRSTOR instructions, unmasked SIMD floating-point exceptions
+		asm("mov %0, %%cr0\n"
+			"mov %1, %%cr4":: "r"(cr0), "r"(cr4));
+	}
+
 	writes("Initializing...\n");
 
 	gdt_install_basic();
@@ -180,6 +205,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(202, syscall_getegid32);
 	add_syscall(243, syscall_set_thread_area);
 	add_syscall(244, syscall_get_thread_area);
+	add_syscall(252, syscall_exit);
 	add_syscall(265, syscall_clock_gettime);
 	add_syscall(384, syscall_archprctl);
 

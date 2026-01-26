@@ -5,6 +5,7 @@
 int main(void) {
 	malloc(10000000);
 	write(1, "hi!\n", 4);
-	for (unsigned short i = 0; i < 4; i++)
+	for (unsigned int i = 0; i < 10; i++) {
 		printf("%u\n", i);
+	}
 }

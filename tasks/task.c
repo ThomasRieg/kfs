@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 15:07:55 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/26 17:14:56 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_st
 	ktop -= sizeof(t_interrupt_data);
 	t_interrupt_data *f = (t_interrupt_data *)ktop;
 
-	memset(f, 42, sizeof(*f));
+	memset(f, 0, sizeof(*f));
 
 	uint32_t udata = (GDT_SEL_UDATA | 3);
 	f->gs = udata;
@@ -184,10 +184,12 @@ __attribute__((noreturn)) static inline void switch_esp_to(uint32_t new_esp)
 // called from interrupt handler
 void context_switch(t_task *next)
 {
+	printk("context_switch\n");
 	g_curr_task = next;
 	tss_set_kernel_stack((uintptr_t)&(next->k_stack[sizeof(next->k_stack)]));
 	write_cr3(next->pd);
 	switch_esp_to(next->k_esp); // then iret path restores regs
+	iret_from_frame((t_interrupt_data *)next->k_esp);
 }
 
 void schedule_next_task()
@@ -218,8 +220,6 @@ void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
 		schedule_next_task();
 	}
 }
-
-
 
 // Returns true if the PT for pdi has no present PTEs
 static bool pt_is_empty(uint32_t pdi)

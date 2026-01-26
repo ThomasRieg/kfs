@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/26 17:13:45 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/26 18:27:44 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,48 @@ uint32_t syscall_archprctl(t_interrupt_data *regs)
 	return (-EINVAL);
 }
 
+struct pollfd {
+	int   fd;         /* file descriptor */
+	short events;     /* requested events */
+	short revents;    /* returned events */
+};
+
+uint32_t syscall_poll(t_interrupt_data *regs)
+{
+	struct pollfd *fds = (struct pollfd *)regs->ebx;
+	int nfds = regs->ecx;
+	void *tmo_p = (void *)regs->edx;
+	void *sigmask = (void *)regs->esi;
+	printk("poll %p %u %p %p\n", fds, nfds, tmo_p, sigmask);
+	return (0);
+}
+
+uint32_t syscall_tkill(t_interrupt_data *regs)
+{
+	int tid = regs->ebx;
+	int sig = regs->ecx;
+	printk("tkill %d %x\n", tid, sig);
+	return (0);
+}
+
+uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
+{
+	int how = regs->ebx;
+	void *set = (void *)regs->ecx;
+	void *oldset = (void *)regs->edx;
+	printk("rt_sigprocmask %x %x %x\n", how, set, oldset);
+	return (0);
+}
+
+uint32_t syscall_rt_sigaction(t_interrupt_data *regs)
+{
+	int signum = regs->ebx;
+	void *act = (void *)regs->ecx;
+	void *oldact = (void *)regs->edx;
+	printk("rt_sigaction %u %x %x\n", signum, act, oldact);
+	return (0);
+}
+
 uint32_t syscall_brk(t_interrupt_data *regs)
 {
 	printk("brk %x\n", regs->ebx);
@@ -58,11 +100,36 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 		return -EINVAL; // TODO: support deallocation
 	unsigned int size = (unsigned int)page_align_up((void *)(new_brk - old_brk));
 	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED) {
-		printk("couldn't allocate brk");
+		printk("couldn't allocate brk\n");
 		return -ENOMEM;
 	}
 	g_curr_task->proc_memory.heap_current = (void *)new_brk;
 	return new_brk;
+}
+
+struct winsize {
+	unsigned short ws_row;
+	unsigned short ws_col;
+	unsigned short ws_xpixel;  /* unused */
+	unsigned short ws_ypixel;  /* unused */
+};
+
+#define TIOCGWINSZ 0x5413
+
+uint32_t syscall_ioctl(t_interrupt_data *regs)
+{
+	int fd = regs->ebx;
+	unsigned long op = regs->ecx;
+	printk("ioctl %u %u\n", fd, op);
+	if (fd > 0 && fd < 4 && op == TIOCGWINSZ) {
+		struct winsize *ws = (struct winsize *)regs->edx;
+		ws->ws_row = 25;
+		ws->ws_col = 80;
+		ws->ws_xpixel = 0;
+		ws->ws_ypixel = 0;
+		return 0;
+	}
+	return (-EINVAL);
 }
 
 struct utsname {
@@ -154,27 +221,6 @@ uint32_t syscall_writev(t_interrupt_data *regs) {
 		write(iovecs[i].iov_base, iovecs[i].iov_len);
 		//printk("%u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
 	}
-	return (0);
-}
-
-#define AT_EMPTY_PATH 0x1000
-
-uint32_t syscall_statx(t_interrupt_data *regs) {
-	unsigned int flags = regs->edx;
-	void *buffer = (void*)regs->edi;
-	printk("statx at eip %p: %u %s %u %u %p\n", regs->eip, regs->ebx, regs->ecx, flags, regs->esi, buffer);
-	if (*(unsigned char *)regs->ecx == 0 && !(flags & AT_EMPTY_PATH))
-		return (-ENOENT);
-	memset(buffer, 0, 256);
-	return (0);
-}
-
-uint32_t syscall_fstatat(t_interrupt_data *regs) {
-	unsigned int flags = regs->esi;
-	printk("fstatat at eip %p: %u %s %p %u\n", regs->eip, regs->ebx, regs->ecx, regs->edx, flags);
-	if (*(unsigned char *)regs->ecx == 0 && !(flags & AT_EMPTY_PATH))
-		return (-ENOENT);
-	memset((void *)regs->edx, 0, 88);
 	return (0);
 }
 

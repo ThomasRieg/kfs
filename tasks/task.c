@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/26 17:14:56 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/26 18:18:26 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,7 +124,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->pd = copy_current_pd();
 	if (!task->pd)
 		return (false);
-	task->proc_memory.heap_current = (void *)0x08100000; // temporary
+	task->proc_memory.heap_current = 0; // temporary
 	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
 	if (task->proc_memory.user_stack_bot == MAP_FAILED)
 	{
@@ -141,10 +141,14 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 			if (base[i].type == 0x01 && base[i].file_offset + base[i].file_size < binary->length) {
 				void *virt = page_align_down((void*)base[i].virt_addr);
 				unsigned int to_add = base[i].virt_addr - (unsigned int)virt;
+
+				void *end = page_align_up((char*)virt+base[i].mem_size+to_add);
 				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory) == MAP_FAILED) {
 					kernel_panic("couldn't map for process", 0);
 				}
 				memcpy((void*)base[i].virt_addr, binary->data + base[i].file_offset, base[i].file_size);
+				if ((unsigned int)task->proc_memory.heap_current < (unsigned int)end)
+					task->proc_memory.heap_current = end;
 			}
 		}
 	}

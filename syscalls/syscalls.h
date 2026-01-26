@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/26 16:10:26 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/26 18:25:15 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,16 +32,25 @@ uint32_t syscall_wait4(t_interrupt_data *regs);
 uint32_t syscall_signal(t_interrupt_data *regs);
 uint32_t syscall_kill(t_interrupt_data *regs);
 uint32_t syscall_fork(t_interrupt_data *regs);
-uint32_t syscall_archprctl(__attribute__((unused))t_interrupt_data *regs);
+uint32_t syscall_archprctl(t_interrupt_data *regs);
+uint32_t syscall_tkill(t_interrupt_data *regs);
+uint32_t syscall_poll(t_interrupt_data *regs);
+uint32_t syscall_ioctl(t_interrupt_data *regs);
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs);
+
+uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs);
+uint32_t syscall_rt_sigaction(t_interrupt_data *regs);
 
 uint32_t syscall_get_thread_area(t_interrupt_data *regs);
 uint32_t syscall_set_thread_area(t_interrupt_data *regs);
 uint32_t syscall_set_tid_address(t_interrupt_data *regs);
 uint32_t syscall_writev(t_interrupt_data *regs);
 uint32_t syscall_mprotect(__attribute__((unused))t_interrupt_data *regs);
+
+uint32_t syscall_mmap2(t_interrupt_data *regs);
+
+uint32_t syscall_readlink(t_interrupt_data *regs);
 uint32_t syscall_fstatat(t_interrupt_data *regs);
 uint32_t syscall_statx(t_interrupt_data *regs);
-uint32_t syscall_mmap2(t_interrupt_data *regs);
 
 #endif

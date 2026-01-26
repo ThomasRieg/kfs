@@ -78,11 +78,15 @@ uint32_t syscall_read(t_interrupt_data *regs)
 
 uint32_t syscall_write(t_interrupt_data *regs)
 {
-	if (regs->ebx > 3)
+	int fd = regs->ebx;
+	const char *buf = (char *)regs->ecx;
+	unsigned int count = regs->edx;
+	//printk("write %u %p %u\n", fd, buf, count);
+	if (fd < 0 || fd > 3)
 		return (-EBADF);
 
-	write((void *)regs->ecx, regs->edx);
-	return (0);
+	write(buf, count);
+	return (count);
 }
 
 uint32_t syscall_clock_gettime(t_interrupt_data *regs)
@@ -198,16 +202,22 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(37, syscall_kill);
 	add_syscall(45, syscall_brk);
 	add_syscall(48, syscall_signal);
+	add_syscall(54, syscall_ioctl);
+	add_syscall(85, syscall_readlink);
 	add_syscall(114, syscall_wait4);
 	add_syscall(122, syscall_uname);
 	add_syscall(125, syscall_mprotect);
 	add_syscall(146, syscall_writev);
+	add_syscall(168, syscall_poll);
+	add_syscall(174, syscall_rt_sigaction);
+	add_syscall(175, syscall_rt_sigprocmask);
 	add_syscall(191, syscall_set_tid_address); // TODO: implement
 	add_syscall(192, syscall_mmap2);
 	add_syscall(199, syscall_getuid);
 	add_syscall(200, syscall_getgid);
 	add_syscall(201, syscall_geteuid32);
 	add_syscall(202, syscall_getegid32);
+	add_syscall(238, syscall_tkill);
 	add_syscall(243, syscall_set_thread_area);
 	add_syscall(244, syscall_get_thread_area);
 	add_syscall(252, syscall_exit);

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 15:10:34 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/26 16:10:26 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,7 @@ uint32_t syscall_geteuid32(__attribute__((unused))t_interrupt_data *regs);
 uint32_t syscall_getegid32(__attribute__((unused))t_interrupt_data *regs);
 
 uint32_t syscall_brk(t_interrupt_data *regs);
+uint32_t syscall_uname(t_interrupt_data *regs);
 uint32_t syscall_wait4(t_interrupt_data *regs);
 uint32_t syscall_signal(t_interrupt_data *regs);
 uint32_t syscall_kill(t_interrupt_data *regs);

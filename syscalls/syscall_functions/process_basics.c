@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 15:31:58 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/26 16:31:29 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,6 +63,28 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	}
 	g_curr_task->proc_memory.heap_current = (void *)new_brk;
 	return new_brk;
+}
+
+struct utsname {
+	char sysname[65];
+	char nodename[65];
+	char release[65];
+	char version[65];
+	char machine[65];
+	char __domainname[65];
+};
+
+uint32_t syscall_uname(t_interrupt_data *regs)
+{
+	// We be doppelgänging as Linux to get glibc to work :D
+	struct utsname *buf = (void *)regs->ebx;
+	memcpy(buf->sysname, "Linux", 6);
+	memcpy(buf->nodename, "kfs", 4);
+	memcpy(buf->release, "6.8.0-40-generic", 17);
+	memcpy(buf->version, "", 1);
+	memcpy(buf->machine, "x86_64", 7);
+	memcpy(buf->__domainname, "(none)", 7);
+	return 0;
 }
 
 uint32_t syscall_mmap2(t_interrupt_data *regs)

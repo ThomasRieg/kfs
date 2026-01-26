@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:48:13 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/14 17:49:43 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/26 15:55:39 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,8 +26,8 @@ void syscall_dispatcher(t_interrupt_data *regs)
 		regs->eax = g_syscall_handlers[regs->eax](regs);
 	else
 	{
-		regs->eax = -ENOSYS;
 		printk("received unhandled syscall %u\n", regs->eax);
+		regs->eax = -ENOSYS;
 	}
 }
 

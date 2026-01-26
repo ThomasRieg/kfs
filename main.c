@@ -199,6 +199,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(45, syscall_brk);
 	add_syscall(48, syscall_signal);
 	add_syscall(114, syscall_wait4);
+	add_syscall(122, syscall_uname);
 	add_syscall(125, syscall_mprotect);
 	add_syscall(146, syscall_writev);
 	add_syscall(191, syscall_set_tid_address); // TODO: implement

@@ -43,6 +43,11 @@ enum interrupt
 	INT_SYSCALLS = 0x80u,
 };
 
+struct timespec {
+	unsigned int tv_sec;
+	unsigned int tv_nsec;
+};
+
 __attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_data *regs);
 
 static inline void disable_interrupts(void)

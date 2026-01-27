@@ -70,35 +70,10 @@ unsigned char from_cmos(enum cmos_register reg)
 }
 
 
-uint32_t syscall_read(t_interrupt_data *regs)
-{
-	printk("reading from fd %u\n", regs->ebx);
-	return (0);
-}
-
-uint32_t syscall_write(t_interrupt_data *regs)
-{
-	int fd = regs->ebx;
-	const char *buf = (char *)regs->ecx;
-	unsigned int count = regs->edx;
-	//printk("write %u %p %u\n", fd, buf, count);
-	struct open_file *file = fd >= 0 && (unsigned int)fd < MAX_OPEN_FILES ? g_curr_task->open_files[fd] : 0;
-	if (!file || file->type != FILE_TERMINAL)
-		return (-EBADF);
-
-	write(buf, count);
-	return (count);
-}
-
 uint32_t syscall_clock_gettime(t_interrupt_data *regs)
 {
 	if (regs->ebx > 0)
 		return (-EINVAL);
-
-	struct timespec {
-		unsigned int tv_sec;
-		unsigned int tv_nsec;
-	};
 
 	unsigned int century = from_cmos(RTC_USUAL_CENTURY);
 	unsigned int year = century * 100 + from_cmos(RTC_YEAR);
@@ -200,6 +175,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(2, syscall_fork);
 	add_syscall(3, syscall_read);
 	add_syscall(4, syscall_write);
+	add_syscall(6, syscall_close);
 	add_syscall(37, syscall_kill);
 	add_syscall(41, syscall_dup);
 	add_syscall(45, syscall_brk);
@@ -219,6 +195,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(200, syscall_getgid);
 	add_syscall(201, syscall_geteuid32);
 	add_syscall(202, syscall_getegid32);
+	add_syscall(221, syscall_fcntl64);
 	add_syscall(238, syscall_tkill);
 	add_syscall(243, syscall_set_thread_area);
 	add_syscall(244, syscall_get_thread_area);

@@ -2,6 +2,7 @@
 #include "drivers/ide.h"
 #include "libk/libk.h"
 #include "tty/tty.h"
+#include "errno.h"
 
 union ext2_super_block {
 	struct {
@@ -130,8 +131,6 @@ static void ext2_read_block(struct ext2_fs *fs, unsigned char *buffer, unsigned 
 		ide_read_sector(&fs->partition.drive, sector, buffer + i);
 	}
 }
-
-#define ROOT_INODE 2
 
 /*static void print_block_group_descriptor(struct ext2_block_group_descriptor *descriptor) {
 	printk("block usage bitmap BA %x, inode usage bitmap BA %x, start inode table BA %x, unallocated blocks %u, unallocated inodes %u, directory count %u\n", descriptor->ba_block_usage_bitmap, descriptor->ba_inode_usage_bitmap, descriptor->ba_start_inode_table, descriptor->unallocated_blocks, descriptor->unallocated_inodes, descriptor->directory_count);
@@ -262,13 +261,14 @@ static struct ext2_inode_extended ext2_get_inode(struct ext2_fs *fs, unsigned in
 	printk("%s %u %u:%u %u\n", modestr, inode->base.hard_link_count, inode->base.uid, inode->base.gid, inode->base.size);
 }*/
 
-static unsigned int ext2_find_absolute(struct ext2_fs *fs, const char *path) {
-	if (*path != '/')
-		return 0;
+static unsigned int ext2_path_to_inode(struct ext2_fs *fs, const char *path, unsigned int inode_nr) {
+	const char *component_start = path;
+	if (*path == '/') {
+		component_start++;
+		inode_nr = EXT2_ROOT_INODE;
+	}
 	const char *current_char;
-	const char *component_start = path + 1;
-	unsigned int inode_nr = ROOT_INODE;
-	struct ext2_inode_extended current_inode = ext2_get_inode(fs, ROOT_INODE);
+	struct ext2_inode_extended current_inode = ext2_get_inode(fs, inode_nr);
 
 	do {
 		//print_inode(&current_inode);
@@ -314,11 +314,31 @@ static unsigned int ext2_find_absolute(struct ext2_fs *fs, const char *path) {
 	return inode_nr;
 }
 
+unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr) {
+	if (!ext2_mounted.mounted) return 0;
+	unsigned int inode_nr = ext2_path_to_inode(&ext2_mounted, path, relative_dir_inode_nr);
+	return inode_nr;
+}
+
+int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned int buf_size) {
+	if (!ext2_mounted.mounted) return -EBADF;
+
+	struct ext2_inode_extended inode = ext2_get_inode(&ext2_mounted, inode_nr);
+
+	// someone won't be happy about this (hi thrieg)
+	struct VecU8 contents = ext2_read_inode(&ext2_mounted, &inode);
+	unsigned written_count = 0;
+	for (unsigned int i = offset; i < contents.length && written_count < buf_size; i++)
+		buf[written_count++] = contents.data[i];
+
+	return written_count;
+}
+
 struct VecU8 read_full_file(const char *path) {
 	struct VecU8 empty = {.length = 0};
 	if (!ext2_mounted.mounted) return empty;
 
-	unsigned int inode_nr = ext2_find_absolute(&ext2_mounted, path);
+	unsigned int inode_nr = ext2_path_to_inode(&ext2_mounted, path, EXT2_ROOT_INODE);
 	if (!inode_nr) return empty;
 
 	struct ext2_inode_extended inode = ext2_get_inode(&ext2_mounted, inode_nr);
@@ -356,7 +376,7 @@ void ext2_test(struct ide_partition *partition) {
 	ide_read_sector(drive, sector_sb2 + 1, sb2.buf + 512);
 	ext2_print_sb(&sb2);*/
 
-	struct ext2_inode_extended root_dir = ext2_get_inode(&ext2_mounted, ROOT_INODE);
+	struct ext2_inode_extended root_dir = ext2_get_inode(&ext2_mounted, EXT2_ROOT_INODE);
 	struct VecU8 file_contents = ext2_read_inode(&ext2_mounted, &root_dir);
 
 	struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;
@@ -366,10 +386,10 @@ void ext2_test(struct ide_partition *partition) {
 		writes("\n");
 		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
 	}
-	printk("'/bin/init' is inode %u\n", ext2_find_absolute(&ext2_mounted, "/bin/init"));
-	printk("'//////bin/init' is inode %u\n", ext2_find_absolute(&ext2_mounted, "//////bin/init"));
-	printk("'//////bin////init' is inode %u\n", ext2_find_absolute(&ext2_mounted, "//////bin////init"));
-	printk("'//////bin////init/' is inode %u\n", ext2_find_absolute(&ext2_mounted, "//////bin////init/"));
-	printk("'/' is inode %u\n", ext2_find_absolute(&ext2_mounted, "/"));
+	printk("'/bin/init' is inode %u\n", ext2_path_to_inode(&ext2_mounted, "/bin/init", EXT2_ROOT_INODE));
+	printk("'//////bin/init' is inode %u\n", ext2_path_to_inode(&ext2_mounted, "//////bin/init", EXT2_ROOT_INODE));
+	printk("'//////bin////init' is inode %u\n", ext2_path_to_inode(&ext2_mounted, "//////bin////init", EXT2_ROOT_INODE));
+	printk("'//////bin////init/' is inode %u\n", ext2_path_to_inode(&ext2_mounted, "//////bin////init/", EXT2_ROOT_INODE));
+	printk("'/' is inode %u\n", ext2_path_to_inode(&ext2_mounted, "/", EXT2_ROOT_INODE));
 	VecU8_destruct(&file_contents);
 }

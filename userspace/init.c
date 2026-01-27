@@ -12,9 +12,9 @@ int main(void) {
 	FILE *fp = fopen("/etc/hostname", "rb");
 
 	if (fp) {
-		unsigned char line[4096];
+		char line[4096];
 		fgets(line, 4096, fp);
-		printf("%s\n", line);
+		printf("%s", line);
 
 		fclose(fp);
 	} else

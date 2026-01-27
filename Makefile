@@ -11,7 +11,7 @@ OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 		pmm/pmm.o\
 		vmalloc/init_state.o vmalloc/vcalloc.o vmalloc/vfree.o vmalloc/vmalloc.o vmalloc/vrealloc.o vmalloc/kmalloc.o\
 		interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o\
-		syscalls/syscalls.o syscalls/syscall_functions/process_basics.o syscalls/syscall_functions/fs.o\
+		syscalls/syscalls.o syscalls/syscall_functions/process_basics.o syscalls/syscall_functions/io.o\
 		tasks/task.o\
 		mmap/mmap.o
 ISO := kfs.iso
@@ -39,7 +39,6 @@ debug: $(ISO) $(DISK_FILE)
 # yes.
 $(DISK_FILE):
 	$(MAKE) -C userspace
-	rm -rf root
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
 	cp userspace/init root/bin
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\

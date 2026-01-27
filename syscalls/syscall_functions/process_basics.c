@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   process_basics.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/26 18:27:44 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/27 16:57:14 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,17 +26,17 @@ uint32_t syscall_getuid(__attribute__((unused)) t_interrupt_data *regs)
 	return (g_curr_task->uid);
 }
 
-uint32_t syscall_getgid(__attribute__((unused))t_interrupt_data *regs)
+uint32_t syscall_getgid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	return (g_curr_task->gid);
 }
 
-uint32_t syscall_geteuid32(__attribute__((unused))t_interrupt_data *regs)
+uint32_t syscall_geteuid32(__attribute__((unused)) t_interrupt_data *regs)
 {
 	return (g_curr_task->euid);
 }
 
-uint32_t syscall_getegid32(__attribute__((unused))t_interrupt_data *regs)
+uint32_t syscall_getegid32(__attribute__((unused)) t_interrupt_data *regs)
 {
 	return (g_curr_task->egid);
 }
@@ -47,10 +47,11 @@ uint32_t syscall_archprctl(t_interrupt_data *regs)
 	return (-EINVAL);
 }
 
-struct pollfd {
-	int   fd;         /* file descriptor */
-	short events;     /* requested events */
-	short revents;    /* returned events */
+struct pollfd
+{
+	int fd;		   /* file descriptor */
+	short events;  /* requested events */
+	short revents; /* returned events */
 };
 
 uint32_t syscall_poll(t_interrupt_data *regs)
@@ -99,7 +100,8 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	if (new_brk < old_brk)
 		return -EINVAL; // TODO: support deallocation
 	unsigned int size = (unsigned int)page_align_up((void *)(new_brk - old_brk));
-	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED) {
+	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED)
+	{
 		printk("couldn't allocate brk\n");
 		return -ENOMEM;
 	}
@@ -107,11 +109,12 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	return new_brk;
 }
 
-struct winsize {
+struct winsize
+{
 	unsigned short ws_row;
 	unsigned short ws_col;
-	unsigned short ws_xpixel;  /* unused */
-	unsigned short ws_ypixel;  /* unused */
+	unsigned short ws_xpixel; /* unused */
+	unsigned short ws_ypixel; /* unused */
 };
 
 #define TIOCGWINSZ 0x5413
@@ -121,7 +124,8 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 	int fd = regs->ebx;
 	unsigned long op = regs->ecx;
 	printk("ioctl %u %u\n", fd, op);
-	if (fd > 0 && fd < 4 && op == TIOCGWINSZ) {
+	if (fd > 0 && fd < 4 && op == TIOCGWINSZ)
+	{
 		struct winsize *ws = (struct winsize *)regs->edx;
 		ws->ws_row = 25;
 		ws->ws_col = 80;
@@ -132,7 +136,8 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 	return (-EINVAL);
 }
 
-struct utsname {
+struct utsname
+{
 	char sysname[65];
 	char nodename[65];
 	char release[65];
@@ -159,16 +164,17 @@ uint32_t syscall_mmap2(t_interrupt_data *regs)
 	return (unsigned int)mmap((void *)regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp, &g_curr_task->proc_memory);
 }
 
-struct user_desc {
+struct user_desc
+{
 	unsigned int entry_number;
 	unsigned int base_addr;
 	unsigned int limit;
-	unsigned int seg_32bit: 1;
-	unsigned int contents: 2;
-	unsigned int read_exec_only: 1;
-	unsigned int limit_in_pages: 1;
-	unsigned int seg_not_present: 1;
-	unsigned int useable: 1;
+	unsigned int seg_32bit : 1;
+	unsigned int contents : 2;
+	unsigned int read_exec_only : 1;
+	unsigned int limit_in_pages : 1;
+	unsigned int seg_not_present : 1;
+	unsigned int useable : 1;
 };
 
 uint32_t syscall_get_thread_area(t_interrupt_data *regs)
@@ -185,7 +191,7 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	printk("set thread area %p\n", desc);
 
 	desc->entry_number = 8; // entry #8 in GDT
-	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE+GDT_START);
+	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
 
 	t_dt_ptr_32 gp;
 	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
@@ -193,33 +199,38 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	dt_set_entry(gdt, 8, desc->base_addr, desc->limit, ACCESS_PRESENT | ACCESS_READ | ACCESS_RING3 | ACCESS_CODE_OR_DATA, FLAG_PROTECTED_32BITS | FLAG_PAGE_GRANULARITY); // 0x40
 	asm volatile(
 		"lgdt %0\n"
-		 : : "m"(gp));
+		: : "m"(gp));
 	return (0);
 }
 
 // dummy used by all non-implemented syscalls at the moment
-uint32_t syscall_set_tid_address(t_interrupt_data *regs) {
+uint32_t syscall_set_tid_address(t_interrupt_data *regs)
+{
 	printk("stub syscall #%u at eip %p\n", regs->eax, regs->eip);
 	// TODO: return task ID
 	return (-ENOSYS);
 }
 
-uint32_t syscall_mprotect(__attribute__((unused))t_interrupt_data *regs) {
+uint32_t syscall_mprotect(__attribute__((unused)) t_interrupt_data *regs)
+{
 	// lie otherwise glibc won't proceed :)
 	return (0);
 }
 
-struct iovec {
+struct iovec
+{
 	void *iov_base;
 	unsigned int iov_len;
 };
 
-uint32_t syscall_writev(t_interrupt_data *regs) {
+uint32_t syscall_writev(t_interrupt_data *regs)
+{
 	printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
 	struct iovec *iovecs = (struct iovec *)regs->ecx;
-	for (unsigned int i = 0; i < regs->edx; i++) {
+	for (unsigned int i = 0; i < regs->edx; i++)
+	{
 		write(iovecs[i].iov_base, iovecs[i].iov_len);
-		//printk("%u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
+		// printk("%u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
 	}
 	return (0);
 }
@@ -346,14 +357,173 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
 	return (g_curr_task->uid); // TODO implement (find efficient way to find the task struct of target pid)
 }
 
+static t_vma *dup_vma(t_vma *src)
+{
+	t_vma *ret = vmalloc(sizeof(*ret));
+	if (!ret)
+		return (NULL);
+	memcpy(ret, src, sizeof(*src));
+	ret->next = NULL;
+	return (ret);
+}
+
+static void free_vmas(t_mm *mm)
+{
+	t_vma *curr = mm->vma_list;
+	while (curr)
+	{
+		t_vma *next = curr->next;
+		vfree(curr);
+		curr = next;
+	}
+}
+
+// returns 0 on success, or negative error code on error
+static uint32_t copy_mm(t_mm *new_mm, t_mm *to_copy)
+{
+	if (!to_copy->vma_list)
+		return (0);
+	new_mm->vma_list = dup_vma(to_copy->vma_list);
+	if (!new_mm->vma_list)
+		return (-ENOMEM);
+	t_vma *curr = to_copy->vma_list->next;
+	t_vma *last_node_new = new_mm->vma_list;
+	while (curr)
+	{
+		last_node_new->next = dup_vma(curr);
+		if (!last_node_new->next)
+		{
+			free_vmas(new_mm);
+			return (-ENOMEM);
+		}
+		last_node_new = last_node_new->next;
+		curr = curr->next;
+	}
+	return (0);
+}
+
+static inline uint32_t get_vma_flags(t_vma *vma)
+{
+	uint32_t flags = PTE_P;
+	if (!(vma->prots & PROT_NONE))
+		flags |= PTE_US;
+	if (vma->prots & PROT_WRITE)
+		flags |= PTE_RW;
+	// READ and EXEC are implied if PROT_NONE is not specified
+	return (flags);
+}
+
+// assumes interrupts are disabled
+// returns 0 if this va is not mapped in pd
+static uint32_t get_phys_frame(virt_ptr ptr, uint32_t pd)
+{
+	uint32_t *pd_virt = kmap(pd);
+	uint32_t pde = pd_virt[PDE_INDEX(ptr)];
+	kunmap();
+	if (!(pde & PTE_P))
+		return (0);
+	uint32_t *pde_virt = kmap(pde & 0xFFFFF000);
+	uint32_t pte = pde_virt[PTE_INDEX(ptr)];
+	kunmap();
+	if (!(pte & PTE_P))
+		return (0);
+	return ((pte & 0xFFFFF000) + (((uintptr_t)ptr) & 0x00000FFF));
+}
+
+#include "../../pmm/pmm.h"
+
+// returns 0 on success, or negative error code on error
+// assumes we have the new process' cr3 loaded, also assumes the copied process has sane and safe mm
+// assumes interrupts are disabled IMPORTANT
+// TODO implement COW and reference count for free later, for now this doesn't free or separate memory
+uint32_t copy_current_user_memory(uint32_t pd_to_copy, t_mm *mm)
+{
+	t_vma *curr = mm->vma_list;
+	while (curr)
+	{
+		if (curr->flags & MAP_SHARED)
+		{
+			// TODO handle the case where frame isn't allocated yet
+			virt_ptr start = page_align_down(curr->start);
+			for (virt_ptr i = start; i < curr->end; i += PAGE_SIZE)
+			{
+				uint32_t frame = get_phys_frame(i, pd_to_copy);
+				if (!frame)
+					continue;
+				uint32_t *pte = get_pte(i);
+				if (!pte)
+				{
+					// allocate PDE, PDEs are never shared anyway
+					phys_ptr pde_frame = pmm_alloc_frame();
+					if (!pde_frame)
+					{
+						return (ENOMEM); // TODO cleanup here
+					}
+					map_page(pde_frame, get_pde(i), PTE_US | PTE_RW | PTE_P); // set permissive flags
+					uint32_t *page_table = (uint32_t *)(uintptr_t)(PT_BASE_VA + PDE_INDEX(i) * PAGE_SIZE);
+					invalidate_cache(page_table);
+					memset(page_table, 0, PAGE_SIZE);
+					pte = get_pte(i); // pte was null, because no pde, now we need to set it before the rest of the code
+					g_curr_task->proc_memory.physical_pages++;
+				}
+
+				map_page(frame, pte, get_vma_flags(curr));
+				virt_ptr virtual_address_page_start = page_align_down(i);
+				invalidate_cache(virtual_address_page_start);
+				g_curr_task->proc_memory.physical_pages++;
+			}
+		}
+		else if (curr->flags & MAP_PRIVATE)
+		{
+			// TODO implement COW here, for now do like map shared
+		}
+		curr++;
+	}
+	return (0);
+}
+
 // 2
 // void
 uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 {
-	t_task *task = vmalloc(sizeof(*task));
-	setup_process(task, g_curr_task, g_curr_task->uid, &((struct VecU8){}));
-	// TODO copy memory pages and stack, add different ret value in child
-	return (0);
+	t_task *task = vcalloc(1, sizeof(*task));
+	if (!task)
+		return (-ENOMEM);
+
+	task->pending_signals = 0;
+	task->task_id = g_next_pid++;
+	task->parent_task = g_curr_task;
+	task->uid = g_curr_task->uid;
+	task->euid = g_curr_task->euid;
+	task->suid = g_curr_task->suid;
+	task->gid = g_curr_task->gid;
+	task->egid = g_curr_task->egid;
+	disable_interrupts();
+	extern phys_ptr copy_current_pd();
+	task->pd = copy_current_pd(); // shallow copy of the kernel address space
+	if (!task->pd)
+		return (-1);
+	uint32_t ret = copy_mm(&task->proc_memory, &g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
+	if (ret)
+		return (enable_interrupts(), ret);
+	uint32_t saved_pd = g_curr_task->pd;
+	write_cr3(task->pd);
+	ret = copy_current_user_memory(saved_pd, &task->proc_memory); // deep copy of the process's address space
+	write_cr3(saved_pd);
+	if (ret)
+		return (enable_interrupts(), ret);
+	enable_interrupts();
+	task->proc_memory.heap_current = g_curr_task->proc_memory.heap_current; // temporary
+	task->proc_memory.user_stack_bot = g_curr_task->proc_memory.user_stack_bot;
+	task->proc_memory.user_stack_top = g_curr_task->proc_memory.user_stack_top;
+	memcpy(task->k_stack, g_curr_task->k_stack, sizeof(g_curr_task->k_stack)); // TODO copy only until k_esp to save instruction?
+	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
+	((t_interrupt_data *)task->k_stack)->eax = 0;
+	task->status = STATUS_RUNNABLE;
+	task->next = g_curr_task->next;
+	g_curr_task->next = task;
+
+	return (task->task_id);
 }
 
 // 1

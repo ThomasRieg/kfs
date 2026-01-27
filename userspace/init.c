@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
+#include <dirent.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <linux/fcntl.h>
 
 #define BYTES 10000000
 
@@ -10,7 +14,15 @@ int main(void)
 	int fd = open("/dev/tty1", O_RDWR | O_NONBLOCK);
 	dup(fd);
 	dup(fd);
-	FILE *fp = fopen("/etc/hostname", "rb");
+	chdir("/etc");
+
+	printf("\t\t//// OPENING `hostname`\n");
+
+	FILE *fp = fopen("hostname", "rb");
+
+	struct stat stat;
+	fstatat(fileno(fp), "", &stat, AT_EMPTY_PATH);
+	printf("dev %llu inode %lu mode %u\n", stat.st_dev, stat.st_ino, stat.st_mode);
 
 	if (fp) {
 		char line[4096];
@@ -21,6 +33,18 @@ int main(void)
 	}
 	else
 		perror("fopen");
+	errno = 0;
+	DIR *dir = opendir(".");
+	if (dir) {
+		struct dirent *dirent;
+		errno = 0;
+		while ((dirent = readdir(dir))) {
+			printf("%lu %ld %u %u %s\n", dirent->d_ino, dirent->d_off, dirent->d_reclen, dirent->d_type, dirent->d_name);
+		}
+		perror("readdir");
+		closedir(dir);
+	} else
+		perror("opendir");
 	unsigned char *p = malloc(BYTES);
 	for (unsigned int i = 0; i < BYTES; i++)
 		p[i] = 42;

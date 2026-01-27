@@ -136,14 +136,6 @@ static void ext2_read_block(struct ext2_fs *fs, unsigned char *buffer, unsigned 
 	printk("block usage bitmap BA %x, inode usage bitmap BA %x, start inode table BA %x, unallocated blocks %u, unallocated inodes %u, directory count %u\n", descriptor->ba_block_usage_bitmap, descriptor->ba_inode_usage_bitmap, descriptor->ba_start_inode_table, descriptor->unallocated_blocks, descriptor->unallocated_inodes, descriptor->directory_count);
 }*/
 
-#define MODE_FIFO 0x1
-#define MODE_CHAR 0x2
-#define MODE_DIRECTORY 0x4
-#define MODE_BLOCKDEV 0x6
-#define MODE_REGULAR 0x8
-#define MODE_SYMLINK 0xA
-#define MODE_SOCKET 0xC
-
 void fs_format_mode(unsigned char out[11], unsigned short mode) {
 	switch (mode >> 12) {
 		case MODE_FIFO:
@@ -229,7 +221,7 @@ static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extend
 	return out;
 }
 
-static struct ext2_inode_extended ext2_get_inode(struct ext2_fs *fs, unsigned int inode) {
+static bool ext2_get_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_inode_extended *out) {
 	unsigned int group = (inode - 1) / fs->sb.inodes_in_group;
 	unsigned int group_index = (inode - 1) % fs->sb.inodes_in_group;
 	unsigned int containing_block = (group_index * fs->sb.inode_size) / fs->sb.block_size;
@@ -251,8 +243,8 @@ static struct ext2_inode_extended ext2_get_inode(struct ext2_fs *fs, unsigned in
 
 	unsigned char block_inode_table[4096];
 	ext2_read_block(fs, block_inode_table, descriptor->ba_start_inode_table + containing_block);
-	struct ext2_inode_extended inode_struct = ((struct ext2_inode_extended *)block_inode_table)[table_block_index];
-	return inode_struct;
+	*out = ((struct ext2_inode_extended *)block_inode_table)[table_block_index];
+	return true;
 }
 
 /*static void print_inode(struct ext2_inode_extended *inode) {
@@ -268,9 +260,11 @@ static unsigned int ext2_path_to_inode(struct ext2_fs *fs, const char *path, uns
 		inode_nr = EXT2_ROOT_INODE;
 	}
 	const char *current_char;
-	struct ext2_inode_extended current_inode = ext2_get_inode(fs, inode_nr);
+	struct ext2_inode_extended current_inode;
 
 	do {
+		if (!ext2_get_inode(fs, inode_nr, &current_inode))
+			return 0;
 		//print_inode(&current_inode);
 		while (*component_start == '/') {
 			component_start++;
@@ -302,7 +296,6 @@ static unsigned int ext2_path_to_inode(struct ext2_fs *fs, const char *path, uns
 				VecU8_destruct(&file_contents);
 				if (found_inode_nr) {
 					inode_nr = found_inode_nr;
-					current_inode = ext2_get_inode(fs, found_inode_nr);
 				} else
 					return 0;
 			}
@@ -320,10 +313,25 @@ unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr)
 	return inode_nr;
 }
 
+bool stat_inode(unsigned int inode_nr, struct stat *out) {
+	struct ext2_inode_extended inode;
+
+	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
+	out->st_dev = 0;
+	out->st_ino = inode_nr;
+	out->st_mode = inode.base.mode;
+	out->st_nlink = inode.base.hard_link_count;
+	out->st_uid = inode.base.uid;
+	out->st_gid = inode.base.gid;
+	return 0;
+}
+
 int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned int buf_size) {
 	if (!ext2_mounted.mounted) return -EBADF;
 
-	struct ext2_inode_extended inode = ext2_get_inode(&ext2_mounted, inode_nr);
+	struct ext2_inode_extended inode;
+
+	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
 
 	// someone won't be happy about this (hi thrieg)
 	struct VecU8 contents = ext2_read_inode(&ext2_mounted, &inode);
@@ -341,7 +349,8 @@ struct VecU8 read_full_file(const char *path) {
 	unsigned int inode_nr = ext2_path_to_inode(&ext2_mounted, path, EXT2_ROOT_INODE);
 	if (!inode_nr) return empty;
 
-	struct ext2_inode_extended inode = ext2_get_inode(&ext2_mounted, inode_nr);
+	struct ext2_inode_extended inode;
+	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return empty;
 
 	return ext2_read_inode(&ext2_mounted, &inode);
 }
@@ -376,7 +385,11 @@ void ext2_test(struct ide_partition *partition) {
 	ide_read_sector(drive, sector_sb2 + 1, sb2.buf + 512);
 	ext2_print_sb(&sb2);*/
 
-	struct ext2_inode_extended root_dir = ext2_get_inode(&ext2_mounted, EXT2_ROOT_INODE);
+	struct ext2_inode_extended root_dir;
+
+	if (!ext2_get_inode(&ext2_mounted, EXT2_ROOT_INODE, &root_dir)) {
+		kernel_panic("couldn't retrieve root inode from ext2 fs", 0);
+	}
 	struct VecU8 file_contents = ext2_read_inode(&ext2_mounted, &root_dir);
 
 	struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;

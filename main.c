@@ -176,6 +176,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(3, syscall_read);
 	add_syscall(4, syscall_write);
 	add_syscall(6, syscall_close);
+	add_syscall(12, syscall_chdir);
 	add_syscall(37, syscall_kill);
 	add_syscall(41, syscall_dup);
 	add_syscall(45, syscall_brk);

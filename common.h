@@ -48,6 +48,23 @@ struct timespec {
 	unsigned int tv_nsec;
 };
 
+struct stat {
+    unsigned int st_dev;
+    unsigned int st_ino;
+    unsigned int st_nlink;
+    unsigned int st_mode;
+    unsigned int st_uid;
+    unsigned int st_gid;
+    int __pad0;
+    unsigned int st_rdev;
+    unsigned int st_size;
+    unsigned int st_blksize;
+    unsigned int st_blocks;
+    struct timespec st_atim;
+    struct timespec st_mtim;
+    struct timespec st_ctim;
+};
+
 __attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_data *regs);
 
 static inline void disable_interrupts(void)

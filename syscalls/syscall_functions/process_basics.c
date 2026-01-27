@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 16:57:14 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/27 19:18:56 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,6 +109,7 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	return new_brk;
 }
 
+<<<<<<< HEAD
 struct winsize
 {
 	unsigned short ws_row;
@@ -138,6 +139,9 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 
 struct utsname
 {
+=======
+struct utsname {
+>>>>>>> 3a74424 (stat file and chdir)
 	char sysname[65];
 	char nodename[65];
 	char release[65];

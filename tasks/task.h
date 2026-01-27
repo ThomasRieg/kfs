@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 16:28:36 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/27 17:23:25 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -129,7 +129,7 @@ typedef struct task
 	unsigned int cwd_inode_nr;
 	phys_ptr pd;
 	uint32_t k_esp;
-	uint8_t k_stack[8096]; // stack tss will returns to on interrupt
+	uint8_t k_stack[16384]; // stack tss will returns to on interrupt
 	t_sig_handler sig_handlers[32];
 	struct task *next; // circular linked list, TODO do better
 	t_mm proc_memory;

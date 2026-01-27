@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 16:11:18 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/27 17:28:22 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,5 +58,6 @@ uint32_t syscall_close(t_interrupt_data *regs);
 uint32_t syscall_fcntl64(t_interrupt_data *regs);
 uint32_t syscall_read(t_interrupt_data *regs);
 uint32_t syscall_write(t_interrupt_data *regs);
+uint32_t syscall_chdir(t_interrupt_data *regs);
 
 #endif

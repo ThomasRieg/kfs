@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 15:20:40 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/27 16:28:36 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@ enum open_file_type
 {
 	FILE_REGULAR,
 	FILE_PIPE,
+	FILE_SOCKET,
 	FILE_TERMINAL,
 };
 
@@ -57,8 +58,9 @@ struct pipe
 
 struct inode
 {
-	unsigned int filesystem_index;
-	unsigned int inode_number;
+	unsigned int inode_nr;
+	unsigned int file_offset;
+	unsigned int open_status;
 };
 
 struct open_file
@@ -124,6 +126,7 @@ typedef struct task
 	unsigned int exit_code;
 	unsigned int pending_signals;
 	struct open_file *open_files[MAX_OPEN_FILES];
+	unsigned int cwd_inode_nr;
 	phys_ptr pd;
 	uint32_t k_esp;
 	uint8_t k_stack[8096]; // stack tss will returns to on interrupt

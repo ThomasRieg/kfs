@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 15:20:25 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/27 16:29:14 by alier            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -160,6 +160,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	}
 	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top));
 	task->status = STATUS_RUNNABLE;
+	task->cwd_inode_nr = 2;
 	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));
 	/*printk("kstack top=%p bot=%p\n",
 	   &task->k_stack[sizeof(task->k_stack)],

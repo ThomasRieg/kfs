@@ -12,11 +12,10 @@ int main(void)
 	dup(fd);
 	FILE *fp = fopen("/etc/hostname", "rb");
 
-	if (fp)
-	{
-		unsigned char line[4096];
+	if (fp) {
+		char line[4096];
 		fgets(line, 4096, fp);
-		printf("%s\n", line);
+		printf("%s", line);
 
 		fclose(fp);
 	}

@@ -21,17 +21,19 @@
 #define TASK_VA_ENTRYPOINT 0x200000u
 #define TASK_STACK_TOP KERNEL_VIRT_BASE - PAGE_SIZE
 #define NB_TICKS_PER_TASK 1u // nb of timer irq before we context switch to next task
+#define MAX_OPEN_FILES 256u
 
 typedef void (*t_sig_handler)(int);
-#define SIG_IGN 1u // ingore this signal
+#define SIG_IGN 1u // ignore this signal
 #define SIG_DFL 0u // default behavior (stop process)
 
-#define SIGCHLD 17u // lsit here https://man7.org/linux/man-pages/man7/signal.7.html
+#define SIGCHLD 17u // list here https://man7.org/linux/man-pages/man7/signal.7.html
 
 enum open_file_type
 {
 	FILE_REGULAR,
 	FILE_PIPE,
+	FILE_TERMINAL,
 };
 
 enum task_status
@@ -61,6 +63,7 @@ struct inode
 
 struct open_file
 {
+	unsigned int ref_count;
 	enum open_file_type type;
 	union
 	{
@@ -120,7 +123,7 @@ typedef struct task
 	unsigned int egid;
 	unsigned int exit_code;
 	unsigned int pending_signals;
-	struct open_file open_files[10];
+	struct open_file *open_files[MAX_OPEN_FILES];
 	phys_ptr pd;
 	uint32_t k_esp;
 	uint8_t k_stack[8096]; // stack tss will returns to on interrupt

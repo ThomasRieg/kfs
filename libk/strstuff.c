@@ -53,6 +53,16 @@ unsigned int	strlen(const char *s)
 	return (i);
 }
 
+int strcmp(const char *a, const char *b)
+{
+	unsigned int	i;
+
+	i = 0;
+	while (a[i] && a[i] == b[i])
+		i++;
+	return ((unsigned char)a[i] - (unsigned char)b[i]);
+}
+
 char invert_caps(char c) {
 	if (c >= 'a' && c <= 'z')
 		c -= ('a' - 'A');

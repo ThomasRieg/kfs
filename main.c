@@ -82,7 +82,8 @@ uint32_t syscall_write(t_interrupt_data *regs)
 	const char *buf = (char *)regs->ecx;
 	unsigned int count = regs->edx;
 	//printk("write %u %p %u\n", fd, buf, count);
-	if (fd < 0 || fd > 3)
+	struct open_file *file = fd >= 0 && (unsigned int)fd < MAX_OPEN_FILES ? g_curr_task->open_files[fd] : 0;
+	if (!file || file->type != FILE_TERMINAL)
 		return (-EBADF);
 
 	write(buf, count);
@@ -200,6 +201,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(3, syscall_read);
 	add_syscall(4, syscall_write);
 	add_syscall(37, syscall_kill);
+	add_syscall(41, syscall_dup);
 	add_syscall(45, syscall_brk);
 	add_syscall(48, syscall_signal);
 	add_syscall(54, syscall_ioctl);
@@ -223,6 +225,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(252, syscall_exit);
 	add_syscall(258, syscall_set_tid_address); // TODO: implement
 	add_syscall(265, syscall_clock_gettime);
+	add_syscall(295, syscall_openat);
 	add_syscall(300, syscall_fstatat);
 	add_syscall(305, syscall_set_tid_address); // TODO: implement
 	add_syscall(311, syscall_set_tid_address); // TODO: implement

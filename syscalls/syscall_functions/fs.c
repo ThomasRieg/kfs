@@ -36,3 +36,45 @@ uint32_t syscall_readlink(t_interrupt_data *regs) {
 	return (-ENOSYS);
 }
 
+uint32_t syscall_openat(t_interrupt_data *regs) {
+	int fd = regs->ebx;
+	const char *path = (char *)regs->ecx;
+	int open_flag = regs->edx;
+	printk("openat: %u %s %u\n", fd, path, open_flag);
+	unsigned short i;
+	for (i = 0; i < MAX_OPEN_FILES; i++) {
+		if (!g_curr_task->open_files[i])
+			break;
+	}
+	if (i >= MAX_OPEN_FILES)
+		return (-EMFILE);
+	if (strcmp(path, "/dev/tty1") == 0) {
+		struct open_file *file = vmalloc(sizeof(struct open_file));
+		if (!file)
+			return (-ENOMEM);
+		file->ref_count = 1;
+		file->type = FILE_TERMINAL;
+		g_curr_task->open_files[i] = file;
+		return i;
+	}
+	return (-ENOENT);
+}
+
+uint32_t syscall_dup(t_interrupt_data *regs) {
+	int fd = regs->ebx;
+	printk("dup: %u\n", fd);
+	struct open_file *file = fd >= 0 && (unsigned int)fd < MAX_OPEN_FILES ? g_curr_task->open_files[fd] : 0;
+	if (!file)
+		return (-EBADF);
+	unsigned short i;
+	for (i = 0; i < MAX_OPEN_FILES; i++) {
+		if (!g_curr_task->open_files[i])
+			break;
+	}
+	if (i >= MAX_OPEN_FILES)
+		return (-EMFILE);
+	g_curr_task->open_files[i] = file;
+	g_curr_task->open_files[i]->ref_count += 1;
+	return (i);
+}
+

@@ -27,6 +27,7 @@ char *strchr(const char *s, int c);
 unsigned int strlen(const char *s);
 unsigned int strnonchr(char *str, char c);
 char invert_caps(char c);
+int strcmp(const char *a, const char *b);
 
 void int32_str_10(char out[12], int n);
 void uint32_str_10(char out[11], unsigned int n);

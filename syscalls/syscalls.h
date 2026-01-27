@@ -52,5 +52,7 @@ uint32_t syscall_mmap2(t_interrupt_data *regs);
 uint32_t syscall_readlink(t_interrupt_data *regs);
 uint32_t syscall_fstatat(t_interrupt_data *regs);
 uint32_t syscall_statx(t_interrupt_data *regs);
+uint32_t syscall_openat(t_interrupt_data *regs);
+uint32_t syscall_dup(t_interrupt_data *regs);
 
 #endif

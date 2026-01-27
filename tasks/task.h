@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/23 14:54:57 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/27 15:20:40 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,7 @@ typedef struct s_vma
 	virt_ptr start; // inclusive, page-aligned
 	virt_ptr end;	// exclusive, page-aligned
 
-	uint32_t prots;	// PROT_READ/WRITE/EXEC
+	uint32_t prots; // PROT_READ/WRITE/EXEC
 	uint32_t flags; // MAP_PRIVATE/MAP_SHARED/MAP_FIXED/...
 	t_vma_backing backing;
 
@@ -102,7 +102,7 @@ typedef struct s_mm
 	virt_ptr user_stack_top;
 	virt_ptr user_stack_bot;
 
-	virt_ptr heap_current;   // used by brk
+	virt_ptr heap_current;	 // used by brk
 	uint32_t reserved_pages; // optional stats/counters
 	uint32_t physical_pages; // optional stats/counters
 } t_mm;
@@ -133,6 +133,7 @@ typedef struct task
 } t_task;
 
 extern t_task *g_curr_task;
+extern uint32_t g_next_pid;
 
 void schedule_next_task();
 void context_switch(t_task *next);

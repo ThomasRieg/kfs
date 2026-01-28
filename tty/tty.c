@@ -84,10 +84,6 @@ void tty_add_input(char c)
 	// echo mode
 	if (c == '\r')
 		write(&(char){'\n'}, 1);
-	else if (c == '\t')
-	{
-		write(" ", 1);
-	}
 	else if (c == '\b' || c == 0x7F)
 	{
 		if (curr->cmd.index != 0)

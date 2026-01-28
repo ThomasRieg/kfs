@@ -59,6 +59,8 @@ void scroll_down()
 
 static inline void vga_add_char(char c)
 {
+	if (c == '\t')
+		c = ' ';
 	if (c == '\n')
 		g_vga_text_location += (VGA_WIDTH * 2) - (g_vga_text_location % (VGA_WIDTH * 2));
 	else

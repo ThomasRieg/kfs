@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <linux/fcntl.h>
+#include <fcntl.h>
 
 #define BYTES 10000000
 
@@ -20,11 +21,11 @@ int main(void)
 
 	FILE *fp = fopen("hostname", "rb");
 
-	struct stat stat;
-	fstatat(fileno(fp), "", &stat, AT_EMPTY_PATH);
-	printf("dev %llu inode %lu mode %u\n", stat.st_dev, stat.st_ino, stat.st_mode);
-
 	if (fp) {
+		struct stat stat;
+		fstatat(fileno(fp), "", &stat, AT_EMPTY_PATH);
+		printf("dev %llu inode %lu mode %u\n", stat.st_dev, stat.st_ino, stat.st_mode);
+
 		char line[4096];
 		fgets(line, 4096, fp);
 		printf("%s", line);

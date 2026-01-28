@@ -5,10 +5,10 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <linux/fcntl.h>
 #include <fcntl.h>
 
 #define BYTES 10000000
+#define AT_EMPTY_PATH		0x1000	/* Allow empty relative pathname */
 
 int main(void)
 {

@@ -109,39 +109,8 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	return new_brk;
 }
 
-<<<<<<< HEAD
-struct winsize
-{
-	unsigned short ws_row;
-	unsigned short ws_col;
-	unsigned short ws_xpixel; /* unused */
-	unsigned short ws_ypixel; /* unused */
-};
-
-#define TIOCGWINSZ 0x5413
-
-uint32_t syscall_ioctl(t_interrupt_data *regs)
-{
-	int fd = regs->ebx;
-	unsigned long op = regs->ecx;
-	printk("ioctl %u %u\n", fd, op);
-	if (fd > 0 && fd < 4 && op == TIOCGWINSZ)
-	{
-		struct winsize *ws = (struct winsize *)regs->edx;
-		ws->ws_row = 25;
-		ws->ws_col = 80;
-		ws->ws_xpixel = 0;
-		ws->ws_ypixel = 0;
-		return 0;
-	}
-	return (-EINVAL);
-}
-
 struct utsname
 {
-=======
-struct utsname {
->>>>>>> 3a74424 (stat file and chdir)
 	char sysname[65];
 	char nodename[65];
 	char release[65];

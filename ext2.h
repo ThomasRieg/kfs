@@ -10,6 +10,7 @@
 #define MODE_SYMLINK 0xA
 #define MODE_SOCKET 0xC
 
+int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset);
 void ext2_test(struct ide_partition *partition);
 int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned int buf_size);
 struct VecU8 read_full_file(const char *path);

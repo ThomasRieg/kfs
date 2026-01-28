@@ -343,6 +343,76 @@ int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned i
 	return written_count;
 }
 
+enum ext2_direnttype {
+	EXT2_UNKNOWN,
+	EXT2_REGULAR,
+	EXT2_DIR,
+	EXT2_CHAR,
+	EXT2_BLOCK,
+	EXT2_FIFO,
+	EXT2_SOCKET,
+	EXT2_SYMLINK
+};
+
+enum norm_direnttype {
+	DT_UNKNOWN = 0,
+	DT_FIFO = 1,
+	DT_CHR = 2,
+	DT_DIR = 4,
+	DT_BLK = 6,
+	DT_REG = 8,
+	DT_LNK = 10,
+	DT_SOCK = 12,
+	DT_WHT = 14
+};
+
+static enum norm_direnttype ext2_direnttype_to_norm(enum ext2_direnttype type) {
+	switch (type) {
+		case EXT2_REGULAR: return DT_REG;
+		case EXT2_DIR: return DT_DIR;
+		case EXT2_CHAR: return DT_CHR;
+		case EXT2_BLOCK: return DT_BLK;
+		case EXT2_FIFO: return DT_FIFO;
+		case EXT2_SOCKET: return DT_SOCK;
+		case EXT2_SYMLINK: return DT_LNK;
+		default: return DT_UNKNOWN;
+	}
+}
+
+int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset) {
+	if (!ext2_mounted.mounted) return -EBADF;
+
+	struct ext2_inode_extended inode;
+
+	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
+
+	// someone won't be happy about this (hi thrieg)
+	struct VecU8 contents = ext2_read_inode(&ext2_mounted, &inode);
+	unsigned written_count = 0;
+
+	struct ext2_direntry *direntry = (struct ext2_direntry *)(contents.data + offset);
+	while ((unsigned char *)direntry < contents.data + contents.length && direntry->inode) {
+		unsigned int reclen = sizeof(struct linux_dirent64) + direntry->name_length + 1;
+		if (reclen & 7) {
+			reclen = (reclen + 8) & (~7);
+		}
+		if (written_count + reclen > count)
+			break;
+		ent->d_ino = direntry->inode;
+		ent->d_off = 0;
+		ent->d_type = ext2_direnttype_to_norm(direntry->type_indicator);
+		ent->d_reclen = reclen;
+		memcpy(ent->d_name, direntry->name, direntry->name_length);
+		ent->d_name[direntry->name_length] = '\0';
+		written_count += reclen;
+
+		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
+		ent = (struct linux_dirent64 *)((unsigned char *)ent + reclen);
+	}
+
+	return written_count;
+}
+
 struct VecU8 read_full_file(const char *path) {
 	struct VecU8 empty = {.length = 0};
 	if (!ext2_mounted.mounted) return empty;

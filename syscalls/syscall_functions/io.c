@@ -299,19 +299,17 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 	return (-EINVAL);
 }
 
-struct linux_dirent64 {
-	uint64_t        d_ino;    /* 64-bit inode number */
-	uint64_t        d_off;    /* 64-bit offset to next structure */
-	unsigned short d_reclen; /* Size of this dirent */
-	unsigned char  d_type;   /* File type */
-	char           d_name[]; /* Filename (null-terminated) */
-};
-
 uint32_t syscall_getdents64(t_interrupt_data *regs)
 {
 	int fd = regs->ebx;
-	struct linux_dirent64 *ents = (struct linux_dirent64 *)regs->ecx;
+	struct linux_dirent64 *ent = (struct linux_dirent64 *)regs->ecx;
 	unsigned int count = regs->edx;
-	printk("getdents64: %d %p %u\n", fd, ents, count);
-	return 0;
+	struct open_file *file = get_file_from_fd(fd);
+	printk("getdents64: %d %p %u\n", fd, ent, count);
+	if (!file) return -EBADF;
+
+	int written = getdents(file->inode.inode_nr, ent, count, file->inode.file_offset);
+	if (written > 0)
+		file->inode.file_offset += written;
+	return written;
 }

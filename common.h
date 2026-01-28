@@ -68,6 +68,14 @@ struct stat {
     struct timespec st_ctim;
 };
 
+struct linux_dirent64 {
+	uint64_t        d_ino;    /* 64-bit inode number */
+	uint64_t        d_off;    /* 64-bit offset to next structure */
+	unsigned short d_reclen; /* Size of this dirent */
+	unsigned char  d_type;   /* File type */
+	char           d_name[]; /* Filename (null-terminated) */
+};
+
 __attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_data *regs);
 
 static inline void disable_interrupts(void)

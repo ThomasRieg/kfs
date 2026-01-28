@@ -323,6 +323,7 @@ bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	out->st_nlink = inode.base.hard_link_count;
 	out->st_uid = inode.base.uid;
 	out->st_gid = inode.base.gid;
+	out->st_size = inode.base.size;
 	return 0;
 }
 

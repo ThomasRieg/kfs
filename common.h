@@ -48,15 +48,18 @@ struct timespec {
 	unsigned int tv_nsec;
 };
 
+typedef unsigned long int dev_t;
+typedef unsigned long int ino_t;
+
 struct stat {
-    unsigned int st_dev;
-    unsigned int st_ino;
+    dev_t st_dev;
+    ino_t st_ino;
     unsigned int st_nlink;
     unsigned int st_mode;
     unsigned int st_uid;
     unsigned int st_gid;
     int __pad0;
-    unsigned int st_rdev;
+    dev_t st_rdev;
     unsigned int st_size;
     unsigned int st_blksize;
     unsigned int st_blocks;

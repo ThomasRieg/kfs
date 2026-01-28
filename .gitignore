@@ -5,4 +5,4 @@ iso
 *.d
 netdump.pcap
 disk.raw
-root
+root/bin

@@ -59,5 +59,6 @@ uint32_t syscall_fcntl64(t_interrupt_data *regs);
 uint32_t syscall_read(t_interrupt_data *regs);
 uint32_t syscall_write(t_interrupt_data *regs);
 uint32_t syscall_chdir(t_interrupt_data *regs);
+uint32_t syscall_getdents64(t_interrupt_data *regs);
 
 #endif

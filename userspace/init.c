@@ -15,6 +15,13 @@ int main(void)
 	int fd = open("/dev/tty1", O_RDWR | O_NONBLOCK);
 	dup(fd);
 	dup(fd);
+	printf("\t\t//// TTY1 opened and duplicated twice so fds 0, 1, 2 all point to terminal\n");
+	printf("sizeof(long long unsigned int) = %u\n", sizeof(long long unsigned int));
+	printf("sizeof(long unsigned int) = %u\n", sizeof(long unsigned int));
+	printf("sizeof(unsigned int) = %u\n", sizeof(unsigned int));
+	printf("sizeof(struct stat) = %u\n", sizeof(struct stat));
+
+	printf("\t\t//// CHANGING CWD TO `/etc`\n");
 	chdir("/etc");
 
 	printf("\t\t//// OPENING `hostname`\n");
@@ -22,10 +29,14 @@ int main(void)
 	FILE *fp = fopen("hostname", "rb");
 
 	if (fp) {
+		printf("\t\t//// FSTATAT `hostname`\n");
 		struct stat stat;
-		fstatat(fileno(fp), "", &stat, AT_EMPTY_PATH);
-		printf("dev %llu inode %lu mode %u\n", stat.st_dev, stat.st_ino, stat.st_mode);
+		if (fstatat(fileno(fp), "", &stat, AT_EMPTY_PATH) == -1)
+			perror("fstatat");
+		else
+			printf("dev %llu inode %lu mode %u size %lu\n", stat.st_dev, stat.st_ino, stat.st_mode, stat.st_size);
 
+		printf("\t\t//// READING LINE IN `hostname`\n");
 		char line[4096];
 		fgets(line, 4096, fp);
 		printf("%s", line);
@@ -34,6 +45,7 @@ int main(void)
 	}
 	else
 		perror("fopen");
+	printf("\t\t//// READING ENTRIES IN CURRENT DIRECTORY\n");
 	errno = 0;
 	DIR *dir = opendir(".");
 	if (dir) {
@@ -46,13 +58,11 @@ int main(void)
 		closedir(dir);
 	} else
 		perror("opendir");
+	printf("\t\t//// ALLOCATION TEST\n");
 	unsigned char *p = malloc(BYTES);
 	for (unsigned int i = 0; i < BYTES; i++)
 		p[i] = 42;
 	free(p);
-	write(1, "hi!\n", 4);
-	for (unsigned int i = 0; i < 10; i++)
-	{
-		printf("%u\n", i);
-	}
+#define GOODBYE "\t\t//// GOODBYE\n"
+	write(1, GOODBYE, sizeof(GOODBYE) - 1);
 }

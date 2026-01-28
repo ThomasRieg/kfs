@@ -196,6 +196,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(200, syscall_getgid);
 	add_syscall(201, syscall_geteuid32);
 	add_syscall(202, syscall_getegid32);
+	add_syscall(220, syscall_getdents64);
 	add_syscall(221, syscall_fcntl64);
 	add_syscall(238, syscall_tkill);
 	add_syscall(243, syscall_set_thread_area);

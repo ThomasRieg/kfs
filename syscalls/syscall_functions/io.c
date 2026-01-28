@@ -90,9 +90,21 @@ uint32_t syscall_statx(t_interrupt_data *regs) {
 		struct open_file *file = get_file_from_fd(dirfd);
 		if (!file) return -EBADF;
 
-		// so stdio is unbuffered
-		*buffer = (struct statx){.stx_mask = STATX_BASIC_STATS | STATX_MNT_ID,
-			.stx_mode = (file->type == FILE_TERMINAL ? MODE_CHAR : MODE_REGULAR) << 12 };
+		*buffer = (struct statx){
+			.stx_mask = STATX_BASIC_STATS | STATX_MNT_ID,
+			.stx_mode = (file->type == FILE_TERMINAL ? MODE_CHAR : MODE_REGULAR) << 12,
+			.stx_ino = (file->type == FILE_REGULAR ? file->inode.inode_nr : 0 ),
+		};
+		if (file->type == FILE_REGULAR) {
+			struct stat stat;
+			int status = stat_inode(file->inode.inode_nr, &stat);
+			if (status) {
+				return status;
+			} else {
+				buffer->stx_size = stat.st_size;
+				buffer->stx_mode = stat.st_mode;
+			}
+		}
 		return 0;
 	}
 	memset(buffer, 0, sizeof(struct statx));
@@ -287,3 +299,19 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 	return (-EINVAL);
 }
 
+struct linux_dirent64 {
+	uint64_t        d_ino;    /* 64-bit inode number */
+	uint64_t        d_off;    /* 64-bit offset to next structure */
+	unsigned short d_reclen; /* Size of this dirent */
+	unsigned char  d_type;   /* File type */
+	char           d_name[]; /* Filename (null-terminated) */
+};
+
+uint32_t syscall_getdents64(t_interrupt_data *regs)
+{
+	int fd = regs->ebx;
+	struct linux_dirent64 *ents = (struct linux_dirent64 *)regs->ecx;
+	unsigned int count = regs->edx;
+	printk("getdents64: %d %p %u\n", fd, ents, count);
+	return 0;
+}

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 16:10:36 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/29 17:18:59 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -352,6 +352,7 @@ static void free_vmas(t_mm *mm)
 }
 
 // returns 0 on success, or negative error code on error
+// sets new_mm->physical_pages = 0;
 static uint32_t copy_mm(t_mm *new_mm, t_mm *to_copy)
 {
 	if (!to_copy->vma_list)
@@ -372,10 +373,15 @@ static uint32_t copy_mm(t_mm *new_mm, t_mm *to_copy)
 		last_node_new = last_node_new->next;
 		curr = curr->next;
 	}
+	new_mm->reserved_pages = to_copy->reserved_pages;
+	new_mm->user_stack_bot = to_copy->user_stack_bot;
+	new_mm->user_stack_top = to_copy->user_stack_top;
+	new_mm->heap_current = to_copy->heap_current;
+	new_mm->physical_pages = 0;
 	return (0);
 }
 
-static inline uint32_t get_vma_flags(t_vma *vma)
+/*static inline uint32_t get_vma_flags(t_vma *vma)
 {
 	uint32_t flags = PTE_P;
 	if (!(vma->prots & PROT_NONE))
@@ -401,7 +407,7 @@ static uint32_t get_phys_frame(virt_ptr ptr, uint32_t pd)
 	if (!(pte & PTE_P))
 		return (0);
 	return ((pte & 0xFFFFF000) + (((uintptr_t)ptr) & 0x00000FFF));
-}
+}*/
 
 #include "../../pmm/pmm.h"
 
@@ -409,15 +415,27 @@ static uint32_t get_phys_frame(virt_ptr ptr, uint32_t pd)
 // assumes we have the new process' cr3 loaded, also assumes the copied process has sane and safe mm
 // assumes interrupts are disabled IMPORTANT
 // TODO implement COW and reference count for free later, for now this doesn't free or separate memory
-uint32_t copy_current_user_memory(uint32_t pd_to_copy, t_mm *mm)
+uint32_t copy_current_user_memory(__attribute__((unused)) uint32_t pd_to_copy, t_mm *mm)
 {
 	t_vma *curr = mm->vma_list;
 	while (curr)
 	{
 		if (curr->flags & MAP_SHARED)
 		{
+			if (curr->backing == VMA_ANON)
+			{
+				t_shm_anon *backing = (t_shm_anon *)curr->backing_obj;
+				backing->refcnt++;
+			}
+			else
+			{
+				return (-ENOSYS); // file and dev backing aren't supported yet
+			}
+		}
+		else if (curr->flags & MAP_PRIVATE)
+		{
 			// TODO handle the case where frame isn't allocated yet
-			virt_ptr start = page_align_down(curr->start);
+			/*virt_ptr start = page_align_down(curr->start);
 			for (virt_ptr i = start; i < curr->end; i += PAGE_SIZE)
 			{
 				uint32_t frame = get_phys_frame(i, pd_to_copy);
@@ -444,13 +462,10 @@ uint32_t copy_current_user_memory(uint32_t pd_to_copy, t_mm *mm)
 				virt_ptr virtual_address_page_start = page_align_down(i);
 				invalidate_cache(virtual_address_page_start);
 				g_curr_task->proc_memory.physical_pages++;
-			}
+			}*/
+			return (-ENOSYS); // TODO handle
 		}
-		else if (curr->flags & MAP_PRIVATE)
-		{
-			// TODO implement COW here, for now do like map shared
-		}
-		curr++;
+		curr = curr->next;
 	}
 	return (0);
 }

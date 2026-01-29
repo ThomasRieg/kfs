@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 17:23:25 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/29 17:05:20 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,6 +86,22 @@ typedef enum e_vma_backing
 	VMA_DEV = 2,  // future (MMIO)
 } t_vma_backing;
 
+struct shm_page
+{
+	phys_ptr frame;
+	virt_ptr virt_start;
+	struct shm_page *next; // sorted by increasing virt_start
+};
+
+// backing object for shared anon mem
+typedef struct s_shm_anon
+{
+	uint32_t refcnt;
+	// maps page index (within VMA) -> phys frame
+	// linked list for now, later a hash/rbtree
+	struct shm_page *pages;
+} t_shm_anon;
+
 typedef struct s_vma
 {
 	virt_ptr start; // inclusive, page-aligned
@@ -94,6 +110,7 @@ typedef struct s_vma
 	uint32_t prots; // PROT_READ/WRITE/EXEC
 	uint32_t flags; // MAP_PRIVATE/MAP_SHARED/MAP_FIXED/...
 	t_vma_backing backing;
+	void *backing_obj;
 
 	struct s_vma *next;
 } t_vma;

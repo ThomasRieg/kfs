@@ -38,7 +38,7 @@ __attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_dat
 	vga_set_color(VGA_RED, VGA_BLACK);
 	if (regs)
 		print_cpu_state(regs);
-	//stack_dump_words(0);
+	// stack_dump_words(0);
 	writes("/!\\Kernel Panic/!\\\n");
 	writes(message);
 	while (1)
@@ -68,7 +68,6 @@ unsigned char from_cmos(enum cmos_register reg)
 	outb(PORT_CMOS_INDEX, reg);
 	return bcd(inb(PORT_CMOS_DATA));
 }
-
 
 uint32_t syscall_clock_gettime(t_interrupt_data *regs)
 {
@@ -149,16 +148,18 @@ void kernel_main(struct s_mb2_info *multi)
 	unsigned int brand_clflush_apic;
 	unsigned int feature_1, feature_2;
 	asm("cpuid" : "=a"(model), "=b"(brand_clflush_apic), "=d"(feature_1), "=c"(feature_2) : "a"(1));
-	if (feature_1 & (1 << 25)) {
+	if (feature_1 & (1 << 25))
+	{
 		printk("SSE supported, enabling\n");
 		unsigned int cr0, cr4;
 		asm("mov %%cr0, %0\n"
-			"mov %%cr4, %1": "=r"(cr0), "=r"(cr4));
+			"mov %%cr4, %1" : "=r"(cr0), "=r"(cr4));
 		cr0 &= 0xFFFFFFFB; // disable floating-point coprocessor emulation
-		cr0 |= 0x2; // set coprocessor monitoring
-		cr4 |= 3 << 9; // enable FXSAVE and FXRSTOR instructions, unmasked SIMD floating-point exceptions
+		cr0 |= 0x2;		   // set coprocessor monitoring
+		cr4 |= 3 << 9;	   // enable FXSAVE and FXRSTOR instructions, unmasked SIMD floating-point exceptions
 		asm("mov %0, %%cr0\n"
-			"mov %1, %%cr4":: "r"(cr0), "r"(cr4));
+			"mov %1, %%cr4" ::"r"(cr0),
+			"r"(cr4));
 	}
 
 	writes("Initializing...\n");
@@ -176,6 +177,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(3, syscall_read);
 	add_syscall(4, syscall_write);
 	add_syscall(6, syscall_close);
+	add_syscall(11, syscall_execve);
 	add_syscall(12, syscall_chdir);
 	add_syscall(37, syscall_kill);
 	add_syscall(41, syscall_dup);
@@ -228,7 +230,8 @@ void kernel_main(struct s_mb2_info *multi)
 
 	struct VecU8 init_binary = read_full_file("/bin/init");
 	t_task *init_task = vcalloc(1, sizeof(t_task));
-	if (!init_task || !setup_process(init_task, NULL, 0, &init_binary)) {
+	if (!init_task || !setup_process(init_task, NULL, 0, &init_binary))
+	{
 		printk("couldn't launch init\n");
 	}
 	VecU8_destruct(&init_binary);

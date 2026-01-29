@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 17:28:22 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/29 16:11:17 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,9 +22,9 @@ void add_syscall(uint32_t syscall_nbr, t_syscall_func func);
 uint32_t syscall_call(uint32_t syscall_nbr, ...);
 
 uint32_t syscall_getuid(t_interrupt_data *regs);
-uint32_t syscall_getgid(__attribute__((unused))t_interrupt_data *regs);
-uint32_t syscall_geteuid32(__attribute__((unused))t_interrupt_data *regs);
-uint32_t syscall_getegid32(__attribute__((unused))t_interrupt_data *regs);
+uint32_t syscall_getgid(__attribute__((unused)) t_interrupt_data *regs);
+uint32_t syscall_geteuid32(__attribute__((unused)) t_interrupt_data *regs);
+uint32_t syscall_getegid32(__attribute__((unused)) t_interrupt_data *regs);
 
 uint32_t syscall_brk(t_interrupt_data *regs);
 uint32_t syscall_uname(t_interrupt_data *regs);
@@ -32,6 +32,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs);
 uint32_t syscall_signal(t_interrupt_data *regs);
 uint32_t syscall_kill(t_interrupt_data *regs);
 uint32_t syscall_fork(t_interrupt_data *regs);
+uint32_t syscall_execve(t_interrupt_data *regs);
 uint32_t syscall_archprctl(t_interrupt_data *regs);
 uint32_t syscall_tkill(t_interrupt_data *regs);
 uint32_t syscall_poll(t_interrupt_data *regs);
@@ -45,7 +46,7 @@ uint32_t syscall_get_thread_area(t_interrupt_data *regs);
 uint32_t syscall_set_thread_area(t_interrupt_data *regs);
 uint32_t syscall_set_tid_address(t_interrupt_data *regs);
 uint32_t syscall_writev(t_interrupt_data *regs);
-uint32_t syscall_mprotect(__attribute__((unused))t_interrupt_data *regs);
+uint32_t syscall_mprotect(__attribute__((unused)) t_interrupt_data *regs);
 
 uint32_t syscall_mmap2(t_interrupt_data *regs);
 

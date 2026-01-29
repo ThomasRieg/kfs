@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 19:18:56 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/29 16:10:36 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -520,5 +520,119 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 	}
 	cleanup_task(g_curr_task);
 	context_switch(g_curr_task->parent_task);
+	__builtin_unreachable();
+}
+
+#include "../../tasks/elf.h"
+
+__attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *frame)
+{
+	__asm__ volatile(
+		"movl %0, %%esp \n"
+		"jmp isr_common_epilogue \n"
+		:
+		: "r"(frame)
+		: "memory");
+	__builtin_unreachable();
+}
+
+// 11
+// const char *filename 	const char *const *argv 	const char *const *envp
+uint32_t syscall_execve(t_interrupt_data *regs)
+{
+	const char *filename = (const char *)regs->ebx;
+	// const char *const *argv = (const char *const *)regs->ecx;
+	// const char *const *envp = (const char *const *)regs->edx;
+	//  if ((user_range_ok(filename, strlen(filename), false)) //TODO do this
+	disable_interrupts();
+
+	extern struct VecU8 read_full_file(const char *path);
+	struct VecU8 binary = read_full_file(filename);
+	if (binary.length < sizeof(struct elf_header))
+		return (-ENOEXEC);
+
+	struct elf_header *header = (struct elf_header *)binary.data;
+	if (memcmp(header->signature, "\x7F"
+								  "ELF",
+			   4) != 0)
+		return (-ENOEXEC);
+	if (header->bits != 0x01 || header->endianness != 0x01 || header->target != 0x03 || header->header_version != 0x01 || (header->abi != 0x00 && header->abi != 0x03) || header->abi_version != 0x00 || header->type != 0x02)
+		return (-ENOEXEC);
+	if (header->program_hdrs_offset + header->program_header_count * header->program_header_size > binary.length)
+		return (-ENOEXEC);
+
+	t_task *task = vcalloc(sizeof(*task), 1);
+	if (!task)
+		return (-ENOMEM);
+	task->pending_signals = 0;
+	task->task_id = g_curr_task->task_id;
+	task->parent_task = g_curr_task->parent_task;
+	task->uid = g_curr_task->uid;
+	task->euid = g_curr_task->euid;
+	task->suid = g_curr_task->suid;
+	task->gid = g_curr_task->gid;
+	task->egid = g_curr_task->egid;
+	extern phys_ptr copy_current_pd();
+	task->pd = copy_current_pd();
+	if (!task->pd)
+		return (vfree(task), -ENOMEM);
+	task->proc_memory.heap_current = 0; // temporary
+	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
+	if (task->proc_memory.user_stack_bot == MAP_FAILED)
+	{
+		vfree(task);
+		pmm_free_frame(task->pd);
+		return (-ENOMEM);
+	}
+	task->next = g_curr_task->next;
+	write_cr3(task->pd);
+	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
+	{
+		struct elf_program_header *base = (struct elf_program_header *)(binary.data + header->program_hdrs_offset);
+		for (unsigned short i = 0; i < header->program_header_count; i++)
+		{
+			if (base[i].type == 0x01 && base[i].file_offset + base[i].file_size < binary.length)
+			{
+				void *virt = page_align_down((void *)base[i].virt_addr);
+				unsigned int to_add = base[i].virt_addr - (unsigned int)virt;
+
+				void *end = page_align_up((char *)virt + base[i].mem_size + to_add);
+				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory) == MAP_FAILED)
+				{
+					cleanup_task(task);
+					vfree(task);
+					pmm_free_frame(task->pd);
+					return (-ENOMEM);
+				}
+				memcpy((void *)base[i].virt_addr, binary.data + base[i].file_offset, base[i].file_size);
+				if ((unsigned int)task->proc_memory.heap_current < (unsigned int)end)
+					task->proc_memory.heap_current = end;
+			}
+		}
+	}
+	extern void build_initial_user_frame(t_task * t, uint32_t entry, uint32_t user_stack_top);
+	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top)); // put argc = 0, argv[0] = NULL, envp[0] = NULL TODO handle these
+	task->status = STATUS_RUNNABLE;
+	task->cwd_inode_nr = 2;
+	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));
+	cleanup_task(g_curr_task);
+	memcpy(g_curr_task, task, sizeof(*task));
+	vfree(task);
+	/*printk("kstack top=%p bot=%p\n",
+	   &task->k_stack[sizeof(task->k_stack)],
+	   &task->k_stack[0]);*/
+	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
+
+	t_dt_ptr_32 gp;
+	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
+	// clears entry possibly set for previous process
+	// TODO: save and switch on context switch
+	gp.base = (unsigned int)gdt;
+	dt_set_entry(gdt, 8, 0, 0, 0, 0);
+	asm volatile(
+		"lgdt %0\n"
+		: : "m"(gp));
+	enable_interrupts();
+	iret_from_frame((t_interrupt_data *)task->k_esp);
 	__builtin_unreachable();
 }

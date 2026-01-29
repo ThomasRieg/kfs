@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/27 16:29:14 by alier            ###   ########.fr       */
+/*   Updated: 2026/01/29 16:09:21 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@
 t_task *g_curr_task = 0;
 uint32_t g_next_pid = 0;
 
-static void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top)
+void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top)
 {
 	// Put the frame at the top of kernel stack and grow downward
 	uint32_t ktop = (uint32_t)&t->k_stack[sizeof(t->k_stack)];

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 16:09:21 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/29 17:53:04 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -308,6 +308,26 @@ static void free_vma_range_pages(virt_ptr start, virt_ptr end)
 	}
 }
 
+void free_backing_obj(t_vma *vma)
+{
+	if (vma->backing == MAP_SHARED)
+	{
+		t_shm_anon *backing = vma->backing_obj;
+		backing->refcnt--;
+		if (!backing->refcnt)
+		{
+			struct shm_page *curr = backing->pages;
+			while (curr)
+			{
+				struct shm_page *next = curr->next;
+				pmm_free_frame(curr->frame);
+				curr = next;
+			}
+			vfree(backing);
+		}
+	}
+}
+
 void free_vmas(t_task *task)
 {
 	t_vma *curr = task->proc_memory.vma_list;
@@ -315,6 +335,8 @@ void free_vmas(t_task *task)
 	{
 		t_vma *next = curr->next;
 		free_vma_range_pages(curr->start, curr->end);
+		if (curr->backing_obj)
+			free_backing_obj(curr);
 		vfree(curr);
 		curr = next;
 	}

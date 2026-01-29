@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 19:39:37 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 19:18:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/29 18:08:37 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@
 #define PTE_PWD 0x00000008u		// write through
 #define PTE_PCD 0x00000010u		// cache disable
 #define PTE_A 0x00000020u		// accessed
+#define PTE_COW (1u << 9)		// software: this page is actually RW=0 but should be RW=1
 #define MMAP_CONTIG 0x00001000u // allocate contiguous physical memory in when calling kmmap (don't overlap with the physical pte flags range)
 
 #define PD_VA 0xFFFFF000u	   // last entry of page directory, maps to the physical address of page directory

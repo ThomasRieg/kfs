@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 17:18:59 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/29 19:30:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -386,7 +386,7 @@ static uint32_t copy_mm(t_mm *new_mm, t_mm *to_copy)
 	return (0);
 }
 
-/*static inline uint32_t get_vma_flags(t_vma *vma)
+static inline uint32_t get_vma_flags(t_vma *vma)
 {
 	uint32_t flags = PTE_P;
 	if (!(vma->prots & PROT_NONE))
@@ -412,7 +412,21 @@ static uint32_t get_phys_frame(virt_ptr ptr, uint32_t pd)
 	if (!(pte & PTE_P))
 		return (0);
 	return ((pte & 0xFFFFF000) + (((uintptr_t)ptr) & 0x00000FFF));
-}*/
+}
+
+// the frame has to exist in the pd
+static void set_phys_frame_cow(virt_ptr ptr, uint32_t pd)
+{
+	uint32_t *pd_virt = kmap(pd);
+	uint32_t pde = pd_virt[PDE_INDEX(ptr)];
+	kunmap();
+	if (!(pde & PTE_P))
+		return; // should not happen
+	uint32_t *pde_virt = kmap(pde & 0xFFFFF000);
+	pde_virt[PTE_INDEX(ptr)] &= ~PTE_RW;
+	pde_virt[PTE_INDEX(ptr)] |= PTE_COW;
+	kunmap();
+}
 
 #include "../../pmm/pmm.h"
 
@@ -420,7 +434,7 @@ static uint32_t get_phys_frame(virt_ptr ptr, uint32_t pd)
 // assumes we have the new process' cr3 loaded, also assumes the copied process has sane and safe mm
 // assumes interrupts are disabled IMPORTANT
 // TODO implement COW and reference count for free later, for now this doesn't free or separate memory
-uint32_t copy_current_user_memory(__attribute__((unused)) uint32_t pd_to_copy, t_mm *mm)
+uint32_t copy_current_user_memory(uint32_t pd_to_copy, t_mm *mm)
 {
 	t_vma *curr = mm->vma_list;
 	while (curr)
@@ -439,8 +453,7 @@ uint32_t copy_current_user_memory(__attribute__((unused)) uint32_t pd_to_copy, t
 		}
 		else if (curr->flags & MAP_PRIVATE)
 		{
-			// TODO handle the case where frame isn't allocated yet
-			/*virt_ptr start = page_align_down(curr->start);
+			virt_ptr start = page_align_down(curr->start);
 			for (virt_ptr i = start; i < curr->end; i += PAGE_SIZE)
 			{
 				uint32_t frame = get_phys_frame(i, pd_to_copy);
@@ -453,22 +466,30 @@ uint32_t copy_current_user_memory(__attribute__((unused)) uint32_t pd_to_copy, t
 					phys_ptr pde_frame = pmm_alloc_frame();
 					if (!pde_frame)
 					{
-						return (ENOMEM); // TODO cleanup here
+						return (-ENOMEM);
 					}
-					map_page(pde_frame, get_pde(i), PTE_US | PTE_RW | PTE_P); // set permissive flags
+					map_page(pde_frame, get_pde(i), PTE_P | PTE_US | PTE_RW); // set permissive flags
 					uint32_t *page_table = (uint32_t *)(uintptr_t)(PT_BASE_VA + PDE_INDEX(i) * PAGE_SIZE);
 					invalidate_cache(page_table);
 					memset(page_table, 0, PAGE_SIZE);
 					pte = get_pte(i); // pte was null, because no pde, now we need to set it before the rest of the code
-					g_curr_task->proc_memory.physical_pages++;
+					mm->physical_pages++;
 				}
 
-				map_page(frame, pte, get_vma_flags(curr));
+				uint32_t flags = get_vma_flags(curr);
+				if (flags & PTE_RW)
+				{
+					set_phys_frame_cow(i, pd_to_copy);
+					flags &= ~PTE_RW;
+					flags |= PTE_COW;
+				}
+				map_page(frame, pte, flags);
+				if (!pmm_add_ref(frame))
+					return (-ENOMEM); // not sure what to return, too many references to this frame already
 				virt_ptr virtual_address_page_start = page_align_down(i);
 				invalidate_cache(virtual_address_page_start);
-				g_curr_task->proc_memory.physical_pages++;
-			}*/
-			return (-ENOSYS); // TODO handle
+				mm->physical_pages++;
+			}
 		}
 		curr = curr->next;
 	}
@@ -492,33 +513,33 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->gid = g_curr_task->gid;
 	task->egid = g_curr_task->egid;
 	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
-	for (unsigned short i = 0; i < sizeof(task->open_files)/sizeof(task->open_files[0]); i++)
+	for (unsigned short i = 0; i < sizeof(task->open_files) / sizeof(task->open_files[0]); i++)
 		if (task->open_files[i])
 			task->open_files[i]->ref_count += 1;
 	disable_interrupts();
 	extern phys_ptr copy_current_pd();
 	task->pd = copy_current_pd(); // shallow copy of the kernel address space
 	if (!task->pd)
-		return (-1);
+		return (vfree(task), -1);
 	uint32_t ret = copy_mm(&task->proc_memory, &g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
 	if (ret)
-		return (enable_interrupts(), ret);
+		return (pmm_free_frame(task->pd), cleanup_task(task), enable_interrupts(), ret);
 	uint32_t saved_pd = g_curr_task->pd;
 	write_cr3(task->pd);
 	ret = copy_current_user_memory(saved_pd, &task->proc_memory); // deep copy of the process's address space
 	write_cr3(saved_pd);
 	if (ret)
-		return (enable_interrupts(), ret);
-	enable_interrupts();
+		return (pmm_free_frame(task->pd), cleanup_task(task), enable_interrupts(), ret);
 	task->proc_memory.heap_current = g_curr_task->proc_memory.heap_current; // temporary
 	task->proc_memory.user_stack_bot = g_curr_task->proc_memory.user_stack_bot;
 	task->proc_memory.user_stack_top = g_curr_task->proc_memory.user_stack_top;
 	memcpy(task->k_stack, g_curr_task->k_stack, sizeof(g_curr_task->k_stack)); // TODO copy only until k_esp to save instruction?
 	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
 	((t_interrupt_data *)task->k_esp)->eax = 0;
-	task->status = STATUS_RUNNABLE;
 	task->next = g_curr_task->next;
 	g_curr_task->next = task;
+	task->status = STATUS_RUNNABLE;
+	enable_interrupts();
 
 	return (task->task_id);
 }

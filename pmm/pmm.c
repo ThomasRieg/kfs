@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/31 21:35:58 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 19:38:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/01/29 20:53:17 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include "../mem_page/mem_defines.h"
 #include "../vga/vga.h"
 #include "../dt/dt.h"
+#include "../vmalloc/vmalloc.h"
 
 // defined in linker script:
 extern char __kernel_start_phys;
@@ -27,6 +28,8 @@ static inline uint64_t align_up_u64(uint64_t x, uint64_t a) { return (x + a - 1)
 static inline uint64_t align_dn_u64(uint64_t x, uint64_t a) { return x & ~(a - 1); }
 
 static uint8_t *g_bitmap = 0;
+static uint16_t *g_refcount_map = 0; // allocated with vmalloc
+static bool g_refcount_init = false;
 static uint32_t g_bitmap_bytes = 0;
 static uint32_t g_total_frames = 0;
 static uint32_t g_free_frames = 0;
@@ -173,6 +176,8 @@ void pmm_init(void *multiboot2_info)
 			p += mmap->entry_size;
 		}
 	}
+	if (max_end > (uint64_t)UINT32_MAX)
+		max_end = UINT32_MAX;
 
 	if (max_end < (uint64_t)(uintptr_t)&__kernel_end_phys)
 	{
@@ -240,6 +245,18 @@ void pmm_init(void *multiboot2_info)
 	mark_used_range((uint32_t)(uintptr_t)mbi, (uint32_t)(uintptr_t)mbi + mbi->total_size);
 }
 
+// needs memory init to be finished (needs vmalloc)
+bool pmm_refcount_init()
+{
+	g_refcount_map = vcalloc(sizeof(*g_refcount_map) * g_total_frames, 1);
+	if (!g_refcount_map)
+		return (false);
+	g_refcount_init = true;
+	for (uint32_t i = 0; i < g_total_frames; i++)
+		g_refcount_map[i] = bit_test(i) ? 1 : 0;
+	return (true);
+}
+
 static uint32_t g_first_free = 0; // index to start searching for free frames
 
 phys_ptr pmm_alloc_frame(void)
@@ -254,6 +271,8 @@ phys_ptr pmm_alloc_frame(void)
 			g_first_free = i;
 			if (g_free_frames)
 				g_free_frames--;
+			if (g_refcount_init)
+				g_refcount_map[i] = 1;
 			return (phys_ptr)(i * PAGE_SIZE);
 		}
 	}
@@ -280,6 +299,8 @@ phys_ptr pmm_alloc_frame(void)
 			g_first_free = idx;
 			if (g_free_frames)
 				g_free_frames--;
+			if (g_refcount_init)
+				g_refcount_map[idx] = 1;
 			return (phys_ptr)(idx * PAGE_SIZE);
 		}
 	}
@@ -356,11 +377,34 @@ phys_ptr pmm_alloc_frames(uint32_t nb_frames)
 					g_free_frames -= nb_frames;
 				else
 					g_free_frames = 0;
-				return (phys_ptr)(start * PAGE_SIZE);
+				if (g_refcount_init)
+					for (uint32_t j = 0; j < nb_frames; j++)
+						g_refcount_map[start + j] = 1;
+				return ((phys_ptr)(start * PAGE_SIZE));
 			}
 		}
 	}
 	return 0;
+}
+
+// returns false if ref count for this frame is already max ref count
+bool pmm_add_ref(phys_ptr frame)
+{
+	uint32_t index = frame >> 12;
+	if (index >= g_total_frames)
+		return (false);
+	if (g_refcount_map[index] == UINT16_MAX)
+		return (false);
+	g_refcount_map[index]++;
+	return (true);
+}
+
+uint32_t pmm_get_refs(phys_ptr frame)
+{
+	uint32_t index = frame >> 12;
+	if (index >= g_total_frames)
+		return (0);
+	return (g_refcount_map[index]);
 }
 
 void pmm_free_frame(phys_ptr pa)
@@ -370,13 +414,31 @@ void pmm_free_frame(phys_ptr pa)
 	uint32_t idx = (uint32_t)(pa / PAGE_SIZE);
 	if (idx >= g_total_frames)
 		return;
-
-	if (bit_test(idx))
+	if (g_refcount_init)
 	{
-		bit_clear(idx);
-		g_free_frames++;
-		if (idx < g_first_free)
-			g_first_free = idx;
+		if (!g_refcount_map[idx])
+			return; // frame not allocated
+		g_refcount_map[idx]--;
+		if (!g_refcount_map[idx])
+		{
+			if (bit_test(idx))
+			{
+				bit_clear(idx);
+				g_free_frames++;
+				if (idx < g_first_free)
+					g_first_free = idx;
+			}
+		}
+	}
+	else
+	{
+		if (bit_test(idx))
+		{
+			bit_clear(idx);
+			g_free_frames++;
+			if (idx < g_first_free)
+				g_first_free = idx;
+		}
 	}
 }
 

@@ -170,6 +170,9 @@ void kernel_main(struct s_mb2_info *multi)
 	writes("GDT installed.\n");
 
 	setup_interrupts();
+	bool pmm_refcount_init();
+	if (!pmm_refcount_init())
+		kernel_panic("couldn't init pmm_refcount\n", NULL);
 	writes("Interrupt Descriptor Table loaded.\n");
 	init_syscalls();
 	add_syscall(1, syscall_exit);

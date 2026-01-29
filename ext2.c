@@ -340,6 +340,8 @@ int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned i
 	for (unsigned int i = offset; i < contents.length && written_count < buf_size; i++)
 		buf[written_count++] = contents.data[i];
 
+	VecU8_destruct(&contents);
+
 	return written_count;
 }
 
@@ -408,6 +410,8 @@ int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int cou
 		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
 		ent = (struct linux_dirent64 *)((unsigned char *)ent + reclen);
 	}
+
+	VecU8_destruct(&contents);
 
 	return written_count;
 }

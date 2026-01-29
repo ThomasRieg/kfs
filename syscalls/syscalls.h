@@ -26,6 +26,7 @@ uint32_t syscall_getgid(__attribute__((unused)) t_interrupt_data *regs);
 uint32_t syscall_geteuid32(__attribute__((unused)) t_interrupt_data *regs);
 uint32_t syscall_getegid32(__attribute__((unused)) t_interrupt_data *regs);
 
+uint32_t syscall_getpid(t_interrupt_data *regs);
 uint32_t syscall_brk(t_interrupt_data *regs);
 uint32_t syscall_uname(t_interrupt_data *regs);
 uint32_t syscall_wait4(t_interrupt_data *regs);

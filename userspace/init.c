@@ -52,7 +52,7 @@ int main(void)
 		struct dirent *dirent;
 		errno = 0;
 		while ((dirent = readdir(dir))) {
-			printf("%lu %ld %u %u %s\n", dirent->d_ino, dirent->d_off, dirent->d_reclen, dirent->d_type, dirent->d_name);
+			printf("ino=%lu off=%ld reclen=%u type=%u name=%s\n", dirent->d_ino, dirent->d_off, dirent->d_reclen, dirent->d_type, dirent->d_name);
 		}
 		perror("readdir");
 		closedir(dir);
@@ -65,4 +65,15 @@ int main(void)
 	free(p);
 #define GOODBYE "\t\t//// GOODBYE\n"
 	write(1, GOODBYE, sizeof(GOODBYE) - 1);
+	int pid = syscall(2);
+	printf("return from fork %d\n", pid);
+	if (pid == -1) {
+		perror("fork");
+	} else if (pid == 0) {
+		printf("hello from pid %u (child)\n", getpid());
+		while (1);
+	} else {
+		printf("hello from pid %u (parent)\n", getpid());
+		while (1);
+	}
 }

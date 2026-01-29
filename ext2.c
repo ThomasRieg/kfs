@@ -393,9 +393,8 @@ int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int cou
 	struct ext2_direntry *direntry = (struct ext2_direntry *)(contents.data + offset);
 	while ((unsigned char *)direntry < contents.data + contents.length && direntry->inode) {
 		unsigned int reclen = sizeof(struct linux_dirent64) + direntry->name_length + 1;
-		if (reclen & 7) {
-			reclen = (reclen + 8) & (~7);
-		}
+		printk("%u", (unsigned int)sizeof(struct linux_dirent64));
+		reclen = (reclen + 7) & (~7);
 		if (written_count + reclen > count)
 			break;
 		ent->d_ino = direntry->inode;

@@ -19,6 +19,11 @@
 #include "../../errno.h"
 #include "../../tty/tty.h"
 
+uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)
+{
+	return (g_curr_task->task_id);
+}
+
 // 199
 // void
 uint32_t syscall_getuid(__attribute__((unused)) t_interrupt_data *regs)
@@ -486,6 +491,10 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->suid = g_curr_task->suid;
 	task->gid = g_curr_task->gid;
 	task->egid = g_curr_task->egid;
+	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
+	for (unsigned short i = 0; i < sizeof(task->open_files)/sizeof(task->open_files[0]); i++)
+		if (task->open_files[i])
+			task->open_files[i]->ref_count += 1;
 	disable_interrupts();
 	extern phys_ptr copy_current_pd();
 	task->pd = copy_current_pd(); // shallow copy of the kernel address space
@@ -506,7 +515,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->proc_memory.user_stack_top = g_curr_task->proc_memory.user_stack_top;
 	memcpy(task->k_stack, g_curr_task->k_stack, sizeof(g_curr_task->k_stack)); // TODO copy only until k_esp to save instruction?
 	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
-	((t_interrupt_data *)task->k_stack)->eax = 0;
+	((t_interrupt_data *)task->k_esp)->eax = 0;
 	task->status = STATUS_RUNNABLE;
 	task->next = g_curr_task->next;
 	g_curr_task->next = task;

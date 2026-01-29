@@ -22,7 +22,7 @@
 #include "../mmap/mmap.h"
 
 t_task *g_curr_task = 0;
-uint32_t g_next_pid = 0;
+uint32_t g_next_pid = 1;
 
 void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top)
 {

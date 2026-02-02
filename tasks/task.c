@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/02 18:08:47 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 23:37:50 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -321,7 +321,7 @@ static void free_vma_range_pages(virt_ptr start, virt_ptr end)
 
 void free_backing_obj(t_vma *vma)
 {
-	if (vma->backing == MAP_SHARED)
+	if (vma->backing == VMA_ANON && vma->flags == MAP_SHARED)
 	{
 		t_shm_anon *backing = vma->backing_obj;
 		backing->refcnt--;

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 19:30:12 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 16:28:23 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -267,7 +267,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 	// Reject unsupported pid modes for now
 	if (pid == 0 || pid < -1)
 	{
-		return (uint32_t)(-38); // -ENOSYS
+		return (uint32_t)(-ENOSYS);
 	}
 
 	for (;;)
@@ -277,7 +277,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 		if (!g_curr_task->children)
 		{
 			enable_interrupts();
-			return (uint32_t)(-10); // -ECHILD
+			return (uint32_t)(-ECHILD);
 		}
 
 		t_task *z = find_zombie_child(g_curr_task, pid);
@@ -294,7 +294,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 			if (stat_uaddr)
 			{
 				if (!user_range_ok((virt_ptr)stat_uaddr, sizeof(uint32_t), true))
-					return (uint32_t)(-14); // -EFAULT
+					return (uint32_t)(-EFAULT);
 				*(uint32_t *)(uintptr_t)stat_uaddr = status;
 			}
 

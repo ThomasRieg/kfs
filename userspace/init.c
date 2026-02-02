@@ -8,7 +8,7 @@
 #include <fcntl.h>
 
 #define BYTES 10000000
-#define AT_EMPTY_PATH		0x1000	/* Allow empty relative pathname */
+#define AT_EMPTY_PATH 0x1000 /* Allow empty relative pathname */
 
 int main(void)
 {
@@ -28,7 +28,8 @@ int main(void)
 
 	FILE *fp = fopen("hostname", "rb");
 
-	if (fp) {
+	if (fp)
+	{
 		printf("\t\t//// FSTATAT `hostname`\n");
 		struct stat stat;
 		if (fstatat(fileno(fp), "", &stat, AT_EMPTY_PATH) == -1)
@@ -48,15 +49,18 @@ int main(void)
 	printf("\t\t//// READING ENTRIES IN CURRENT DIRECTORY\n");
 	errno = 0;
 	DIR *dir = opendir(".");
-	if (dir) {
+	if (dir)
+	{
 		struct dirent *dirent;
 		errno = 0;
-		while ((dirent = readdir(dir))) {
+		while ((dirent = readdir(dir)))
+		{
 			printf("ino=%lu off=%ld reclen=%u type=%u name=%s\n", dirent->d_ino, dirent->d_off, dirent->d_reclen, dirent->d_type, dirent->d_name);
 		}
 		perror("readdir");
 		closedir(dir);
-	} else
+	}
+	else
 		perror("opendir");
 	printf("\t\t//// ALLOCATION TEST\n");
 	unsigned char *p = malloc(BYTES);
@@ -67,13 +71,21 @@ int main(void)
 	write(1, GOODBYE, sizeof(GOODBYE) - 1);
 	int pid = syscall(2);
 	printf("return from fork %d\n", pid);
-	if (pid == -1) {
+	if (pid == -1)
+	{
 		perror("fork");
-	} else if (pid == 0) {
+	}
+	else if (pid == 0)
+	{
 		printf("hello from pid %u (child)\n", getpid());
-		while (1);
-	} else {
+		exit(0);
+	}
+	else
+	{
 		printf("hello from pid %u (parent)\n", getpid());
-		while (1);
+		printf("waiting for child to exit\n");
+		syscall()
+		while (1)
+			;
 	}
 }

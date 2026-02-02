@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/02 15:10:26 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 15:17:03 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -263,6 +263,7 @@ void page_fault_handler(t_interrupt_data *regs)
 	{
 		// COW 🐂
 		phys_ptr frame = *pte & 0xFFFFF000;
+		printk("COW at frame %x, at va %x, from pid %u\n", frame, virtual_address, g_curr_task->task_id);
 		if (pmm_get_refs(frame) > 1)
 		{
 			// copy frame
@@ -295,6 +296,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		if (regs->err_code & 4)
 			printk("while in userspace\n");
 		printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
+		printk("by pid %u\n", g_curr_task->task_id);
 		print_interrupt_frame(regs);
 		while (1)
 			asm volatile("hlt");

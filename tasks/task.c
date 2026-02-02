@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 17:53:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 16:22:41 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -198,9 +198,13 @@ void context_switch(t_task *next)
 	printk("context_switch\n");
 	g_curr_task = next;
 	tss_set_kernel_stack((uintptr_t)&(next->k_stack[sizeof(next->k_stack)]));
+	// printk("1\n");
 	write_cr3(next->pd);
-	switch_esp_to(next->k_esp); // then iret path restores regs
+	// printk("2\n");
+
+	// printk("3\n");
 	iret_from_frame((t_interrupt_data *)next->k_esp);
+	switch_esp_to(next->k_esp); // wont be called, change that later to come back to the correct instruction if the next task yielded from kernel code
 }
 
 void schedule_next_task()

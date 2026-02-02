@@ -69,6 +69,7 @@ int main(void)
 	free(p);
 #define GOODBYE "\t\t//// GOODBYE\n"
 	write(1, GOODBYE, sizeof(GOODBYE) - 1);
+	u_int32_t skibidi = 67;
 	int pid = syscall(2);
 	printf("return from fork %d\n", pid);
 	if (pid == -1)
@@ -78,12 +79,16 @@ int main(void)
 	else if (pid == 0)
 	{
 		printf("hello from pid %u (child)\n", getpid());
+		skibidi = 0;
+		printf("child modified skybidi to %u in child\n", skibidi);
 		exit(0);
 	}
 	else
 	{
 		printf("hello from pid %u (parent)\n", getpid());
 		printf("waiting for child to exit\n");
+		syscall(114, pid, 0, 0, 0);
+		printf("skibidy still %u in parent\n", skibidi);
 		while (1)
 			;
 	}

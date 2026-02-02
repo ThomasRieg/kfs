@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 17:12:50 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 15:10:26 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -258,6 +258,34 @@ void page_fault_handler(t_interrupt_data *regs)
 		invalidate_cache(virtual_address_page_start);
 		memset(virtual_address_page_start, 0, PAGE_SIZE);
 		g_curr_task->proc_memory.physical_pages++;
+	}
+	else if ((pte && (*pte & PTE_P) && (*pte & PTE_COW)) && (regs->err_code & 2) && (vma->prots & PROT_WRITE))
+	{
+		// COW 🐂
+		phys_ptr frame = *pte & 0xFFFFF000;
+		if (pmm_get_refs(frame) > 1)
+		{
+			// copy frame
+			phys_ptr new_frame = pmm_alloc_frame();
+			if (!new_frame)
+				kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
+			char buff[PAGE_SIZE];
+			memcpy(buff, virtual_address_page_start, PAGE_SIZE);
+			map_page(new_frame, pte, get_vma_flags(vma));
+			invalidate_cache(virtual_address_page_start);
+			memcpy(virtual_address_page_start, buff, PAGE_SIZE);
+			g_curr_task->proc_memory.physical_pages++;
+		}
+		else
+		{
+			// last referencce, just make it rw
+			pmm_free_frame(frame); // will just decrease the refcount here
+			*pte |= PTE_RW;
+			*pte &= ~PTE_COW;
+			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
+			invalidate_cache(virtual_address_page_start);
+		}
 	}
 	else
 	{

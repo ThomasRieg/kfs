@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 17:05:20 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 18:08:45 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -160,5 +160,6 @@ void context_switch(t_task *next);
 void cleanup_task(t_task *task);
 void task_reap_zombie(t_task *t);
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary);
+void add_child(t_task *parent, t_task *child);
 
 #endif

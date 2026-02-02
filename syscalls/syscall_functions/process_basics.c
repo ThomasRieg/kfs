@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/02 16:28:23 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 18:09:16 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -507,6 +507,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->pending_signals = 0;
 	task->task_id = g_next_pid++;
 	task->parent_task = g_curr_task;
+	add_child(g_curr_task, task);
 	task->uid = g_curr_task->uid;
 	task->euid = g_curr_task->euid;
 	task->suid = g_curr_task->suid;

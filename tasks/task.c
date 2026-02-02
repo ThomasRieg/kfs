@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/02 16:22:41 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/02 18:08:47 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -179,6 +179,13 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 
 	return (true);
+}
+
+void add_child(t_task *parent, t_task *child)
+{
+	t_task *children_head = parent->children;
+	parent->children = child;
+	child->next_sibling = children_head;
 }
 
 __attribute__((noreturn)) static inline void switch_esp_to(uint32_t new_esp)

@@ -84,7 +84,6 @@ int main(void)
 	{
 		printf("hello from pid %u (parent)\n", getpid());
 		printf("waiting for child to exit\n");
-		syscall()
 		while (1)
 			;
 	}

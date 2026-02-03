@@ -20,6 +20,7 @@ static t_isr_handler g_isr_handlers[256];
 void isr_dispatch_c(t_interrupt_data *regs)
 {
 	disable_interrupts(); // should be disabled by default, but let's be safe
+	//printk("\e[32mservicing interrupt %u\e[0m\n", regs->int_no);
 	if (g_curr_task)
 	{
 		g_curr_task->k_esp = (uintptr_t)regs;
@@ -35,6 +36,7 @@ void isr_dispatch_c(t_interrupt_data *regs)
 		printk("received unhandled interrupt %u\n", regs->int_no); // TODO add better handling here, idk how to make something robust for when we implement software interrupts and processes, so WIP
 		kernel_panic("unhandled interrupt", regs);
 	}
+	//printk("\e[31m\ndone servicing interrupt %u\e[0m\n", regs->int_no);
 }
 
 void isr_add_handler(uint8_t int_no, t_isr_handler func)

@@ -88,10 +88,9 @@ void stack_dump_words(uint32_t bytes)
 }
 
 // Very basic frame-pointer walk (works best if compiled with -fno-omit-frame-pointer)
-void stack_trace_ebp(uint32_t max_frames)
+void stack_trace_ebp(uint32_t max_frames, uint32_t ebp)
 {
-	uint32_t ebp = read_ebp();
-	printk("=== kernel stack trace (ebp chain) ===\n");
+	printk("=== stack trace (ebp chain) ===\n");
 	printk("start ebp=%p\n", (void *)ebp);
 
 	for (uint32_t frame = 0; frame < max_frames; ++frame)

@@ -587,8 +587,8 @@ __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *f
 uint32_t syscall_execve(t_interrupt_data *regs)
 {
 	const char *filename = (const char *)regs->ebx;
-	// const char *const *argv = (const char *const *)regs->ecx;
-	// const char *const *envp = (const char *const *)regs->edx;
+	const char *const *argv = (const char *const *)regs->ecx;
+	const char *const *envp = (const char *const *)regs->edx;
 	//  if ((user_range_ok(filename, strlen(filename), false)) //TODO do this
 	disable_interrupts();
 
@@ -607,32 +607,30 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	if (header->program_hdrs_offset + header->program_header_count * header->program_header_size > binary.length)
 		return (-ENOEXEC);
 
-	t_task *task = vcalloc(sizeof(*task), 1);
-	if (!task)
-		return (-ENOMEM);
-	task->pending_signals = 0;
-	task->task_id = g_curr_task->task_id;
-	task->parent_task = g_curr_task->parent_task;
-	task->uid = g_curr_task->uid;
-	task->euid = g_curr_task->euid;
-	task->suid = g_curr_task->suid;
-	task->gid = g_curr_task->gid;
-	task->egid = g_curr_task->egid;
 	extern phys_ptr copy_current_pd();
-	task->pd = copy_current_pd();
-	if (!task->pd)
-		return (vfree(task), -ENOMEM);
-	task->proc_memory.heap_current = 0; // temporary
-	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
-	if (task->proc_memory.user_stack_bot == MAP_FAILED)
+	phys_ptr new_pd = copy_current_pd();
+	if (!new_pd)
+		return (-ENOMEM);
+	g_curr_task->pending_signals = 0;
+	g_curr_task->proc_memory.heap_current = 0; // temporary
+	virt_ptr user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory);
+	if (g_curr_task->proc_memory.user_stack_bot == MAP_FAILED)
 	{
-		vfree(task);
-		pmm_free_frame(task->pd);
+		pmm_free_frame(g_curr_task->pd);
 		return (-ENOMEM);
 	}
-	task->next = g_curr_task->next;
-	write_cr3(task->pd);
-	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
+	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
+
+	extern void build_initial_user_frame(t_task * t, uint32_t entry, uint32_t user_stack_top, const char *const *argv, const char *const *envp);
+	build_initial_user_frame(g_curr_task, header->entrypoint, (uint32_t)user_stack_top, argv, envp);
+
+	cleanup_task(g_curr_task);
+
+	g_curr_task->proc_memory.user_stack_bot = user_stack_bot;
+	g_curr_task->proc_memory.user_stack_top = user_stack_top;
+	g_curr_task->pd = new_pd;
+	write_cr3(g_curr_task->pd);
+
 	{
 		struct elf_program_header *base = (struct elf_program_header *)(binary.data + header->program_hdrs_offset);
 		for (unsigned short i = 0; i < header->program_header_count; i++)
@@ -643,27 +641,19 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 				unsigned int to_add = base[i].virt_addr - (unsigned int)virt;
 
 				void *end = page_align_up((char *)virt + base[i].mem_size + to_add);
-				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory) == MAP_FAILED)
+				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED)
 				{
-					cleanup_task(task);
-					vfree(task);
-					pmm_free_frame(task->pd);
+					pmm_free_frame(g_curr_task->pd);
 					return (-ENOMEM);
 				}
 				memcpy((void *)base[i].virt_addr, binary.data + base[i].file_offset, base[i].file_size);
-				if ((unsigned int)task->proc_memory.heap_current < (unsigned int)end)
-					task->proc_memory.heap_current = end;
+				if ((unsigned int)g_curr_task->proc_memory.heap_current < (unsigned int)end)
+					g_curr_task->proc_memory.heap_current = end;
 			}
 		}
 	}
-	extern void build_initial_user_frame(t_task * t, uint32_t entry, uint32_t user_stack_top);
-	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top)); // put argc = 0, argv[0] = NULL, envp[0] = NULL TODO handle these
-	task->status = STATUS_RUNNABLE;
-	task->cwd_inode_nr = 2;
-	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));
-	cleanup_task(g_curr_task);
-	memcpy(g_curr_task, task, sizeof(*task));
-	vfree(task);
+	g_curr_task->status = STATUS_RUNNABLE;
+	tss_set_kernel_stack((uintptr_t)&(g_curr_task->k_stack[sizeof(g_curr_task->k_stack)]));
 	/*printk("kstack top=%p bot=%p\n",
 	   &task->k_stack[sizeof(task->k_stack)],
 	   &task->k_stack[0]);*/
@@ -679,6 +669,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		"lgdt %0\n"
 		: : "m"(gp));
 	// enable_interrupts();
-	iret_from_frame((t_interrupt_data *)task->k_esp);
+	iret_from_frame((t_interrupt_data *)g_curr_task->k_esp);
+	enable_interrupts();
 	__builtin_unreachable();
 }

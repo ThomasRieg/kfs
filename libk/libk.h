@@ -37,7 +37,7 @@ int printk(const char *str, ...);
 
 // print stack
 void stack_dump_words(uint32_t bytes);
-void stack_trace_ebp(uint32_t max_frames);
+void stack_trace_ebp(uint32_t max_frames, uint32_t ebp);
 void hex_dump(unsigned char *data, unsigned int size);
 
 #include "vec.h"

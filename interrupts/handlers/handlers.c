@@ -299,6 +299,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
 		printk("by pid %u\n", g_curr_task->task_id);
 		print_interrupt_frame(regs);
+		stack_trace_ebp(32, regs->ebp);
 		while (1)
 			asm volatile("hlt");
 	}

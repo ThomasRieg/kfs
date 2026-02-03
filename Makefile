@@ -41,6 +41,7 @@ $(DISK_FILE):
 	$(MAKE) -C userspace
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
 	cp userspace/init root/bin
+	wget -O root/bin/cat https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_CAT
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
 		OFFSET=$$(parted -s $(DISK_FILE) unit B print \

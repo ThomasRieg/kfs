@@ -24,7 +24,7 @@
 t_task *g_curr_task = 0;
 uint32_t g_next_pid = 1;
 
-void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top)
+void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top, const char *const *argv_copy, const char *const *envp_copy)
 {
 	// Put the frame at the top of kernel stack and grow downward
 	uint32_t ktop = (uint32_t)&t->k_stack[sizeof(t->k_stack)];
@@ -50,6 +50,23 @@ void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top
 	f->cs = (GDT_SEL_UCODE | 3);
 	f->eflags = 0x202u; // IF=1 + reserved bit
 
+	// stack layout
+	// BOTTOM (high addresses)
+	//
+	// - null-terminated string data pointed to by argv and envp
+	// - 16 "random" bytes pointed to by auxv
+	// - ELF auxv NONE (to mark end of auxiliary vectors)
+	// - ELF auxv RANDOM (required by glibc)
+	// - envp[n - 1] = NULL
+	// - envp[...]
+	// - envp[0]
+	// - argv[argc] = NULL
+	// - argv[...]
+	// - argv[0]
+	// - argc
+	//
+	// TOP (low addresses)
+
 	// ELF auxiliary vectors
 	user_stack_top -= 16;
 	unsigned int random_auxv_addr = user_stack_top; // yes, the "random" bytes are all zero
@@ -59,7 +76,9 @@ void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top
 	struct elf_auxiliary_vector *random_auxv = (struct elf_auxiliary_vector *)user_stack_top;
 	random_auxv->type = ELF_AT_RANDOM;
 	random_auxv->value = random_auxv_addr;
+	(void)argv_copy, (void)envp_copy;
 	user_stack_top -= 3 * sizeof(unsigned int); // argc, argv[0] = NULL, envp[0] = NULL
+	*(uint32_t*)user_stack_top = 0;
 	f->useresp = user_stack_top;
 	f->ss = udata;
 
@@ -158,7 +177,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 			}
 		}
 	}
-	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top));
+	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top), NULL, NULL);
 	task->status = STATUS_RUNNABLE;
 	task->cwd_inode_nr = 2;
 	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));

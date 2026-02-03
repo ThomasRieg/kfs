@@ -161,10 +161,6 @@ void handle_command(unsigned char len, const char *cmd)
 			memset(forty_two, 0x42, 100);
 			stack_dump_words(0);
 		}
-		else if (memcmp(cmd, "print-trace", 11) == 0)
-		{
-			stack_trace_ebp(32);
-		}
 		else if (memcmp(cmd, "fill-memory", 11) == 0)
 		{
 			fill_memory();

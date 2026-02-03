@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:21:49 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:45:56 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -363,8 +363,29 @@ void cleanup_task(t_task *task)
 }
 
 // call whean reaping a zombie task that already has been called in cleanup_task
-void task_reap_zombie(t_task *t)
+void task_reap_zombie(t_task *t, t_task *parent)
 {
 	// TODO link prev task to next task in scheduler linked list
+	t_task *prev_sibling = NULL;
+	t_task *curr = parent->children;
+	if (curr && curr == t)
+	{
+		parent->children = t->next_sibling;
+	}
+	else
+	{
+		while (curr->next && curr != t)
+		{
+			prev_sibling = curr;
+			curr = curr->next;
+		}
+		if (curr == t)
+		{
+			if (prev_sibling)
+				prev_sibling->next = curr->next;
+		}
+		else
+			kernel_panic("uncoherent state of parent/sibling relationship in task_reap_zombie\n", NULL);
+	}
 	vfree(t);
 }

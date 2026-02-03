@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:21:08 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:40:55 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -298,7 +298,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 				*(uint32_t *)(uintptr_t)stat_uaddr = status;
 			}
 
-			task_reap_zombie(z);
+			task_reap_zombie(z, g_curr_task);
 			return child_pid;
 		}
 

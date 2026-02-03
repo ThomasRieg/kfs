@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:07:58 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:40:30 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -158,7 +158,7 @@ extern uint32_t g_next_pid;
 void schedule_next_task();
 void context_switch(t_task *next);
 void cleanup_task(t_task *task);
-void task_reap_zombie(t_task *t);
+void task_reap_zombie(t_task *t, t_task *parent);
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary);
 void add_child(t_task *parent, t_task *child);
 

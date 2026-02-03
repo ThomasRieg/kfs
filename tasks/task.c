@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:45:56 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:53:21 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -372,7 +372,7 @@ void task_reap_zombie(t_task *t, t_task *parent)
 	{
 		parent->children = t->next_sibling;
 	}
-	else
+	else if (curr)
 	{
 		while (curr->next && curr != t)
 		{
@@ -387,5 +387,16 @@ void task_reap_zombie(t_task *t, t_task *parent)
 		else
 			kernel_panic("uncoherent state of parent/sibling relationship in task_reap_zombie\n", NULL);
 	}
+	t_task *prev_exec_list = NULL;
+	curr = t->next;
+	while (curr != t)
+	{
+		prev_exec_list = curr;
+	}
+	if (!prev_exec_list)
+	{
+		kernel_panic("could not find any other task after reaping a task (shouldn't happen)\n", NULL);
+	}
+	prev_exec_list->next = t->next;
 	vfree(t);
 }

@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 
 #define BYTES 10000000
 #define AT_EMPTY_PATH 0x1000 /* Allow empty relative pathname */
@@ -69,6 +70,13 @@ int main(void)
 	free(p);
 #define GOODBYE "\t\t//// GOODBYE\n"
 	write(1, GOODBYE, sizeof(GOODBYE) - 1);
+	char *shared = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	if (shared == MAP_FAILED)
+	{
+		perror("mmap");
+		return (-1);
+	}
+	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;
 	int pid = syscall(2);
 	printf("return from fork %d\n", pid);
@@ -81,6 +89,8 @@ int main(void)
 		printf("hello from pid %u (child)\n", getpid());
 		skibidi = 0;
 		printf("child modified skybidi to %u in child\n", skibidi);
+		shared[0] = 42;
+		printf("child modified shared[0] to %u in child\n", shared[0]);
 		exit(0);
 	}
 	else
@@ -89,6 +99,7 @@ int main(void)
 		printf("waiting for child to exit\n");
 		syscall(114, pid, 0, 0, 0);
 		printf("skibidy still %u in parent\n", skibidi);
+		printf("shared[0] changed to %u in parent\n", shared[0]);
 		while (1)
 			;
 	}

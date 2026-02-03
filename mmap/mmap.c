@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:25:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 16:36:45 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 15:57:58 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include "../tasks/task.h"
 #include "../vmalloc/vmalloc.h"
 #include "../mem_page/mem_paging.h"
+#include "../errno.h"
 
 static int vma_overlaps(t_mm *mm, uintptr_t start, uintptr_t end)
 {
@@ -74,15 +75,15 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 {
 	void *original_addr = addr;
 	if (offset || fd > 0)
-		return (MAP_FAILED); // not supported yet, add it when (if) we add memory with fd backing
+		return ((void *)-ENOSYS); // not supported yet, add it when (if) we add memory with fd backing
 	if (!!(flags & MAP_PRIVATE) == !!(flags & MAP_SHARED))
-		return (MAP_FAILED); // both 0 or both 1
+		return ((void *)-EINVAL); // both 0 or both 1
 	if (!length)
-		return (MAP_FAILED); // 0 lenght mapping not allowed
+		return ((void *)-EINVAL); // 0 lenght mapping not allowed
 	if ((uintptr_t)addr >= KERNEL_VIRT_BASE)
-		return (MAP_FAILED);
+		return ((void *)-EFAULT);
 	if (length >= (KERNEL_VIRT_BASE - USERLAND_HEAP_START_VA))
-		return (MAP_FAILED); // not enough memory left
+		return ((void *)-ENOMEM); // not enough memory left
 	if ((uintptr_t)addr < USERLAND_HEAP_START_VA)
 		addr = (virt_ptr)USERLAND_HEAP_START_VA;
 	if (length % PAGE_SIZE)
@@ -100,18 +101,18 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 		if (end < start)
 		{
 			enable_interrupts();
-			return (MAP_FAILED); // overflow
+			return ((void *)-ERANGE); // overflow
 		}
 		if (original_addr != addr)
 		{
 			enable_interrupts();
-			return (MAP_FAILED); // start changed, therefore invalid (not alligned, too low...)
+			return ((void *)-EINVAL); // start changed, therefore invalid (not alligned, too low...)
 		}
 
 		if (vma_overlaps(mm, start, end))
 		{
 			enable_interrupts();
-			return (MAP_FAILED); // zone already reserved, TODO apparently posix wants us to just override the entry/entries that reserved this zone, idk if it's worth doing
+			return ((void *)-EINVAL); // zone already reserved, TODO apparently posix wants us to just override the entry/entries that reserved this zone, idk if it's worth doing
 		}
 
 		find_insert_pos(mm, start, &prev, &next);
@@ -123,14 +124,14 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 		if (!available_start)
 		{
 			enable_interrupts();
-			return (MAP_FAILED);
+			return ((void *)-ENOMEM);
 		}
 	}
 	t_vma *new = vmalloc(sizeof(*new));
 	if (!new)
 	{
 		enable_interrupts();
-		return (MAP_FAILED);
+		return ((void *)-ENOMEM);
 	}
 	if (prev)
 		prev->next = new;
@@ -145,8 +146,8 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 		if (new->backing == VMA_ANON)
 		{
 			new->backing_obj = vmalloc(sizeof(t_shm_anon));
-			if (!new->backing)
-				return (enable_interrupts(), vfree(new), MAP_FAILED);
+			if (!new->backing_obj)
+				return (enable_interrupts(), vfree(new), (void *)-ENOMEM);
 			((t_shm_anon *)(new->backing_obj))->pages = NULL;
 			((t_shm_anon *)(new->backing_obj))->refcnt = 1;
 		}

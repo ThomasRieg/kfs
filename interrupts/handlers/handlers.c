@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/02 18:10:29 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 15:59:26 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -179,6 +179,8 @@ static bool add_page_to_shm_anon(t_shm_anon *backing, virt_ptr virtual_address_p
 	return (true);
 }
 
+static char page_buff[PAGE_SIZE];
+
 void page_fault_handler(t_interrupt_data *regs)
 {
 	disable_interrupts();
@@ -215,7 +217,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			g_curr_task->proc_memory.physical_pages++;
 		}
 	}
-	if (vma && vma->flags == MAP_SHARED)
+	if (vma && (vma->flags & MAP_SHARED))
 	{
 		if (vma->backing == VMA_ANON)
 		{
@@ -271,11 +273,10 @@ void page_fault_handler(t_interrupt_data *regs)
 			if (!new_frame)
 				kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
 			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
-			char buff[PAGE_SIZE];
-			memcpy(buff, virtual_address_page_start, PAGE_SIZE);
+			memcpy(page_buff, virtual_address_page_start, PAGE_SIZE);
 			map_page(new_frame, pte, get_vma_flags(vma));
 			invalidate_cache(virtual_address_page_start);
-			memcpy(virtual_address_page_start, buff, PAGE_SIZE);
+			memcpy(virtual_address_page_start, page_buff, PAGE_SIZE);
 			g_curr_task->proc_memory.physical_pages++;
 		}
 		else

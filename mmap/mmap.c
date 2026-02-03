@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:25:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 15:57:58 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:21:32 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,25 +93,25 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 	t_vma *prev;
 	t_vma *next;
 	void *available_start;
-	disable_interrupts();
+	// disable_interrupts();
 	if (flags & MAP_FIXED)
 	{
 		uintptr_t start = (uintptr_t)original_addr;
 		uintptr_t end = start + length;
 		if (end < start)
 		{
-			enable_interrupts();
+			// enable_interrupts();
 			return ((void *)-ERANGE); // overflow
 		}
 		if (original_addr != addr)
 		{
-			enable_interrupts();
+			// enable_interrupts();
 			return ((void *)-EINVAL); // start changed, therefore invalid (not alligned, too low...)
 		}
 
 		if (vma_overlaps(mm, start, end))
 		{
-			enable_interrupts();
+			// enable_interrupts();
 			return ((void *)-EINVAL); // zone already reserved, TODO apparently posix wants us to just override the entry/entries that reserved this zone, idk if it's worth doing
 		}
 
@@ -123,14 +123,14 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 		available_start = find_first_available(addr, length, mm, &prev, &next);
 		if (!available_start)
 		{
-			enable_interrupts();
+			// enable_interrupts();
 			return ((void *)-ENOMEM);
 		}
 	}
 	t_vma *new = vmalloc(sizeof(*new));
 	if (!new)
 	{
-		enable_interrupts();
+		// enable_interrupts();
 		return ((void *)-ENOMEM);
 	}
 	if (prev)
@@ -147,7 +147,7 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 		{
 			new->backing_obj = vmalloc(sizeof(t_shm_anon));
 			if (!new->backing_obj)
-				return (enable_interrupts(), vfree(new), (void *)-ENOMEM);
+				return (vfree(new), (void *)-ENOMEM); // enable interrupts
 			((t_shm_anon *)(new->backing_obj))->pages = NULL;
 			((t_shm_anon *)(new->backing_obj))->refcnt = 1;
 		}
@@ -156,6 +156,6 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 	new->end = (virt_ptr)((uintptr_t)available_start + length);
 
 	mm->reserved_pages += length / PAGE_SIZE;
-	enable_interrupts();
+	// enable_interrupts();
 	return (available_start);
 }

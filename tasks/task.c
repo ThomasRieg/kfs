@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 15:21:52 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:21:49 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,7 +76,7 @@ phys_ptr copy_current_pd()
 	phys_ptr pd = pmm_alloc_frame();
 	if (!pd)
 		return (0);
-	disable_interrupts();
+	// disable_interrupts();
 	virt_ptr tmp = kmap(pd);
 	memset(tmp, 0, PAGE_SIZE);
 	uint32_t *pde = (uint32_t *)tmp;
@@ -88,7 +88,7 @@ phys_ptr copy_current_pd()
 	}
 	pde[1023] = (pd & 0xFFFFF000u) | PTE_P | PTE_RW; // recursive mapping
 	kunmap();
-	enable_interrupts();
+	// enable_interrupts();
 	return (pd);
 }
 
@@ -358,8 +358,8 @@ void cleanup_task(t_task *task)
 {
 	disable_interrupts();
 	free_vmas(task);
-	enable_interrupts();
-	// TODO implement (clean up memory, fd and everything
+	// enable_interrupts();
+	//  TODO implement (clean up memory, fd and everything
 }
 
 // call whean reaping a zombie task that already has been called in cleanup_task

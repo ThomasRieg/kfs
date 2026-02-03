@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 15:59:26 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:21:05 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -183,7 +183,7 @@ static char page_buff[PAGE_SIZE];
 
 void page_fault_handler(t_interrupt_data *regs)
 {
-	disable_interrupts();
+	// disable_interrupts();
 	unsigned int virtual_address;
 	asm volatile("mov %%cr2, %0" : "=r"(virtual_address));
 	if (!g_curr_task)
@@ -302,7 +302,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		while (1)
 			asm volatile("hlt");
 	}
-	enable_interrupts();
+	// enable_interrupts();
 }
 
 void breakpoint_handler(t_interrupt_data *regs)

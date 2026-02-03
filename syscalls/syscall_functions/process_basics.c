@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/02 18:09:16 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/03 16:21:08 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -272,11 +272,11 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 	for (;;)
 	{
-		disable_interrupts();
+		// disable_interrupts();
 
 		if (!g_curr_task->children)
 		{
-			enable_interrupts();
+			// enable_interrupts();
 			return (uint32_t)(-ECHILD);
 		}
 
@@ -288,7 +288,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 			unlink_child(g_curr_task, z);
 
-			enable_interrupts();
+			// enable_interrupts();
 
 			// write status to user if requested
 			if (stat_uaddr)
@@ -305,7 +305,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 		// no zombie found
 		if (options & WNOHANG)
 		{
-			enable_interrupts();
+			// enable_interrupts();
 			return 0;
 		}
 
@@ -313,7 +313,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 		g_curr_task->wait_reason = WAIT_CHILD;
 		g_curr_task->status = STATUS_SLEEP;
 
-		enable_interrupts();
+		// enable_interrupts();
 
 		// yield; when woken, loop and try again
 		schedule_next_task();
@@ -524,13 +524,13 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 		return (vfree(task), -1);
 	uint32_t ret = copy_mm(&task->proc_memory, &g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
 	if (ret)
-		return (pmm_free_frame(task->pd), cleanup_task(task), enable_interrupts(), ret);
+		return (pmm_free_frame(task->pd), cleanup_task(task), ret); // enable interrupts
 	uint32_t saved_pd = g_curr_task->pd;
 	write_cr3(task->pd);
 	ret = copy_current_user_memory(saved_pd, &task->proc_memory); // deep copy of the process's address space
 	write_cr3(saved_pd);
 	if (ret)
-		return (pmm_free_frame(task->pd), cleanup_task(task), enable_interrupts(), ret);
+		return (pmm_free_frame(task->pd), cleanup_task(task), ret);			// enable interrupts
 	task->proc_memory.heap_current = g_curr_task->proc_memory.heap_current; // temporary
 	task->proc_memory.user_stack_bot = g_curr_task->proc_memory.user_stack_bot;
 	task->proc_memory.user_stack_top = g_curr_task->proc_memory.user_stack_top;
@@ -540,7 +540,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->next = g_curr_task->next;
 	g_curr_task->next = task;
 	task->status = STATUS_RUNNABLE;
-	enable_interrupts();
+	// enable_interrupts();
 
 	return (task->task_id);
 }
@@ -678,7 +678,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	asm volatile(
 		"lgdt %0\n"
 		: : "m"(gp));
-	enable_interrupts();
+	// enable_interrupts();
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 	__builtin_unreachable();
 }

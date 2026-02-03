@@ -91,6 +91,10 @@ int main(void)
 		printf("child modified skybidi to %u in child\n", skibidi);
 		shared[0] = 42;
 		printf("child modified shared[0] to %u in child\n", shared[0]);
+		p = malloc(BYTES * 200);
+		for (unsigned int i = 0; i < BYTES * 200; i++)
+			p[i] = 42;
+		free(p);
 		exit(0);
 	}
 	else
@@ -100,6 +104,9 @@ int main(void)
 		syscall(114, pid, 0, 0, 0);
 		printf("skibidy still %u in parent\n", skibidi);
 		printf("shared[0] changed to %u in parent\n", shared[0]);
+		p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)
+		for (unsigned int i = 0; i < BYTES * 200; i++)
+			p[i] = 42;
 		while (1)
 			;
 	}

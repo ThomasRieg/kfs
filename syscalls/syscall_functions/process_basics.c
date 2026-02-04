@@ -205,12 +205,14 @@ uint32_t syscall_writev(t_interrupt_data *regs)
 {
 	printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
 	struct iovec *iovecs = (struct iovec *)regs->ecx;
+	uint32_t written = 0;
 	for (unsigned int i = 0; i < regs->edx; i++)
 	{
+		written += iovecs[i].iov_len;
 		write(iovecs[i].iov_base, iovecs[i].iov_len);
 		// printk("%u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
 	}
-	return (0);
+	return (written);
 }
 
 static t_task *find_zombie_child(t_task *parent, int pid)
@@ -582,6 +584,17 @@ __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *f
 	__builtin_unreachable();
 }
 
+static struct process_strings strings_collect(const char *const *strs) {
+	struct process_strings out;
+	out.string_count = 0;
+	VecU8_init(&out.string_data);
+	while (strs[out.string_count]) {
+		VecU8_append(&out.string_data, (const unsigned char *)strs[out.string_count], strlen(strs[out.string_count]) + 1);
+		out.string_count++;
+	}
+	return out;
+}
+
 // 11
 // const char *filename 	const char *const *argv 	const char *const *envp
 uint32_t syscall_execve(t_interrupt_data *regs)
@@ -611,25 +624,33 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	phys_ptr new_pd = copy_current_pd();
 	if (!new_pd)
 		return (-ENOMEM);
-	g_curr_task->pending_signals = 0;
-	g_curr_task->proc_memory.heap_current = 0; // temporary
-	virt_ptr user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory);
-	if (g_curr_task->proc_memory.user_stack_bot == MAP_FAILED)
-	{
-		pmm_free_frame(g_curr_task->pd);
-		return (-ENOMEM);
-	}
-	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 
-	extern void build_initial_user_frame(t_task * t, uint32_t entry, uint32_t user_stack_top, const char *const *argv, const char *const *envp);
-	build_initial_user_frame(g_curr_task, header->entrypoint, (uint32_t)user_stack_top, argv, envp);
+	struct process_strings argv_s = strings_collect(argv);
+	struct process_strings envp_s = strings_collect(envp);
 
 	cleanup_task(g_curr_task);
+
+	virt_ptr user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory);
+	if (user_stack_bot == MAP_FAILED)
+	{
+		VecU8_destruct(&binary);
+		VecU8_destruct(&argv_s.string_data);
+		VecU8_destruct(&envp_s.string_data);
+		pmm_free_frame(new_pd);
+		return (-ENOMEM);
+	}
+	g_curr_task->pending_signals = 0;
+	g_curr_task->proc_memory.heap_current = 0; // temporary
+	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 
 	g_curr_task->proc_memory.user_stack_bot = user_stack_bot;
 	g_curr_task->proc_memory.user_stack_top = user_stack_top;
 	g_curr_task->pd = new_pd;
 	write_cr3(g_curr_task->pd);
+
+	unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings argv, struct process_strings envp);
+	// This takes ownership of the argv, envp vectors so no need to clean them up after here
+	build_user_stack((unsigned int)user_stack_top, argv_s, envp_s);
 
 	{
 		struct elf_program_header *base = (struct elf_program_header *)(binary.data + header->program_hdrs_offset);
@@ -644,6 +665,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED)
 				{
 					pmm_free_frame(g_curr_task->pd);
+					VecU8_destruct(&binary);
 					return (-ENOMEM);
 				}
 				memcpy((void *)base[i].virt_addr, binary.data + base[i].file_offset, base[i].file_size);
@@ -652,12 +674,11 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 			}
 		}
 	}
+	regs->eip = header->entrypoint;
+	VecU8_destruct(&binary);
 	g_curr_task->status = STATUS_RUNNABLE;
-	tss_set_kernel_stack((uintptr_t)&(g_curr_task->k_stack[sizeof(g_curr_task->k_stack)]));
-	/*printk("kstack top=%p bot=%p\n",
-	   &task->k_stack[sizeof(task->k_stack)],
-	   &task->k_stack[0]);*/
-	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
+
+	/*volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
 
 	t_dt_ptr_32 gp;
 	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
@@ -667,9 +688,9 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	dt_set_entry(gdt, 8, 0, 0, 0, 0);
 	asm volatile(
 		"lgdt %0\n"
-		: : "m"(gp));
+		: : "m"(gp));*/
 	// enable_interrupts();
-	iret_from_frame((t_interrupt_data *)g_curr_task->k_esp);
-	enable_interrupts();
+
+	iret_from_frame(regs);
 	__builtin_unreachable();
 }

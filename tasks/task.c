@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 14:57:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 18:02:51 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,77 @@
 t_task *g_curr_task = 0;
 uint32_t g_next_pid = 1;
 
-void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top, const char *const *argv_copy, const char *const *envp_copy)
+static void copy_strings(unsigned char *dst_s, struct process_strings strings, unsigned char **dst_p)
+{
+	memcpy(dst_s, strings.string_data.data, strings.string_data.length);
+	VecU8_destruct(&strings.string_data);
+	unsigned int str = 0, i = 0;
+	if (strings.string_count)
+	{
+		do
+		{
+			dst_p[str] = dst_s + i;
+			while (dst_s[i])
+				i++;
+			i++; // i now points to next string
+			str++;
+		} while (str < strings.string_count);
+	}
+	dst_p[str] = 0;
+}
+
+unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings argv, struct process_strings envp)
+{
+	// stack layout
+	// BOTTOM (high addresses)
+	//
+	// - null-terminated string data pointed to by argv and envp
+	// - 16 "random" bytes pointed to by auxv
+	// - ELF auxv NONE (to mark end of auxiliary vectors)
+	// - ELF auxv RANDOM (required by glibc)
+	// - envp[n - 1] = NULL
+	// - envp[...]
+	// - envp[0]
+	// - argv[argc] = NULL
+	// - argv[...]
+	// - argv[0]
+	// - argc
+	//
+	// TOP (low addresses)
+
+	union
+	{
+		unsigned int n;
+		unsigned char *p;
+	} stck = {.n = user_stack_top};
+
+	unsigned char **envp0 = (unsigned char **)(stck.n - 16 - argv.string_data.length - envp.string_data.length - 2 * sizeof(struct elf_auxiliary_vector) - (envp.string_count + 1) * sizeof(char *));
+	stck.n -= envp.string_data.length;
+	copy_strings(stck.p, envp, envp0);
+
+	unsigned char **argv0 = (unsigned char **)((unsigned int)envp0 - (argv.string_count + 1) * sizeof(char *));
+	stck.n -= argv.string_data.length;
+	copy_strings(stck.p, argv, argv0);
+
+	// ELF auxiliary vectors
+	stck.n -= 16;
+	unsigned int random_auxv_addr = stck.n; // yes, the "random" bytes are all zero
+	// memory is initialized to zero by mmap = NULL auxv
+	stck.n -= sizeof(struct elf_auxiliary_vector);
+	stck.n -= sizeof(struct elf_auxiliary_vector);
+	struct elf_auxiliary_vector *random_auxv = (struct elf_auxiliary_vector *)stck.p;
+	random_auxv->type = ELF_AT_RANDOM;
+	random_auxv->value = random_auxv_addr;
+
+	stck.n = (unsigned int)argv0;
+
+	// put argc at top of stack
+	stck.n -= sizeof(unsigned int);
+	*(uint32_t *)stck.p = argv.string_count;
+	return stck.n;
+}
+
+void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top)
 {
 	// Put the frame at the top of kernel stack and grow downward
 	uint32_t ktop = (uint32_t)&t->k_stack[sizeof(t->k_stack)];
@@ -49,36 +119,6 @@ void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top
 	f->eip = entry;
 	f->cs = (GDT_SEL_UCODE | 3);
 	f->eflags = 0x202u; // IF=1 + reserved bit
-
-	// stack layout
-	// BOTTOM (high addresses)
-	//
-	// - null-terminated string data pointed to by argv and envp
-	// - 16 "random" bytes pointed to by auxv
-	// - ELF auxv NONE (to mark end of auxiliary vectors)
-	// - ELF auxv RANDOM (required by glibc)
-	// - envp[n - 1] = NULL
-	// - envp[...]
-	// - envp[0]
-	// - argv[argc] = NULL
-	// - argv[...]
-	// - argv[0]
-	// - argc
-	//
-	// TOP (low addresses)
-
-	// ELF auxiliary vectors
-	user_stack_top -= 16;
-	unsigned int random_auxv_addr = user_stack_top; // yes, the "random" bytes are all zero
-	// memory is initialized to zero by mmap = NULL auxv
-	user_stack_top -= sizeof(struct elf_auxiliary_vector);
-	user_stack_top -= sizeof(struct elf_auxiliary_vector);
-	struct elf_auxiliary_vector *random_auxv = (struct elf_auxiliary_vector *)user_stack_top;
-	random_auxv->type = ELF_AT_RANDOM;
-	random_auxv->value = random_auxv_addr;
-	(void)argv_copy, (void)envp_copy;
-	user_stack_top -= 3 * sizeof(unsigned int); // argc, argv[0] = NULL, envp[0] = NULL
-	*(uint32_t *)user_stack_top = 0;
 	f->useresp = user_stack_top;
 	f->ss = udata;
 
@@ -177,7 +217,9 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 			}
 		}
 	}
-	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top), NULL, NULL);
+	struct process_strings empty_strs = {.string_count = 0};
+	unsigned int stacktop = build_user_stack((uintptr_t)(task->proc_memory.user_stack_top), empty_strs, empty_strs);
+	build_initial_user_frame(task, header->entrypoint, stacktop);
 	task->status = STATUS_RUNNABLE;
 	task->cwd_inode_nr = 2;
 	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));

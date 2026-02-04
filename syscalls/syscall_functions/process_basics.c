@@ -24,6 +24,13 @@ uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)
 	return (g_curr_task->task_id);
 }
 
+uint32_t syscall_getppid(__attribute__((unused)) t_interrupt_data *regs)
+{
+	if (!g_curr_task->parent_task)
+		return 0;
+	return (g_curr_task->parent_task->task_id);
+}
+
 // 199
 // void
 uint32_t syscall_getuid(__attribute__((unused)) t_interrupt_data *regs)
@@ -203,7 +210,7 @@ struct iovec
 
 uint32_t syscall_writev(t_interrupt_data *regs)
 {
-	printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
+	//printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
 	struct iovec *iovecs = (struct iovec *)regs->ecx;
 	uint32_t written = 0;
 	for (unsigned int i = 0; i < regs->edx; i++)

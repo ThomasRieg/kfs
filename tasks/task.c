@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 18:43:55 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 19:21:39 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -417,48 +417,29 @@ void free_vmas(t_task *task)
 // does not free the task struct itself
 void cleanup_task(t_task *task)
 {
-	disable_interrupts();
+	// disable_interrupts();
 	free_vmas(task);
 	// enable_interrupts();
 	//  TODO implement (clean up memory, fd and everything
 }
 
 // call whean reaping a zombie task that already has been called in cleanup_task
-void task_reap_zombie(t_task *t, t_task *parent)
+void task_reap_zombie(t_task *t)
 {
-	// TODO link prev task to next task in scheduler linked list
-	t_task *prev_sibling = NULL;
-	t_task *curr = parent->children;
-	if (curr && curr == t)
+	// Remove from circular run list: find predecessor
+	t_task *prev = t;
+	while (prev->next != t)
 	{
-		parent->children = t->next_sibling;
+		prev = prev->next;
 	}
-	else if (curr)
-	{
-		while (curr->next && curr != t)
-		{
-			prev_sibling = curr;
-			curr = curr->next;
-		}
-		if (curr == t)
-		{
-			if (prev_sibling)
-				prev_sibling->next = curr->next;
-		}
-		else
-			kernel_panic("uncoherent state of parent/sibling relationship in task_reap_zombie\n", NULL);
-	}
-	t_task *prev_exec_list = NULL;
-	curr = t->next;
-	while (curr != t)
-	{
-		prev_exec_list = curr;
-	}
-	if (!prev_exec_list)
-	{
-		kernel_panic("could not find any other task after reaping a task (shouldn't happen)\n", NULL);
-	}
-	prev_exec_list->next = t->next;
+	if (prev == t) // should never happen unless list corrupt
+		kernel_panic("reaped last task in task_reap_zombie", NULL);
+
+	if (g_curr_task == t)
+		g_curr_task = t->next;
+
+	prev->next = t->next;
+
 	vfree(t);
 }
 

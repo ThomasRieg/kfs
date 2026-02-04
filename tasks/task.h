@@ -142,7 +142,7 @@ extern uint32_t g_next_pid;
 void schedule_next_task();
 void context_switch(t_task *next);
 void cleanup_task(t_task *task);
-void task_reap_zombie(t_task *t, t_task *parent);
+void task_reap_zombie(t_task *t);
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary);
 void add_child(t_task *parent, t_task *child);
 void yield();

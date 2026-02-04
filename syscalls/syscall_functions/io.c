@@ -243,6 +243,7 @@ uint32_t syscall_close(t_interrupt_data *regs)
 	file->refcnt--;
 	if (file->refcnt == 0)
 		vfree(file);
+	g_curr_task->open_files[fd] = NULL;
 	return (0);
 }
 

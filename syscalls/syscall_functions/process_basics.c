@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 17:22:50 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 19:22:14 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -210,7 +210,7 @@ struct iovec
 
 uint32_t syscall_writev(t_interrupt_data *regs)
 {
-	//printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
+	// printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
 	struct iovec *iovecs = (struct iovec *)regs->ecx;
 	uint32_t written = 0;
 	for (unsigned int i = 0; i < regs->edx; i++)
@@ -250,16 +250,27 @@ static t_task *find_zombie_child(t_task *parent, int pid)
 
 static void unlink_child(t_task *parent, t_task *child)
 {
-	t_task **pp = &parent->children;
-	while (*pp)
+	// TODO link prev task to next task in scheduler linked list
+	t_task *prev_sibling = NULL;
+	t_task *curr = parent->children;
+	if (curr && curr == child)
 	{
-		if (*pp == child)
+		parent->children = child->next_sibling;
+	}
+	else if (curr)
+	{
+		while (curr->next && curr != child)
 		{
-			*pp = child->next_sibling;
-			child->next_sibling = NULL;
-			return;
+			prev_sibling = curr;
+			curr = curr->next_sibling;
 		}
-		pp = &(*pp)->next_sibling;
+		if (curr == child)
+		{
+			if (prev_sibling)
+				prev_sibling->next = curr->next;
+		}
+		else
+			kernel_panic("uncoherent state of parent/sibling relationship in unlink_child\n", NULL);
 	}
 }
 
@@ -307,7 +318,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 				*(uint32_t *)(uintptr_t)stat_uaddr = status;
 			}
 
-			task_reap_zombie(z, g_curr_task);
+			task_reap_zombie(z);
 			return child_pid;
 		}
 
@@ -324,8 +335,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 		// enable_interrupts();
 
-		// yield; when woken, loop and try again
-		schedule_next_task();
+		yield();
 	}
 }
 
@@ -591,11 +601,13 @@ __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *f
 	__builtin_unreachable();
 }
 
-static struct process_strings strings_collect(const char *const *strs) {
+static struct process_strings strings_collect(const char *const *strs)
+{
 	struct process_strings out;
 	out.string_count = 0;
 	VecU8_init(&out.string_data);
-	while (strs[out.string_count]) {
+	while (strs[out.string_count])
+	{
 		VecU8_append(&out.string_data, (const unsigned char *)strs[out.string_count], strlen(strs[out.string_count]) + 1);
 		out.string_count++;
 	}

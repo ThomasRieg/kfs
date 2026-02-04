@@ -78,7 +78,7 @@ int main(void)
 	}
 	char *const argv[] = {"/bin/sh", 0};
 	char *const envp[] = {0};
-	execve("/bin/sh", argv, envp);
+	// execve("/bin/sh", argv, envp);
 
 	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;
@@ -96,7 +96,7 @@ int main(void)
 	}
 	else if (pid == 0)
 	{
-		write(pipe_fd[1], "coucou from pipe\n", 18);
+		write(pipe_fd[1], "coucou from pipe", 17);
 		printf("hello from pid %u (child)\n", getpid());
 		skibidi = 0;
 		printf("child modified skybidi to %u in child\n", skibidi);
@@ -113,11 +113,10 @@ int main(void)
 	{
 		printf("hello from pid %u (parent)\n", getpid());
 		printf("waiting for child to exit\n");
+		syscall(114, pid, 0, 0, 0);
 		char buff[20];
 		read(pipe_fd[0], buff, 20);
 		printf("message from pipe: %s\n", buff);
-		printf("read return\n");
-		syscall(114, pid, 0, 0, 0);
 		printf("skibidy still %u in parent\n", skibidi);
 		printf("shared[0] changed to %u in parent\n", shared[0]);
 		/*p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)

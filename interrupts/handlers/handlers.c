@@ -300,6 +300,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		printk("by pid %u\n", g_curr_task->task_id);
 		print_interrupt_frame(regs);
 		stack_trace_ebp(32, regs->ebp);
+		kernel_panic("page fault", regs);
 		while (1)
 			asm volatile("hlt");
 	}

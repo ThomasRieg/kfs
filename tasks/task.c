@@ -40,32 +40,7 @@ static void copy_strings(unsigned char *dst_s, struct process_strings strings, u
 	dst_p[str] = 0;
 }
 
-void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top, struct process_strings argv, struct process_strings envp)
-{
-	// Put the frame at the top of kernel stack and grow downward
-	uint32_t ktop = (uint32_t)&t->k_stack[sizeof(t->k_stack)];
-	ktop &= 0xFFFFFFF0u; // nice alignment
-
-	ktop -= sizeof(t_interrupt_data);
-	t_interrupt_data *f = (t_interrupt_data *)ktop;
-
-	memset(f, 0, sizeof(*f));
-
-	uint32_t udata = (GDT_SEL_UDATA | 3);
-	f->gs = udata;
-	f->fs = udata;
-	f->es = udata;
-	f->ds = udata;
-
-	// Discarded before iret anyway
-	f->int_no = 0;
-	f->err_code = 0;
-
-	// IRET frame
-	f->eip = entry;
-	f->cs = (GDT_SEL_UCODE | 3);
-	f->eflags = 0x202u; // IF=1 + reserved bit
-
+unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings argv, struct process_strings envp) {
 	// stack layout
 	// BOTTOM (high addresses)
 	//
@@ -109,8 +84,35 @@ void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top
 	// put argc at top of stack
 	stck.n -= sizeof(unsigned int);
 	*(uint32_t*)stck.p = argv.string_count;
+	return stck.n;
+}
 
-	f->useresp = stck.n;
+void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top)
+{
+	// Put the frame at the top of kernel stack and grow downward
+	uint32_t ktop = (uint32_t)&t->k_stack[sizeof(t->k_stack)];
+	ktop &= 0xFFFFFFF0u; // nice alignment
+
+	ktop -= sizeof(t_interrupt_data);
+	t_interrupt_data *f = (t_interrupt_data *)ktop;
+
+	memset(f, 0, sizeof(*f));
+
+	uint32_t udata = (GDT_SEL_UDATA | 3);
+	f->gs = udata;
+	f->fs = udata;
+	f->es = udata;
+	f->ds = udata;
+
+	// Discarded before iret anyway
+	f->int_no = 0;
+	f->err_code = 0;
+
+	// IRET frame
+	f->eip = entry;
+	f->cs = (GDT_SEL_UCODE | 3);
+	f->eflags = 0x202u; // IF=1 + reserved bit
+	f->useresp = user_stack_top;
 	f->ss = udata;
 
 	t->k_esp = (uint32_t)f;
@@ -209,7 +211,8 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 		}
 	}
 	struct process_strings empty_strs = {.string_count = 0};
-	build_initial_user_frame(task, header->entrypoint, (uintptr_t)(task->proc_memory.user_stack_top), empty_strs, empty_strs);
+	unsigned int stacktop = build_user_stack((uintptr_t)(task->proc_memory.user_stack_top), empty_strs, empty_strs);
+	build_initial_user_frame(task, header->entrypoint, stacktop);
 	task->status = STATUS_RUNNABLE;
 	task->cwd_inode_nr = 2;
 	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));

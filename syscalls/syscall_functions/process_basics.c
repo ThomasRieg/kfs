@@ -641,20 +641,14 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	g_curr_task->proc_memory.heap_current = 0; // temporary
 	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 
-	tss_set_kernel_stack((uintptr_t)&(g_curr_task->k_stack[sizeof(g_curr_task->k_stack)]));
-	/*printk("kstack top=%p bot=%p\n",
-	   &task->k_stack[sizeof(task->k_stack)],
-	   &task->k_stack[0]);*/
-
 	g_curr_task->proc_memory.user_stack_bot = user_stack_bot;
 	g_curr_task->proc_memory.user_stack_top = user_stack_top;
 	g_curr_task->pd = new_pd;
 	write_cr3(g_curr_task->pd);
 
-	extern void build_initial_user_frame(t_task * t, uint32_t entry, uint32_t user_stack_top, struct process_strings argv, struct process_strings envp);
+	unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings argv, struct process_strings envp);
 	// This takes ownership of the argv, envp vectors so no need to clean them up after here
-	build_initial_user_frame(g_curr_task, header->entrypoint, (uint32_t)user_stack_top,
-			argv_s, envp_s);
+	build_user_stack((unsigned int)user_stack_top, argv_s, envp_s);
 
 	{
 		struct elf_program_header *base = (struct elf_program_header *)(binary.data + header->program_hdrs_offset);
@@ -678,6 +672,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 			}
 		}
 	}
+	regs->eip = header->entrypoint;
 	VecU8_destruct(&binary);
 	g_curr_task->status = STATUS_RUNNABLE;
 
@@ -693,6 +688,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		"lgdt %0\n"
 		: : "m"(gp));*/
 	// enable_interrupts();
-	iret_from_frame((t_interrupt_data *)g_curr_task->k_esp);
+
+	iret_from_frame(regs);
 	__builtin_unreachable();
 }

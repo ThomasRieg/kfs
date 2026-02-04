@@ -76,9 +76,9 @@ int main(void)
 		perror("mmap");
 		return (-1);
 	}
-	char *const argv[] = {0};
+	char *const argv[] = {"/bin/sh", 0};
 	char *const envp[] = {0};
-	// execve("/bin/ls", argv, envp);
+	execve("/bin/sh", argv, envp);
 
 	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;

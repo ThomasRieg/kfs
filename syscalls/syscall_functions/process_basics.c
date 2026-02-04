@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:40:55 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 17:22:50 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -516,7 +516,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
 	for (unsigned short i = 0; i < sizeof(task->open_files) / sizeof(task->open_files[0]); i++)
 		if (task->open_files[i])
-			task->open_files[i]->ref_count += 1;
+			task->open_files[i]->refcnt += 1;
 	disable_interrupts();
 	extern phys_ptr copy_current_pd();
 	task->pd = copy_current_pd(); // shallow copy of the kernel address space

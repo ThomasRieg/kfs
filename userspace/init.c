@@ -78,6 +78,12 @@ int main(void)
 	}
 	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;
+	int pipe_fd[2];
+	if (pipe(pipe_fd))
+	{
+		perror("pipe");
+		return (-1);
+	}
 	int pid = syscall(2);
 	printf("return from fork %d\n", pid);
 	if (pid == -1)
@@ -86,6 +92,7 @@ int main(void)
 	}
 	else if (pid == 0)
 	{
+		write(pipe_fd[1], "coucou from pipe\n", 18);
 		printf("hello from pid %u (child)\n", getpid());
 		skibidi = 0;
 		printf("child modified skybidi to %u in child\n", skibidi);
@@ -95,6 +102,7 @@ int main(void)
 		for (unsigned int i = 0; i < BYTES * 200; i++)
 			p[i] = 42;
 		free(p);*/
+		close(pipe_fd[1]);
 		exit(0);
 	}
 	else
@@ -104,11 +112,14 @@ int main(void)
 		syscall(114, pid, 0, 0, 0);
 		printf("skibidy still %u in parent\n", skibidi);
 		printf("shared[0] changed to %u in parent\n", shared[0]);
+		char buff[20];
+		read(pipe_fd[0], buff, 20);
+		printf("%s\n", buff);
 		/*p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)
 		for (unsigned int i = 0; i < BYTES * 200; i++)
 			p[i] = 42;*/
-		char * const argv[] = {"-n", "/etc/hostname", 0};
-		char * const envp[] = {0};
+		char *const argv[] = {"-n", "/etc/hostname", 0};
+		char *const envp[] = {0};
 		execve("/bin/cat", argv, envp);
 		while (1)
 			;

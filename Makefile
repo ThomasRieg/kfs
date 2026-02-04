@@ -13,7 +13,8 @@ OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 		interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o\
 		syscalls/syscalls.o syscalls/syscall_functions/process_basics.o syscalls/syscall_functions/io.o\
 		tasks/task.o\
-		mmap/mmap.o
+		mmap/mmap.o\
+		fd/pipe.o fd/inode.o fd/fd_tty.o
 ISO := kfs.iso
 ELF := kfs.elf
 DISK_FILE := disk.raw

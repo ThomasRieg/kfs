@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:40:30 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 17:20:25 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include "../mem_page/mem_defines.h"
 #include "../libk/vec.h"
 #include "../dt/dt.h"
+#include "../fd/fd.h"
 
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
@@ -28,14 +29,7 @@ typedef void (*t_sig_handler)(int);
 #define SIG_DFL 0u // default behavior (stop process)
 
 #define SIGCHLD 17u // list here https://man7.org/linux/man-pages/man7/signal.7.html
-
-enum open_file_type
-{
-	FILE_REGULAR,
-	FILE_PIPE,
-	FILE_SOCKET,
-	FILE_TERMINAL,
-};
+#define SIGPIPE 13u
 
 enum task_status
 {
@@ -50,20 +44,7 @@ enum wait_reason
 	WAIT_CHILD,
 };
 
-struct pipe
-{
-	char buffer[8192];
-	unsigned int buffer_size;
-};
-
-struct inode
-{
-	unsigned int inode_nr;
-	unsigned int file_offset;
-	unsigned int open_status;
-};
-
-struct open_file
+/*struct open_file
 {
 	unsigned int ref_count;
 	enum open_file_type type;
@@ -77,7 +58,7 @@ struct open_file
 			struct pipe *pipe;
 		};
 	};
-};
+};*/
 
 typedef enum e_vma_backing
 {
@@ -142,7 +123,7 @@ typedef struct task
 	unsigned int egid;
 	unsigned int exit_code;
 	unsigned int pending_signals;
-	struct open_file *open_files[MAX_OPEN_FILES];
+	t_file *open_files[MAX_OPEN_FILES];
 	unsigned int cwd_inode_nr;
 	phys_ptr pd;
 	uint32_t k_esp;
@@ -161,5 +142,6 @@ void cleanup_task(t_task *task);
 void task_reap_zombie(t_task *t, t_task *parent);
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary);
 void add_child(t_task *parent, t_task *child);
+void yield();
 
 #endif

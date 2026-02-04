@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 16:11:17 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 17:51:26 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,7 @@ uint32_t syscall_fstatat(t_interrupt_data *regs);
 uint32_t syscall_statx(t_interrupt_data *regs);
 uint32_t syscall_openat(t_interrupt_data *regs);
 uint32_t syscall_dup(t_interrupt_data *regs);
+uint32_t syscall_pipe2(t_interrupt_data *regs);
 uint32_t syscall_close(t_interrupt_data *regs);
 uint32_t syscall_fcntl64(t_interrupt_data *regs);
 uint32_t syscall_read(t_interrupt_data *regs);

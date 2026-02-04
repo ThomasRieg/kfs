@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:53:21 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 14:57:51 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,7 +78,7 @@ void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top
 	random_auxv->value = random_auxv_addr;
 	(void)argv_copy, (void)envp_copy;
 	user_stack_top -= 3 * sizeof(unsigned int); // argc, argv[0] = NULL, envp[0] = NULL
-	*(uint32_t*)user_stack_top = 0;
+	*(uint32_t *)user_stack_top = 0;
 	f->useresp = user_stack_top;
 	f->ss = udata;
 
@@ -418,4 +418,10 @@ void task_reap_zombie(t_task *t, t_task *parent)
 	}
 	prev_exec_list->next = t->next;
 	vfree(t);
+}
+
+void yield()
+{
+	g_tick = 0;
+	schedule_next_task();
 }

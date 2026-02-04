@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 18:02:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 18:43:55 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -465,5 +465,10 @@ void task_reap_zombie(t_task *t, t_task *parent)
 void yield()
 {
 	g_tick = 0;
+	asm volatile("int $0x81" ::: "memory");
+}
+
+void yield_handler(__attribute__((unused)) t_interrupt_data *regs)
+{
 	schedule_next_task();
 }

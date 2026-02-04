@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:20:35 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 19:05:28 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 18:44:41 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ void setup_interrupts()
 	isr_add_handler(INT_NIC, rtl8139_handler);
 	isr_add_handler(INT_PRIMARY_ATA, ata_handler);
 	isr_add_handler(INT_SECONDARY_ATA, ata_handler);
+	isr_add_handler(INT_YIELD, yield_handler);
 	struct descriptor_table_pointer
 	{
 		unsigned short limit;

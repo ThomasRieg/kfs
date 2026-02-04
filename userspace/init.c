@@ -78,7 +78,7 @@ int main(void)
 	}
 	char *const argv[] = {0};
 	char *const envp[] = {0};
-	execve("/bin/ls", argv, envp);
+	// execve("/bin/ls", argv, envp);
 
 	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;
@@ -113,12 +113,13 @@ int main(void)
 	{
 		printf("hello from pid %u (parent)\n", getpid());
 		printf("waiting for child to exit\n");
+		char buff[20];
+		read(pipe_fd[0], buff, 20);
+		printf("message from pipe: %s\n", buff);
+		printf("read return\n");
 		syscall(114, pid, 0, 0, 0);
 		printf("skibidy still %u in parent\n", skibidi);
 		printf("shared[0] changed to %u in parent\n", shared[0]);
-		char buff[20];
-		read(pipe_fd[0], buff, 20);
-		printf("%s\n", buff);
 		/*p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)
 		for (unsigned int i = 0; i < BYTES * 200; i++)
 			p[i] = 42;*/

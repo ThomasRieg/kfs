@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 17:42:43 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/04 18:22:54 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,6 +63,7 @@ static uint32_t pipe_write_ring(t_pipe *p, const uint8_t *src, uint32_t n)
 
 int32_t pipe_read(t_file *f, void *buf_, size_t n)
 {
+	// printk("pipe_read called\n");
 	t_pipe *pipe = ((t_pipe_end *)f->priv)->p;
 	uint8_t *buf = (uint8_t *)buf_;
 	uint32_t readed = 0;
@@ -80,6 +81,7 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		{
 			return readed ? (readed) : (-EAGAIN);
 		}
+		// printk("pipe_read yielded\n");
 		yield(); // TODO implement real sleep
 	}
 	return (readed);
@@ -87,6 +89,7 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 
 int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 {
+	// printk("pipe_write called\n");
 	t_pipe *pipe = ((t_pipe_end *)f->priv)->p;
 	uint8_t *buf = (uint8_t *)buf_;
 	uint32_t wrote = 0;

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:11:02 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/16 12:17:51 by alier            ###   ########.fr       */
+/*   Updated: 2026/02/04 18:43:15 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,7 @@ void timer_handler(__attribute__((unused)) t_interrupt_data *regs);
 void serial1_handler(__attribute__((unused)) t_interrupt_data *regs);
 void keyboard_handler(__attribute__((unused)) t_interrupt_data *regs);
 void rtl8139_handler(__attribute__((unused)) t_interrupt_data *regs); // defined in drivers/rtl8139.c
-void ata_handler(__attribute__((unused)) t_interrupt_data *regs); // defined in drivers/ide.c
+void ata_handler(__attribute__((unused)) t_interrupt_data *regs);	  // defined in drivers/ide.c
+void yield_handler(__attribute__((unused)) t_interrupt_data *regs);
 
 #endif

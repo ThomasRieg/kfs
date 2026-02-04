@@ -41,9 +41,11 @@ enum interrupt
 	INT_PRIMARY_ATA = PIC_OFFSET + 14,
 	INT_SECONDARY_ATA = PIC_OFFSET + 15,
 	INT_SYSCALLS = 0x80u,
+	INT_YIELD = 0x81u, // forces a yield, only called from ring 0
 };
 
-struct timespec {
+struct timespec
+{
 	unsigned int tv_sec;
 	unsigned int tv_nsec;
 };
@@ -51,29 +53,31 @@ struct timespec {
 typedef unsigned long int dev_t;
 typedef unsigned long int ino_t;
 
-struct stat {
-    dev_t st_dev;
-    ino_t st_ino;
-    unsigned int st_nlink;
-    unsigned int st_mode;
-    unsigned int st_uid;
-    unsigned int st_gid;
-    int __pad0;
-    dev_t st_rdev;
-    unsigned int st_size;
-    unsigned int st_blksize;
-    unsigned int st_blocks;
-    struct timespec st_atim;
-    struct timespec st_mtim;
-    struct timespec st_ctim;
+struct stat
+{
+	dev_t st_dev;
+	ino_t st_ino;
+	unsigned int st_nlink;
+	unsigned int st_mode;
+	unsigned int st_uid;
+	unsigned int st_gid;
+	int __pad0;
+	dev_t st_rdev;
+	unsigned int st_size;
+	unsigned int st_blksize;
+	unsigned int st_blocks;
+	struct timespec st_atim;
+	struct timespec st_mtim;
+	struct timespec st_ctim;
 };
 
-struct linux_dirent64 {
-	uint64_t        d_ino;    /* 64-bit inode number */
-	uint64_t        d_off;    /* 64-bit offset to next structure */
+struct linux_dirent64
+{
+	uint64_t d_ino;			 /* 64-bit inode number */
+	uint64_t d_off;			 /* 64-bit offset to next structure */
 	unsigned short d_reclen; /* Size of this dirent */
-	unsigned char  d_type;   /* File type */
-	char           d_name[]; /* Filename (null-terminated) */
+	unsigned char d_type;	 /* File type */
+	char d_name[];			 /* Filename (null-terminated) */
 };
 
 __attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_data *regs);

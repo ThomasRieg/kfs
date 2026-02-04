@@ -76,6 +76,10 @@ int main(void)
 		perror("mmap");
 		return (-1);
 	}
+	char * const argv[] = {"-n", "/etc/hostname", 0};
+	char * const envp[] = {0};
+	execve("/bin/cat", argv, envp);
+
 	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;
 	int pid = syscall(2);
@@ -107,9 +111,6 @@ int main(void)
 		/*p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)
 		for (unsigned int i = 0; i < BYTES * 200; i++)
 			p[i] = 42;*/
-		char * const argv[] = {"-n", "/etc/hostname", 0};
-		char * const envp[] = {0};
-		execve("/bin/cat", argv, envp);
 		while (1)
 			;
 	}

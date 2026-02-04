@@ -2,9 +2,7 @@
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   task.h                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
+/*                                                    +:+ +:+         +:+     */ /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */ /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:55:31 by thrieg            #+#    #+#             */
 /*   Updated: 2026/02/03 16:40:30 by thrieg           ###   ########.fr       */
 /*                                                                            */
@@ -151,6 +149,11 @@ typedef struct task
 	struct task *next; // circular linked list, TODO do better
 	t_mm proc_memory;
 } t_task;
+
+struct process_strings {
+	unsigned int string_count;
+	struct VecU8 string_data;
+};
 
 extern t_task *g_curr_task;
 extern uint32_t g_next_pid;

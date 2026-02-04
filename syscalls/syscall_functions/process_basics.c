@@ -205,12 +205,14 @@ uint32_t syscall_writev(t_interrupt_data *regs)
 {
 	printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
 	struct iovec *iovecs = (struct iovec *)regs->ecx;
+	uint32_t written = 0;
 	for (unsigned int i = 0; i < regs->edx; i++)
 	{
+		written += iovecs[i].iov_len;
 		write(iovecs[i].iov_base, iovecs[i].iov_len);
 		// printk("%u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
 	}
-	return (0);
+	return (written);
 }
 
 static t_task *find_zombie_child(t_task *parent, int pid)

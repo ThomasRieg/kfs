@@ -76,9 +76,9 @@ int main(void)
 		perror("mmap");
 		return (-1);
 	}
-	char * const argv[] = {"-n", "/etc/hostname", 0};
+	char * const argv[] = {0};
 	char * const envp[] = {0};
-	execve("/bin/cat", argv, envp);
+	execve("/bin/ls", argv, envp);
 
 	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;

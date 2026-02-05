@@ -310,7 +310,7 @@ uint32_t syscall_read(t_interrupt_data *regs)
 	unsigned int count = regs->edx;
 	if (!user_range_ok(buf, count, true, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	printk("read: %u %p %u\n", fd, buf, count);
+	//printk("read: %u %p %u\n", fd, buf, count);
 	t_file *file = get_file_from_fd(fd);
 	if (!file)
 		return (-EBADF);

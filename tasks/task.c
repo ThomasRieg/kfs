@@ -244,7 +244,7 @@ void add_child(t_task *parent, t_task *child)
 // called from interrupt handler
 __attribute__((noreturn)) void context_switch(t_task *next)
 {
-	printk("context_switch\n");
+	//printk("context_switch\n");
 	g_curr_task = next;
 	tss_set_kernel_stack((uintptr_t)&(next->k_stack[sizeof(next->k_stack)]));
 	gdt_set_user_segment(&next->user_gdt_segment);

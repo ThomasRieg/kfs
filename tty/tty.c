@@ -70,19 +70,19 @@ void next_tty()
 
 void handle_command(unsigned char len, const unsigned char *cmd);
 
-static inline void serial_delete_char(void)
+/*static inline void serial_delete_char(void)
 {
 	outb(PORT_COM1, '\b');
 	outb(PORT_COM1, ' ');
 	outb(PORT_COM1, '\b');
-}
+}*/
 
 void tty_add_input(char c)
 {
 	t_tty *curr = &g_ttys[g_current_tty];
 
 	// echo mode
-	if (c == '\r')
+	/*if (c == '\r')
 		write(&(char){'\n'}, 1);
 	else if (c == '\b' || c == 0x7F)
 	{
@@ -97,7 +97,7 @@ void tty_add_input(char c)
 		return;
 	}
 	else
-		write(&c, 1);
+		write(&c, 1);*/
 
 	if (!ft_vector_pushback(&(curr->cmd), c))
 		kernel_panic("out of memory in the OS trying to allocate memory for tty command", NULL);

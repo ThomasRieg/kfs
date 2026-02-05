@@ -12,6 +12,7 @@
 
 #include "fd_tty.h"
 #include "../errno.h"
+#include "../tasks/task.h"
 #include "../libk/libk.h"
 
 t_file_ops g_tty_ops = {.read = tty_read, .write = tty_write, .close = tty_close};
@@ -19,9 +20,17 @@ t_file_ops g_tty_ops = {.read = tty_read, .write = tty_write, .close = tty_close
 int32_t tty_read(t_file *f, void *buf, size_t n)
 {
 	if (f && buf && n) {
-#define B "/bin/ls -l\n"
-		memcpy(buf, B, sizeof(B) - 1);
-		return sizeof(B) - 1;
+		t_tty *tty = f->priv;
+		if (!tty->cmd.index) {
+			do {
+				yield();
+				//printk("yielding because no tty ready\n");
+			} while (!tty->cmd.index);
+		}
+
+		tty->cmd.index--;
+		*(unsigned char *)buf = tty->cmd.buffer[0];
+		return 1;
 	}
 	return (-ENOSYS);
 }

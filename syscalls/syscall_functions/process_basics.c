@@ -75,13 +75,12 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 {
 	struct pollfd *fds = (struct pollfd *)regs->ebx;
 	int nfds = regs->ecx;
-	void *tmo_p = (void *)regs->edx;
-	void *sigmask = (void *)regs->esi;
-	printk("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
-	for (unsigned short i = 0; i < nfds; i++)
-	{
-		printk("\tfd: %d", fds[i].fd);
-		printk("\tevents: %d\n", fds[i].events);
+	//void *tmo_p = (void *)regs->edx;
+	//void *sigmask = (void *)regs->esi;
+	//printk("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
+	for (unsigned short i = 0; i < nfds; i++) {
+		//printk("\tfd: %d", fds[i].fd);
+		//printk("\tevents: %d\n", fds[i].events);
 		fds[i].revents = fds[i].events;
 	}
 	return (nfds);

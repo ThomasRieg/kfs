@@ -89,33 +89,6 @@ uint32_t syscall_clock_gettime(t_interrupt_data *regs)
 	return (0);
 }
 
-// also removes the line from the tty.cmd
-char *read_line()
-{
-	while (1)
-	{
-		extern void handle_ps2(void);
-		extern void handle_serial(void);
-		asm volatile("hlt");
-		handle_ps2();
-		if (g_ttys[g_current_tty].cmd.index && g_ttys[g_current_tty].cmd.buffer[g_ttys[g_current_tty].cmd.index - 1] == '\r')
-		{
-			g_ttys[g_current_tty].cmd.index--;
-			char *ret = ft_vtoc(&(g_ttys[g_current_tty].cmd));
-			g_ttys[g_current_tty].cmd.index = 0;
-			return (ret);
-		}
-		handle_serial();
-		if (g_ttys[g_current_tty].cmd.index && g_ttys[g_current_tty].cmd.buffer[g_ttys[g_current_tty].cmd.index - 1] == '\r')
-		{
-			g_ttys[g_current_tty].cmd.index--;
-			char *ret = ft_vtoc(&(g_ttys[g_current_tty].cmd));
-			g_ttys[g_current_tty].cmd.index = 0;
-			return (ret);
-		}
-	}
-}
-
 static void print_header(void)
 {
 	vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
@@ -236,6 +209,8 @@ void kernel_main(struct s_mb2_info *multi)
 	mem_test_all();
 	pci_init_all();
 
+	print_header();
+
 	struct VecU8 init_binary = read_full_file("/bin/init");
 	t_task *init_task = vcalloc(1, sizeof(t_task));
 	if (!init_task || !setup_process(init_task, NULL, 0, &init_binary))
@@ -244,15 +219,6 @@ void kernel_main(struct s_mb2_info *multi)
 	}
 	VecU8_destruct(&init_binary);
 
-	print_header();
-	writes("> ");
 	while (1)
-	{
-		extern void handle_command(unsigned char len, const char *cmd);
-		char *line = read_line();
-		if (!line)
-			kernel_panic("readline couldn't allocate memory in main loop\n", NULL);
-		handle_command(strlen(line), line);
-		vfree(line);
-	}
+		asm("hlt");
 }

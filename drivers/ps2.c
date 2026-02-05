@@ -6,28 +6,9 @@
 static bool shift_held = false;
 static bool caps_lock = false;
 static bool lctrl_held = false;
-static unsigned char scancode = 0;
 static unsigned char *layout[2] = { scan_code_set_1_qwerty, scan_code_set_1_qwerty_shifted };
 
-void keyboard_handler(__attribute__((unused)) t_interrupt_data *regs)
-{
-	scancode = inb(PORT_PS2_DATA);
-	// pic_eoi(INT_KEYBOARD);
-}
-
-void tty_swap_layout(void) {
-	if (layout[0] == scan_code_set_1_qwerty) {
-		layout[0] = scan_code_set_1_azerty;
-		layout[1] = scan_code_set_1_azerty_shifted;
-		printk("You are now using the AZERTY layout.\n");
-	} else {
-		layout[0] = scan_code_set_1_qwerty;
-		layout[1] = scan_code_set_1_qwerty_shifted;
-		printk("You are now using the QWERTY layout.\n");
-	}
-}
-
-void handle_ps2(void) {
+void handle_ps2(unsigned char scancode) {
 	if (scancode != 0) {
 		if (!(scancode >> 7))
 		{ // if not a release event
@@ -78,5 +59,23 @@ void handle_ps2(void) {
 			}
 		}
 		scancode = 0;
+	}
+}
+
+void keyboard_handler(__attribute__((unused)) t_interrupt_data *regs)
+{
+	handle_ps2(inb(PORT_PS2_DATA));
+	// pic_eoi(INT_KEYBOARD);
+}
+
+void tty_swap_layout(void) {
+	if (layout[0] == scan_code_set_1_qwerty) {
+		layout[0] = scan_code_set_1_azerty;
+		layout[1] = scan_code_set_1_azerty_shifted;
+		printk("You are now using the AZERTY layout.\n");
+	} else {
+		layout[0] = scan_code_set_1_qwerty;
+		layout[1] = scan_code_set_1_qwerty_shifted;
+		printk("You are now using the QWERTY layout.\n");
 	}
 }

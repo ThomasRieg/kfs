@@ -49,6 +49,7 @@ unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings ar
 	// BOTTOM (high addresses)
 	//
 	// - null-terminated string data pointed to by argv and envp
+	// - padding for 4-byte alignment
 	// - 16 "random" bytes pointed to by auxv
 	// - ELF auxv NONE (to mark end of auxiliary vectors)
 	// - ELF auxv RANDOM (required by glibc)
@@ -75,6 +76,7 @@ unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings ar
 	unsigned char **argv0 = (unsigned char **)((unsigned int)envp0 - (argv.string_count + 1) * sizeof(char *));
 	stck.n -= argv.string_data.length;
 	copy_strings(stck.p, argv, argv0);
+	stck.n &= ~(3);
 
 	// ELF auxiliary vectors
 	stck.n -= 16;

@@ -45,11 +45,13 @@ $(DISK_FILE):
 	curl -o root/bin/cat -z root/bin/cat https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_CAT
 	curl -o root/bin/ls -z root/bin/ls https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_LS
 	curl -o root/bin/sh -z root/bin/sh https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_ASH
+	curl -o root/bin/echo -z root/bin/echo https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_ECHO
+	chmod +x root/bin/*
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
 		OFFSET=$$(parted -s $(DISK_FILE) unit B print \
   | awk '/^ 1/ { gsub("B","",$$2); print $$2 }') &&\
-		mkfs.ext2 -d root -F -E offset=$$OFFSET $(DISK_FILE) 9M
+	  mkfs.ext2 -d root -F -E offset=$$OFFSET $(DISK_FILE) 9M
 
 all: $(ISO)
 

@@ -80,7 +80,7 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 	printk("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
 	for (unsigned short i = 0; i < nfds; i++) {
 		printk("\tfd: %d", fds[i].fd);
-		printk("\tevents: %d", fds[i].events);
+		printk("\tevents: %d\n", fds[i].events);
 		fds[i].revents = fds[i].events;
 	}
 	return (nfds);
@@ -680,7 +680,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 
 	unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings argv, struct process_strings envp);
 	// This takes ownership of the argv, envp vectors so no need to clean them up after here
-	build_user_stack((unsigned int)user_stack_top, argv_s, envp_s);
+	regs->useresp = build_user_stack((unsigned int)user_stack_top, argv_s, envp_s);
 
 	{
 		struct elf_program_header *base = (struct elf_program_header *)(binary.data + header->program_hdrs_offset);

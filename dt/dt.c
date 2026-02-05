@@ -62,6 +62,19 @@ static inline void gdt_set_tss(volatile t_dt_entry_32 *gdt, int i, uint32_t base
 	dt_set_entry(gdt, i, base, limit, ACCESS_PRESENT | ACCESS_TYPE_32BIT_AVAILABLE_TSS, 0x00);
 }
 
+void gdt_set_user_segment(struct user_desc *desc)
+{
+	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
+
+	t_dt_ptr_32 gp;
+	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
+	gp.base = (unsigned int)gdt;
+	dt_set_entry(gdt, 8, desc->base_addr, desc->limit, ACCESS_PRESENT | ACCESS_READ | ACCESS_RING3 | ACCESS_CODE_OR_DATA, FLAG_PROTECTED_32BITS | FLAG_PAGE_GRANULARITY); // 0x40
+	asm volatile(
+		"lgdt %0\n"
+		: : "m"(gp));
+}
+
 static inline void tss_flush(uint16_t sel)
 {
 	__asm__ volatile(

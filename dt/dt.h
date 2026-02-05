@@ -103,6 +103,20 @@ typedef struct __attribute__((packed)) s_tss32
 	uint16_t iomap_base;
 } t_tss32;
 
+/* Descriptor for user's segment in the GDT */
+struct user_desc
+{
+	unsigned int entry_number;
+	unsigned int base_addr;
+	unsigned int limit;
+	unsigned int seg_32bit : 1;
+	unsigned int contents : 2;
+	unsigned int read_exec_only : 1;
+	unsigned int limit_in_pages : 1;
+	unsigned int seg_not_present : 1;
+	unsigned int useable : 1;
+};
+
 void tss_init(void);
 void tss_set_kernel_stack(uint32_t esp0);
 
@@ -114,4 +128,5 @@ void dt_set_entry(volatile t_dt_entry_32 *dt,
 					 unsigned char flags);
 void gdt_install_basic(void);
 
+void gdt_set_user_segment(struct user_desc *desc);
 #endif

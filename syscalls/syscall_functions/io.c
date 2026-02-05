@@ -81,22 +81,23 @@ static t_file *get_file_from_fd(int fd)
 	return file;
 }
 
-#define STATX_TYPE		0x00000001U	/* Want/got stx_mode & S_IFMT */
-#define STATX_MODE		0x00000002U	/* Want/got stx_mode & ~S_IFMT */
-#define STATX_NLINK		0x00000004U	/* Want/got stx_nlink */
-#define STATX_UID		0x00000008U	/* Want/got stx_uid */
-#define STATX_GID		0x00000010U	/* Want/got stx_gid */
-#define STATX_ATIME		0x00000020U	/* Want/got stx_atime */
-#define STATX_MTIME		0x00000040U	/* Want/got stx_mtime */
-#define STATX_CTIME		0x00000080U	/* Want/got stx_ctime */
-#define STATX_INO		0x00000100U	/* Want/got stx_ino */
-#define STATX_SIZE		0x00000200U	/* Want/got stx_size */
-#define STATX_BLOCKS		0x00000400U	/* Want/got stx_blocks */
-#define STATX_BASIC_STATS	0x000007ffU	/* The stuff in the normal stat struct */
-#define STATX_BTIME		0x00000800U	/* Want/got stx_btime */
-#define STATX_MNT_ID		0x00001000U	/* Got stx_mnt_id */
+#define STATX_TYPE 0x00000001U		  /* Want/got stx_mode & S_IFMT */
+#define STATX_MODE 0x00000002U		  /* Want/got stx_mode & ~S_IFMT */
+#define STATX_NLINK 0x00000004U		  /* Want/got stx_nlink */
+#define STATX_UID 0x00000008U		  /* Want/got stx_uid */
+#define STATX_GID 0x00000010U		  /* Want/got stx_gid */
+#define STATX_ATIME 0x00000020U		  /* Want/got stx_atime */
+#define STATX_MTIME 0x00000040U		  /* Want/got stx_mtime */
+#define STATX_CTIME 0x00000080U		  /* Want/got stx_ctime */
+#define STATX_INO 0x00000100U		  /* Want/got stx_ino */
+#define STATX_SIZE 0x00000200U		  /* Want/got stx_size */
+#define STATX_BLOCKS 0x00000400U	  /* Want/got stx_blocks */
+#define STATX_BASIC_STATS 0x000007ffU /* The stuff in the normal stat struct */
+#define STATX_BTIME 0x00000800U		  /* Want/got stx_btime */
+#define STATX_MNT_ID 0x00001000U	  /* Got stx_mnt_id */
 
-static void fill_statx_from_stat(struct statx *statx, struct stat *stat) {
+static void fill_statx_from_stat(struct statx *statx, struct stat *stat)
+{
 	statx->stx_ino = stat->st_ino;
 	statx->stx_nlink = stat->st_nlink;
 	statx->stx_uid = stat->st_uid;
@@ -158,6 +159,8 @@ uint32_t syscall_fstatat(t_interrupt_data *regs)
 	int dirfd = regs->ebx;
 	const char *path = (char *)regs->ecx;
 	struct stat *buf = (struct stat *)regs->edx;
+	if (!user_range_ok(buf, sizeof(*buf), false, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	unsigned int flags = regs->esi;
 	printk("fstatat at eip %p: %u %s %p %u\n", regs->eip, dirfd, path, buf, flags);
 	if (path[0] == 0 && !(flags & AT_EMPTY_PATH))
@@ -171,11 +174,14 @@ uint32_t syscall_readlink(t_interrupt_data *regs)
 	const char *path = (char *)regs->ebx;
 	char *buf = (char *)regs->ecx;
 	unsigned int buf_size = regs->edx;
+	if (!user_range_ok(buf, buf_size, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	printk("readlink: %s %p %u\n", path, buf, buf_size);
 	return (-ENOSYS);
 }
 
-uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribute__((unused))unsigned int mode) {
+uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribute__((unused)) unsigned int mode)
+{
 	unsigned short i;
 	for (i = 0; i < MAX_OPEN_FILES; i++)
 	{
@@ -302,6 +308,8 @@ uint32_t syscall_read(t_interrupt_data *regs)
 	unsigned int fd = regs->ebx;
 	char *buf = (char *)regs->ecx;
 	unsigned int count = regs->edx;
+	if (!user_range_ok(buf, count, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	printk("read: %u %p %u\n", fd, buf, count);
 	t_file *file = get_file_from_fd(fd);
 	if (!file)
@@ -316,6 +324,8 @@ uint32_t syscall_write(t_interrupt_data *regs)
 	int32_t fd = regs->ebx;
 	const char *buf = (char *)regs->ecx;
 	uint32_t count = regs->edx;
+	if (!user_range_ok((const virt_ptr)buf, count, false, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	// printk("write %u %p %u\n", fd, buf, count);
 	t_file *file = get_file_from_fd(fd);
 	if (!file)
@@ -329,6 +339,8 @@ uint32_t syscall_pipe2(t_interrupt_data *regs)
 {
 	int32_t *pipe_fd = (int32_t *)regs->ebx;
 	int flags = (int)regs->ecx;
+	if (!user_range_ok(pipe_fd, 2 * sizeof(int32_t), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	uint32_t i;
 	uint32_t j;
 	for (i = 0; i < MAX_OPEN_FILES; i++)
@@ -465,6 +477,8 @@ uint32_t syscall_getdents64(t_interrupt_data *regs)
 	int fd = regs->ebx;
 	struct linux_dirent64 *ent = (struct linux_dirent64 *)regs->ecx;
 	unsigned int count = regs->edx;
+	if (!user_range_ok(ent, count, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	t_file *file = get_file_from_fd(fd);
 	printk("getdents64: %d %p %u\n", fd, ent, count);
 	if (!file)

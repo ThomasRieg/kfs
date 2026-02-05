@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 19:22:14 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/05 17:33:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,7 +78,8 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 	void *tmo_p = (void *)regs->edx;
 	void *sigmask = (void *)regs->esi;
 	printk("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
-	for (unsigned short i = 0; i < nfds; i++) {
+	for (unsigned short i = 0; i < nfds; i++)
+	{
 		printk("\tfd: %d", fds[i].fd);
 		printk("\tevents: %d\n", fds[i].events);
 		fds[i].revents = fds[i].events;
@@ -323,7 +324,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 			// write status to user if requested
 			if (stat_uaddr)
 			{
-				if (!user_range_ok((virt_ptr)stat_uaddr, sizeof(uint32_t), true))
+				if (!user_range_ok((virt_ptr)stat_uaddr, sizeof(uint32_t), true, &g_curr_task->proc_memory))
 					return (uint32_t)(-EFAULT);
 				*(uint32_t *)(uintptr_t)stat_uaddr = status;
 			}
@@ -571,6 +572,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	g_curr_task->next = task;
 	task->status = STATUS_RUNNABLE;
 	// enable_interrupts();
+	// printk("forked pid %u\n", task->task_id);
 
 	return (task->task_id);
 }

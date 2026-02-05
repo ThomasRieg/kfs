@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 02:50:39 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/20 15:25:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/05 17:27:55 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -165,9 +165,12 @@ static inline uint32_t align_up_u32(uint32_t x, uint32_t a)
 
 #include "../mem_page/mem_defines.h"
 #include "../mem_page/mem_paging.h"
+#include "../mmap/mmap.h"
+
+extern t_vma *vma_for_address(t_mm *proc_memory, uintptr_t va);
 
 // returns true if process have access to a zone
-bool user_range_ok(virt_ptr uaddr, uint32_t size, bool write)
+bool user_range_ok(const virt_ptr uaddr, uint32_t size, bool write, t_mm *mm)
 {
 	if (size == 0)
 		return 1;
@@ -183,23 +186,19 @@ bool user_range_ok(virt_ptr uaddr, uint32_t size, bool write)
 
 	uint32_t start_page = align_down_u32((uintptr_t)uaddr, PAGE_SIZE);
 	uint32_t end_page = align_up_u32(end, PAGE_SIZE);
+	uint32_t va = start_page;
 
-	for (uint32_t va = start_page; va < end_page; va += PAGE_SIZE)
+	while (va < end_page)
 	{
-		uint32_t *pte = get_pte((virt_ptr)va);
-		if (!pte)
-			return 0;
-
-		uint32_t p = *pte;
-
-		// Must be mapped and user-accessible
-		if (!(p & PTE_P))
-			return 0;
-		if (!(p & PTE_US))
-			return 0;
-
-		if (write && !(p & PTE_RW))
-			return 0;
+		t_vma *vma = vma_for_address(mm, va);
+		if (!vma)
+			return (false);
+		else if (vma->prots & PROT_NONE)
+			return (false);
+		else if (write && !(vma->prots & PROT_WRITE))
+			return (false);
+		else
+			va = (uint32_t)vma->end;
 	}
 	return 1;
 }

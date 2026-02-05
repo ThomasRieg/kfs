@@ -11,6 +11,25 @@
 #define BYTES 10000000
 #define AT_EMPTY_PATH 0x1000 /* Allow empty relative pathname */
 
+int fdprintf(int fd, size_t bufmax, const char *fmt, ...)
+{
+	char *buffer;
+	int n;
+	va_list ap;
+
+	buffer = (char *)malloc(bufmax);
+	if (!buffer)
+		return 0;
+
+	va_start(ap, fmt);
+	n = vsnprintf(buffer, bufmax, fmt, ap);
+	va_end(ap);
+
+	write(fd, buffer, n);
+	free(buffer);
+	return n;
+}
+
 int main(void)
 {
 	int fd = open("/dev/tty1", O_RDWR | O_NONBLOCK);
@@ -78,7 +97,7 @@ int main(void)
 	}
 	char *const argv[] = {"/bin/sh", 0};
 	char *const envp[] = {0};
-	execve("/bin/sh", argv, envp);
+	// execve("/bin/sh", argv, envp);
 
 	memset(shared, 0, 4096);
 	u_int32_t skibidi = 67;
@@ -93,10 +112,13 @@ int main(void)
 	if (pid == -1)
 	{
 		perror("fork");
+		return (-1);
 	}
 	else if (pid == 0)
 	{
 		write(pipe_fd[1], "coucou from pipe", 17);
+		for (u_int32_t i = 0; i < 100; i++)
+			write(pipe_fd[1], "yo", 2);
 		printf("hello from pid %u (child)\n", getpid());
 		skibidi = 0;
 		printf("child modified skybidi to %u in child\n", skibidi);
@@ -114,9 +136,18 @@ int main(void)
 		printf("hello from pid %u (parent)\n", getpid());
 		printf("waiting for child to exit\n");
 		syscall(114, pid, 0, 0, 0);
-		char buff[20];
-		read(pipe_fd[0], buff, 20);
-		printf("message from pipe: %s\n", buff);
+		char buff[8093];
+		int ret = read(pipe_fd[0], buff, 8092);
+		while (ret > 0)
+		{
+			buff[ret] = 0;
+			printf("message from pipe: %s\n", buff);
+			ret = read(pipe_fd[0], buff, 8092);
+		}
+		if (ret < 0)
+		{
+			perror("read");
+		}
 		printf("skibidy still %u in parent\n", skibidi);
 		printf("shared[0] changed to %u in parent\n", shared[0]);
 		/*p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)

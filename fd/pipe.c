@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 18:22:54 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/05 16:43:57 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,8 +103,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		else if (pipe_space(pipe))
 		{
 			wrote += pipe_write_ring(pipe, buf + wrote, (uint32_t)(n - wrote));
-			// TODO: wake readers when you implement wait queues
-			return (int32_t)wrote; // return partial write is fine
+			printk("debug wrote %u in pipe\n", wrote);
 		}
 		if (f->flags & O_NONBLOCK)
 		{

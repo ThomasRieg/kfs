@@ -131,7 +131,8 @@ typedef struct task
 	t_mm proc_memory;
 } t_task;
 
-struct process_strings {
+struct process_strings
+{
 	unsigned int string_count;
 	struct VecU8 string_data;
 };

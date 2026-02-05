@@ -159,19 +159,6 @@ uint32_t syscall_mmap2(t_interrupt_data *regs)
 	return (unsigned int)mmap((void *)regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp, &g_curr_task->proc_memory);
 }
 
-struct user_desc
-{
-	unsigned int entry_number;
-	unsigned int base_addr;
-	unsigned int limit;
-	unsigned int seg_32bit : 1;
-	unsigned int contents : 2;
-	unsigned int read_exec_only : 1;
-	unsigned int limit_in_pages : 1;
-	unsigned int seg_not_present : 1;
-	unsigned int useable : 1;
-};
-
 uint32_t syscall_get_thread_area(t_interrupt_data *regs)
 {
 	printk("get thread area %p\n", regs->ebx);
@@ -186,15 +173,8 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	printk("set thread area %p\n", desc);
 
 	desc->entry_number = 8; // entry #8 in GDT
-	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
-
-	t_dt_ptr_32 gp;
-	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
-	gp.base = (unsigned int)gdt;
-	dt_set_entry(gdt, 8, desc->base_addr, desc->limit, ACCESS_PRESENT | ACCESS_READ | ACCESS_RING3 | ACCESS_CODE_OR_DATA, FLAG_PROTECTED_32BITS | FLAG_PAGE_GRANULARITY); // 0x40
-	asm volatile(
-		"lgdt %0\n"
-		: : "m"(gp));
+	g_curr_task->user_gdt_segment = *desc;
+	gdt_set_user_segment(&g_curr_task->user_gdt_segment);
 	return (0);
 }
 
@@ -543,6 +523,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->suid = g_curr_task->suid;
 	task->gid = g_curr_task->gid;
 	task->egid = g_curr_task->egid;
+	task->user_gdt_segment = g_curr_task->user_gdt_segment;
 	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
 	for (unsigned short i = 0; i < sizeof(task->open_files) / sizeof(task->open_files[0]); i++)
 		if (task->open_files[i])

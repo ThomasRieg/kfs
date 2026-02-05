@@ -228,17 +228,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	/*printk("kstack top=%p bot=%p\n",
 	   &task->k_stack[sizeof(task->k_stack)],
 	   &task->k_stack[0]);*/
-	volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
-
-	t_dt_ptr_32 gp;
-	gp.limit = (unsigned short)(GDT_NB_ENTRY * sizeof(t_dt_entry_32) - 1);
-	// clears entry possibly set for previous process
-	// TODO: save and switch on context switch
-	gp.base = (unsigned int)gdt;
-	dt_set_entry(gdt, 8, 0, 0, 0, 0);
-	asm volatile(
-		"lgdt %0\n"
-		: : "m"(gp));
+	gdt_set_user_segment(&task->user_gdt_segment);
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 
 	return (true);
@@ -251,30 +241,20 @@ void add_child(t_task *parent, t_task *child)
 	child->next_sibling = children_head;
 }
 
-__attribute__((noreturn)) static inline void switch_esp_to(uint32_t new_esp)
-{
-	__asm__ volatile(
-		"movl %0, %%esp \n"
-		"ret            \n"
-		:
-		: "r"(new_esp)
-		: "memory");
-	__builtin_unreachable();
-}
-
 // called from interrupt handler
-void context_switch(t_task *next)
+__attribute__((noreturn)) void context_switch(t_task *next)
 {
 	printk("context_switch\n");
 	g_curr_task = next;
 	tss_set_kernel_stack((uintptr_t)&(next->k_stack[sizeof(next->k_stack)]));
+	gdt_set_user_segment(&next->user_gdt_segment);
 	// printk("1\n");
 	write_cr3(next->pd);
 	// printk("2\n");
 
 	// printk("3\n");
 	iret_from_frame((t_interrupt_data *)next->k_esp);
-	switch_esp_to(next->k_esp); // wont be called, change that later to come back to the correct instruction if the next task yielded from kernel code
+	__builtin_unreachable();
 }
 
 void schedule_next_task()

@@ -124,6 +124,7 @@ typedef struct task
 	t_file *open_files[MAX_OPEN_FILES];
 	unsigned int cwd_inode_nr;
 	phys_ptr pd;
+	struct user_desc user_gdt_segment;
 	uint32_t k_esp;
 	uint8_t k_stack[16384]; // stack tss will returns to on interrupt
 	t_sig_handler sig_handlers[32];

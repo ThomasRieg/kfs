@@ -42,9 +42,9 @@ $(DISK_FILE):
 	$(MAKE) -C userspace
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
 	cp userspace/init root/bin
-	wget -O root/bin/cat https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_CAT
-	wget -O root/bin/ls https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_LS
-	wget -O root/bin/sh https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_ASH
+	curl -o root/bin/cat -z root/bin/cat https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_CAT
+	curl -o root/bin/ls -z root/bin/ls https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_LS
+	curl -o root/bin/sh -z root/bin/sh https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_ASH
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
 		OFFSET=$$(parted -s $(DISK_FILE) unit B print \

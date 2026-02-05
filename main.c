@@ -179,6 +179,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(2, syscall_fork);
 	add_syscall(3, syscall_read);
 	add_syscall(4, syscall_write);
+	add_syscall(5, syscall_open);
 	add_syscall(6, syscall_close);
 	add_syscall(11, syscall_execve);
 	add_syscall(12, syscall_chdir);
@@ -193,6 +194,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(114, syscall_wait4);
 	add_syscall(122, syscall_uname);
 	add_syscall(125, syscall_mprotect);
+	add_syscall(132, syscall_getpgid);
 	add_syscall(146, syscall_writev);
 	add_syscall(168, syscall_poll);
 	add_syscall(174, syscall_rt_sigaction);

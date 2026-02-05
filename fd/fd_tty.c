@@ -12,13 +12,17 @@
 
 #include "fd_tty.h"
 #include "../errno.h"
+#include "../libk/libk.h"
 
 t_file_ops g_tty_ops = {.read = tty_read, .write = tty_write, .close = tty_close};
 
 int32_t tty_read(t_file *f, void *buf, size_t n)
 {
-	if (f && buf && n)
-		return (-ENOSYS);
+	if (f && buf && n) {
+#define B "/bin/ls -l\n"
+		memcpy(buf, B, sizeof(B) - 1);
+		return sizeof(B) - 1;
+	}
 	return (-ENOSYS);
 }
 

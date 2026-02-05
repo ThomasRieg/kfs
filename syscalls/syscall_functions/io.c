@@ -12,6 +12,7 @@
 #include "../../fd/fd_tty.h"
 #include "../../fd/pipe.h"
 
+#define AT_SYMLINK_NOFOLLOW 0x100
 #define AT_EMPTY_PATH 0x1000
 #define AT_FDCWD -100
 
@@ -80,9 +81,30 @@ static t_file *get_file_from_fd(int fd)
 	return file;
 }
 
-#define STATX_TYPE 0x00000001U
-#define STATX_BASIC_STATS 0x000007ffU
-#define STATX_MNT_ID 0x00001000U
+#define STATX_TYPE		0x00000001U	/* Want/got stx_mode & S_IFMT */
+#define STATX_MODE		0x00000002U	/* Want/got stx_mode & ~S_IFMT */
+#define STATX_NLINK		0x00000004U	/* Want/got stx_nlink */
+#define STATX_UID		0x00000008U	/* Want/got stx_uid */
+#define STATX_GID		0x00000010U	/* Want/got stx_gid */
+#define STATX_ATIME		0x00000020U	/* Want/got stx_atime */
+#define STATX_MTIME		0x00000040U	/* Want/got stx_mtime */
+#define STATX_CTIME		0x00000080U	/* Want/got stx_ctime */
+#define STATX_INO		0x00000100U	/* Want/got stx_ino */
+#define STATX_SIZE		0x00000200U	/* Want/got stx_size */
+#define STATX_BLOCKS		0x00000400U	/* Want/got stx_blocks */
+#define STATX_BASIC_STATS	0x000007ffU	/* The stuff in the normal stat struct */
+#define STATX_BTIME		0x00000800U	/* Want/got stx_btime */
+#define STATX_MNT_ID		0x00001000U	/* Got stx_mnt_id */
+
+static void fill_statx_from_stat(struct statx *statx, struct stat *stat) {
+	statx->stx_ino = stat->st_ino;
+	statx->stx_nlink = stat->st_nlink;
+	statx->stx_uid = stat->st_uid;
+	statx->stx_gid = stat->st_gid;
+	statx->stx_blocks = stat->st_blocks;
+	statx->stx_size = stat->st_size;
+	statx->stx_mode = stat->st_mode;
+}
 
 uint32_t syscall_statx(t_interrupt_data *regs)
 {
@@ -104,24 +126,30 @@ uint32_t syscall_statx(t_interrupt_data *regs)
 			.stx_mask = STATX_BASIC_STATS | STATX_MNT_ID,
 			.stx_mode = (file->type == FILE_TERMINAL ? MODE_CHAR : MODE_REGULAR) << 12,
 			.stx_ino = (file->type == FILE_REGULAR ? ((t_inode *)file->priv)->inode_nr : 0),
+			.stx_mnt_id = 0,
 		};
 		if (file->type == FILE_REGULAR)
 		{
 			struct stat stat;
 			int status = stat_inode(((t_inode *)file->priv)->inode_nr, &stat);
 			if (status)
-			{
 				return status;
-			}
-			else
-			{
-				buffer->stx_size = stat.st_size;
-				buffer->stx_mode = stat.st_mode;
-			}
+			fill_statx_from_stat(buffer, &stat);
 		}
 		return 0;
 	}
-	memset(buffer, 0, sizeof(struct statx));
+	int inode_nr = path_to_inode(path, g_curr_task->cwd_inode_nr);
+	if (!inode_nr)
+		return -ENOENT;
+	struct stat stat;
+	int status = stat_inode(inode_nr, &stat);
+	if (status)
+		return status;
+	*buffer = (struct statx){
+		.stx_mask = STATX_BASIC_STATS | STATX_MNT_ID,
+		.stx_mnt_id = 0,
+	};
+	fill_statx_from_stat(buffer, &stat);
 	return 0;
 }
 
@@ -147,12 +175,7 @@ uint32_t syscall_readlink(t_interrupt_data *regs)
 	return (-ENOSYS);
 }
 
-uint32_t syscall_openat(t_interrupt_data *regs)
-{
-	int dirfd = regs->ebx;
-	const char *path = (char *)regs->ecx;
-	int open_flag = regs->edx;
-	printk("openat: %u %s %u\n", dirfd, path, open_flag);
+uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribute__((unused))unsigned int mode) {
 	unsigned short i;
 	for (i = 0; i < MAX_OPEN_FILES; i++)
 	{
@@ -170,23 +193,13 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 		file->type = FILE_TERMINAL;
 		file->ops = &g_tty_ops;
 		file->pos = 0;
-		file->flags = open_flag;
+		file->flags = flags;
 		file->priv = &g_ttys[0]; // tty1 = tty 0 I guess?
 		g_curr_task->open_files[i] = file;
 		return i;
 	}
-	unsigned int dir_inode;
-	if (dirfd == AT_FDCWD)
-		dir_inode = g_curr_task->cwd_inode_nr;
-	else
-	{
-		t_file *file = get_file_from_fd(dirfd);
-		if (!file || file->type != FILE_REGULAR)
-			return -EBADF;
-		dir_inode = ((t_inode *)file->priv)->inode_nr;
-	}
 	unsigned int inode_nr = path_to_inode(path, dir_inode);
-	printk("openat inode_nr: %u\n", inode_nr);
+	printk("open inode_nr: %u\n", inode_nr);
 	if (!inode_nr)
 		return -ENOENT;
 
@@ -195,7 +208,7 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 		return (-ENOMEM);
 	file->refcnt = 1;
 	file->type = FILE_REGULAR;
-	file->flags = open_flag;
+	file->flags = flags;
 	t_inode *inode = vmalloc(sizeof(t_inode));
 	if (!inode)
 		return (vfree(file), -ENOMEM);
@@ -207,6 +220,35 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 
 	g_curr_task->open_files[i] = file;
 	return i;
+}
+
+uint32_t syscall_open(t_interrupt_data *regs)
+{
+	const char *path = (char *)regs->ebx;
+	int flags = regs->ecx;
+	unsigned int mode = regs->edx;
+	printk("open: %s %d %u\n", path, flags, mode);
+	return do_open(path, g_curr_task->cwd_inode_nr, flags, mode);
+}
+
+uint32_t syscall_openat(t_interrupt_data *regs)
+{
+	int dirfd = regs->ebx;
+	const char *path = (char *)regs->ecx;
+	int open_flag = regs->edx;
+	unsigned int mode = regs->edi;
+	printk("openat: %u %s %u %u\n", dirfd, path, open_flag, mode);
+	unsigned int dir_inode;
+	if (dirfd == AT_FDCWD)
+		dir_inode = g_curr_task->cwd_inode_nr;
+	else
+	{
+		t_file *file = get_file_from_fd(dirfd);
+		if (!file || file->type != FILE_REGULAR)
+			return -EBADF;
+		dir_inode = ((t_inode *)file->priv)->inode_nr;
+	}
+	return do_open(path, dir_inode, open_flag, mode);
 }
 
 // TODO adapt to new file struct
@@ -378,6 +420,10 @@ struct winsize
 };
 
 #define TCGETS 0x5401
+#define TCSETS 0x5402
+#define TIOCGPGRP 0x540F
+#define TIOCSPGRP 0x5410
+#define TIOCGWINSZ 0x5413
 #define TIOCGWINSZ 0x5413
 
 // TODO add this to file->ops instead of doing a switch in this function
@@ -385,7 +431,7 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 {
 	int fd = regs->ebx;
 	unsigned long op = regs->ecx;
-	printk("ioctl %u %u\n", fd, op);
+	printk("ioctl %u: 0x%x = %u\n", fd, op, op);
 	t_file *file = get_file_from_fd(fd);
 	if (!file)
 		return -EBADF;
@@ -400,7 +446,13 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 			ws->ws_ypixel = 0;
 			return 0;
 		}
-		else if (op == TCGETS)
+		else if (op == TIOCGPGRP)
+		{
+			unsigned int *pgrp = (unsigned int *)regs->edx;
+			*pgrp = 0;
+			return 0;
+		}
+		else if (op == TCGETS || op == TCSETS || op == TIOCSPGRP)
 		{
 			return 0;
 		}

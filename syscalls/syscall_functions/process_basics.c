@@ -19,6 +19,11 @@
 #include "../../errno.h"
 #include "../../tty/tty.h"
 
+uint32_t syscall_getpgid(__attribute__((unused)) t_interrupt_data *regs)
+{
+	return 0;
+}
+
 uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	return (g_curr_task->task_id);
@@ -72,8 +77,13 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 	int nfds = regs->ecx;
 	void *tmo_p = (void *)regs->edx;
 	void *sigmask = (void *)regs->esi;
-	printk("poll %p %u %p %p\n", fds, nfds, tmo_p, sigmask);
-	return (0);
+	printk("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
+	for (unsigned short i = 0; i < nfds; i++) {
+		printk("\tfd: %d", fds[i].fd);
+		printk("\tevents: %d", fds[i].events);
+		fds[i].revents = fds[i].events;
+	}
+	return (nfds);
 }
 
 uint32_t syscall_tkill(t_interrupt_data *regs)
@@ -526,6 +536,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->pending_signals = 0;
 	task->task_id = g_next_pid++;
 	task->parent_task = g_curr_task;
+	task->cwd_inode_nr = g_curr_task->cwd_inode_nr;
 	add_child(g_curr_task, task);
 	task->uid = g_curr_task->uid;
 	task->euid = g_curr_task->euid;

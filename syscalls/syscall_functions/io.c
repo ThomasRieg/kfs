@@ -335,7 +335,7 @@ uint32_t syscall_write(t_interrupt_data *regs)
 	return (file->ops->write(file, buf, count));
 }
 
-uint32_t do_pipe(int32_t *pipe_fd) {
+uint32_t do_pipe(int32_t *pipe_fd, uint32_t flags) {
 	if (!user_range_ok(pipe_fd, 2 * sizeof(int32_t), true, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	uint32_t i;
@@ -373,13 +373,13 @@ uint32_t do_pipe(int32_t *pipe_fd) {
 	t_file *file_write = vcalloc(1, sizeof(*file_write));
 	if (!file_write)
 		return (vfree(pipe), vfree(pipe_end_read), vfree(pipe_end_write), vfree(file_read), -ENOMEM);
-	file_read->flags = O_RDONLY;
+	file_read->flags = O_RDONLY | flags;
 	file_read->ops = &g_pipe_read_ops;
 	file_read->pos = 0;
 	file_read->priv = pipe_end_read;
 	file_read->refcnt = 1;
 	file_read->type = FILE_PIPE;
-	file_write->flags = O_WRONLY;
+	file_write->flags = O_WRONLY | flags;
 	file_write->ops = &g_pipe_write_ops;
 	file_write->pos = 0;
 	file_write->priv = pipe_end_write;
@@ -395,15 +395,15 @@ uint32_t do_pipe(int32_t *pipe_fd) {
 uint32_t syscall_pipe(t_interrupt_data *regs)
 {
 	int32_t *pipe_fd = (int32_t *)regs->ebx;
-	return do_pipe(pipe_fd);
+	return do_pipe(pipe_fd, 0);
 }
 
 uint32_t syscall_pipe2(t_interrupt_data *regs)
 {
 	int32_t *pipe_fd = (int32_t *)regs->ebx;
 	// TODO: handle O_CLOEXEC, O_DIRECT and O_NONBLOCK
-	//int flags = (int)regs->ecx;
-	return do_pipe(pipe_fd);
+	int flags = (int)regs->ecx;
+	return do_pipe(pipe_fd, flags);
 }
 
 uint32_t syscall_chdir(t_interrupt_data *regs)

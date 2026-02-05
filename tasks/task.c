@@ -76,7 +76,8 @@ unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings ar
 	unsigned char **argv0 = (unsigned char **)((unsigned int)envp0 - (argv.string_count + 1) * sizeof(char *));
 	stck.n -= argv.string_data.length;
 	copy_strings(stck.p, argv, argv0);
-	stck.n &= ~(3);
+	// TODO: properly align and calculate pointer locations correctly in copy_strings
+	//stck.n &= ~(3);
 
 	// ELF auxiliary vectors
 	stck.n -= 16;

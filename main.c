@@ -159,6 +159,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(20, syscall_getpid);
 	add_syscall(37, syscall_kill);
 	add_syscall(41, syscall_dup);
+	add_syscall(42, syscall_pipe);
 	add_syscall(45, syscall_brk);
 	add_syscall(48, syscall_signal);
 	add_syscall(54, syscall_ioctl);

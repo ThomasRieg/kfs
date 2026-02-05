@@ -116,7 +116,7 @@ int main(void)
 	}
 	else if (pid == 0)
 	{
-		write(pipe_fd[1], "coucou from pipe", 17);
+		write(pipe_fd[1], "coucou from pipe", 16);
 		for (u_int32_t i = 0; i < 100; i++)
 			write(pipe_fd[1], "yo", 2);
 		printf("hello from pid %u (child)\n", getpid());
@@ -141,7 +141,7 @@ int main(void)
 		while (ret > 0)
 		{
 			buff[ret] = 0;
-			printf("message from pipe: %s\n", buff);
+			printf("message from pipe: %s ret: %i\n", buff, ret);
 			ret = read(pipe_fd[0], buff, 8092);
 		}
 		if (ret < 0)

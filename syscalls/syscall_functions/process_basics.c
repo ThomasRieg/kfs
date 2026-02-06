@@ -19,6 +19,22 @@
 #include "../../errno.h"
 #include "../../tty/tty.h"
 
+uint32_t syscall_nanosleep(t_interrupt_data *regs)
+{
+	const struct timespec *req = (struct timespec *)regs->ebx;
+	struct timespec *rem = (struct timespec *)regs->ecx;
+
+	struct timespec start = rtc_get_time();
+	struct timespec now;
+	do {
+		yield();
+		now = rtc_get_time();
+	} while (now.tv_sec - start.tv_sec < req->tv_sec);
+	*rem = (struct timespec){0,0};
+
+	return 0;
+}
+
 uint32_t syscall_getpgid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	return 0;

@@ -39,6 +39,7 @@ uint32_t syscall_archprctl(t_interrupt_data *regs);
 uint32_t syscall_tkill(t_interrupt_data *regs);
 uint32_t syscall_poll(t_interrupt_data *regs);
 uint32_t syscall_ioctl(t_interrupt_data *regs);
+uint32_t syscall_nanosleep(t_interrupt_data *regs);
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs);
 
 uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs);

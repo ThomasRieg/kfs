@@ -69,11 +69,7 @@ unsigned char from_cmos(enum cmos_register reg)
 	return bcd(inb(PORT_CMOS_DATA));
 }
 
-uint32_t syscall_clock_gettime(t_interrupt_data *regs)
-{
-	if (regs->ebx > 0)
-		return (-EINVAL);
-
+struct timespec rtc_get_time(void) {
 	unsigned int century = from_cmos(RTC_USUAL_CENTURY);
 	unsigned int year = century * 100 + from_cmos(RTC_YEAR);
 	unsigned int month = from_cmos(RTC_MONTH);
@@ -81,11 +77,20 @@ uint32_t syscall_clock_gettime(t_interrupt_data *regs)
 	unsigned int hour = from_cmos(RTC_HOUR);
 	unsigned int minute = from_cmos(RTC_MINUTE);
 	unsigned int second = from_cmos(RTC_SECOND);
-	struct timespec *dst = (struct timespec *)regs->ecx;
 	// TODO: gregorian calendar calculator
 	unsigned int seconds_since_epoch = (year - 1970) * 31536000 + ((month - 1) * 30 + day) * 86400 + hour * 3600 + minute * 60 + second;
-	dst->tv_sec = seconds_since_epoch;
-	dst->tv_nsec = 0;
+	// leap years
+	seconds_since_epoch += (year - 1970) * 86400 / 4;
+	return (struct timespec){seconds_since_epoch, 0};
+}
+
+uint32_t syscall_clock_gettime(t_interrupt_data *regs)
+{
+	if (regs->ebx > 0)
+		return (-EINVAL);
+
+	struct timespec *dst = (struct timespec *)regs->ecx;
+	*dst = rtc_get_time();
 	return (0);
 }
 
@@ -171,6 +176,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(125, syscall_mprotect);
 	add_syscall(132, syscall_getpgid);
 	add_syscall(146, syscall_writev);
+	add_syscall(162, syscall_nanosleep);
 	add_syscall(168, syscall_poll);
 	add_syscall(174, syscall_rt_sigaction);
 	add_syscall(175, syscall_rt_sigprocmask);

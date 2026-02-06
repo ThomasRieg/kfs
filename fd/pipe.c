@@ -79,7 +79,7 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		}
 		if (f->flags & O_NONBLOCK)
 		{
-			return readed ? (readed) : (-EAGAIN);
+			return readed ? (int32_t)(readed) : (-EAGAIN);
 		}
 		// printk("pipe_read yielded\n");
 		yield(); // TODO implement real sleep
@@ -107,7 +107,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		}
 		if (f->flags & O_NONBLOCK)
 		{
-			return wrote ? (wrote) : (-EAGAIN);
+			return wrote ? (int32_t)(wrote) : (-EAGAIN);
 		}
 		yield(); // TODO implement real sleep
 	}

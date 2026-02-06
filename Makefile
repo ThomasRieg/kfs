@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu2x -Wall -Wextra -Werror -m32 -MMD -ffreestanding -g
+CFLAGS := -std=gnu2x -Wall -Wextra -Werror -m32 -MMD -ffreestanding -fno-pie -g
 ASFLAGS := --32
 LDFLAGS := -T link.ld -m elf_i386
 OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \

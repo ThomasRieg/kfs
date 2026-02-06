@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <stdarg.h>
 
 #define BYTES 10000000
 #define AT_EMPTY_PATH 0x1000 /* Allow empty relative pathname */

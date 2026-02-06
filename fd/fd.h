@@ -40,7 +40,7 @@ typedef struct s_file_ops
 {
 	read_fn read;
 	write_fn write;
-	close_fn close;
+	close_fn close; //only called when fd refcnt becomes 0 in syscall_close
 	// later: ioctl, poll, mmap, seek, readdir, fstat...
 } t_file_ops;
 

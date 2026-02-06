@@ -13,6 +13,7 @@
 #include "pipe.h"
 #include "../tasks/task.h"
 #include "../errno.h"
+#include <asm-generic/errno.h>
 
 t_file_ops g_pipe_read_ops = {.read = pipe_read, .write = NULL, .close = pipe_close};
 t_file_ops g_pipe_write_ops = {.read = NULL, .write = pipe_write, .close = pipe_close};
@@ -81,16 +82,23 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		{
 			return readed ? (int32_t)(readed) : (-EAGAIN);
 		}
-		// printk("pipe_read yielded\n");
-		yield(); // TODO implement real sleep
+		else if(readed < n)
+		{
+			printk("debug, yieded in pipe read\n");
+			yield(); // TODO implement real sleep
+		}
 	}
 	return (readed);
 }
 
 int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 {
-	// printk("pipe_write called\n");
-	t_pipe *pipe = ((t_pipe_end *)f->priv)->p;
+	t_pipe_end *pipe_end = (t_pipe_end *)f->priv;
+	if (!pipe_end || pipe_end->is_read_end)
+		return (-EBADFD);
+	t_pipe *pipe = pipe_end->p;
+	if (!pipe)
+		return (-EBADFD);
 	uint8_t *buf = (uint8_t *)buf_;
 	uint32_t wrote = 0;
 	while (wrote < n)
@@ -103,13 +111,16 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		else if (pipe_space(pipe))
 		{
 			wrote += pipe_write_ring(pipe, buf + wrote, (uint32_t)(n - wrote));
-			printk("debug wrote %u in pipe\n", wrote);
 		}
 		if (f->flags & O_NONBLOCK)
 		{
 			return wrote ? (int32_t)(wrote) : (-EAGAIN);
 		}
-		yield(); // TODO implement real sleep
+		else if(wrote < n)
+		{
+			printk("debug, yieded in pipe write\n");
+			yield(); // TODO implement real sleep
+		}
 	}
 	return (wrote);
 }
@@ -120,15 +131,25 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 int32_t pipe_close(t_file *f)
 {
 	t_pipe_end *pipe_end = (t_pipe_end *)f->priv;
+	if (!pipe_end)
+		return (-EBADFD);
 	t_pipe *pipe = pipe_end->p;
+	if (!pipe)
+		return (-EBADFD);
 	if (pipe_end->is_read_end)
 	{
-		pipe->readers--;
+		if (pipe->readers)
+			pipe->readers = 0;
+		else
+		 	kernel_panic("uncoherent pipe state \n", NULL);
 		// TODO wake writers if 0 readers when sleep system implemented
 	}
 	else
 	{
-		pipe->writers--;
+		if (pipe->writers)
+			pipe->writers = 0;
+		else
+		 	kernel_panic("uncoherent pipe state \n", NULL);
 		// TODO wake writers if 0 readers when sleep system implemented
 	}
 	if (!pipe->readers && !pipe->writers)
@@ -136,5 +157,6 @@ int32_t pipe_close(t_file *f)
 		vfree(pipe);
 	}
 	vfree(pipe_end);
+	f->priv = NULL;
 	return (0);
 }

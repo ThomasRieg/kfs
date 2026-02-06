@@ -275,10 +275,12 @@ uint32_t syscall_dup2(t_interrupt_data *regs)
 		return -EBADF;
 	t_file *newfile = g_curr_task->open_files[newfd];
 	if (newfile) {
-		newfile->ops->close(newfile); // doesn't free file
 		newfile->refcnt--;
 		if (newfile->refcnt == 0)
+		{
+			newfile->ops->close(newfile);
 			vfree(newfile);
+		}
 	}
 	g_curr_task->open_files[newfd] = file;
 	file->refcnt += 1;
@@ -315,10 +317,12 @@ uint32_t syscall_close(t_interrupt_data *regs)
 		return (-EBADF);
 	if (!file->ops->close)
 		return (-EINVAL);
-	file->ops->close(file); // doesn't free file
 	file->refcnt--;
 	if (file->refcnt == 0)
+	{
+		file->ops->close(file); // doesn't free file
 		vfree(file);
+	}
 	g_curr_task->open_files[fd] = NULL;
 	return (0);
 }

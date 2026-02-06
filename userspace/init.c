@@ -126,11 +126,11 @@ int main(void)
 	}
 	else if (pid == 0)
 	{
-		write(pipe_fd[1], "coucou from pipe", 16);
-		for (u_int32_t i = 0; i < 100; i++)
-			write(pipe_fd[1], "yo", 2);
 		printf("hello from pid %u (child)\n", getpid());
 		skibidi = 0;
+		write(pipe_fd[1], "coucou from pipe", 16);
+		for (u_int32_t i = 0; i < 10000; i++)
+			fdprintf(pipe_fd[1], 4096,  "%u", i);
 		printf("child modified skybidi to %u in child\n", skibidi);
 		shared[0] = 42;
 		printf("child modified shared[0] to %u in child\n", shared[0]);
@@ -144,8 +144,6 @@ int main(void)
 	else
 	{
 		printf("hello from pid %u (parent)\n", getpid());
-		printf("waiting for child to exit\n");
-		syscall(114, pid, 0, 0, 0);
 		char buff[8093];
 		int ret = read(pipe_fd[0], buff, 8092);
 		while (ret > 0)
@@ -158,6 +156,8 @@ int main(void)
 		{
 			perror("read");
 		}
+		printf("waiting for child to exit\n");
+		syscall(114, pid, 0, 0, 0);
 		printf("skibidy still %u in parent\n", skibidi);
 		printf("shared[0] changed to %u in parent\n", shared[0]);
 		/*p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)

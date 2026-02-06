@@ -59,6 +59,7 @@ uint32_t syscall_statx(t_interrupt_data *regs);
 uint32_t syscall_openat(t_interrupt_data *regs);
 uint32_t syscall_open(t_interrupt_data *regs);
 uint32_t syscall_dup(t_interrupt_data *regs);
+uint32_t syscall_dup2(t_interrupt_data *regs);
 uint32_t syscall_pipe(t_interrupt_data *regs);
 uint32_t syscall_pipe2(t_interrupt_data *regs);
 uint32_t syscall_close(t_interrupt_data *regs);

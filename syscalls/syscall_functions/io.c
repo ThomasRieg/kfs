@@ -263,6 +263,28 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 	return do_open(path, dir_inode, open_flag, mode);
 }
 
+uint32_t syscall_dup2(t_interrupt_data *regs)
+{
+	int oldfd = regs->ebx;
+	int newfd = regs->ecx;
+	printk("dup2: %u %u\n", oldfd, newfd);
+	t_file *file = get_file_from_fd(oldfd);
+	if (!file)
+		return (-EBADF);
+	if (newfd < 0 || (unsigned)newfd >= MAX_OPEN_FILES)
+		return -EBADF;
+	t_file *newfile = g_curr_task->open_files[newfd];
+	if (newfile) {
+		newfile->ops->close(newfile); // doesn't free file
+		newfile->refcnt--;
+		if (newfile->refcnt == 0)
+			vfree(newfile);
+	}
+	g_curr_task->open_files[newfd] = file;
+	file->refcnt += 1;
+	return (newfd);
+}
+
 // TODO adapt to new file struct
 uint32_t syscall_dup(t_interrupt_data *regs)
 {

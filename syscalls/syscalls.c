@@ -20,6 +20,7 @@ static t_syscall_func g_syscall_handlers[1000];
 
 void syscall_dispatcher(t_interrupt_data *regs)
 {
+	//printk("syscall %u\n", regs->eax);
 	if (regs->eax >= (sizeof(g_syscall_handlers) / sizeof(t_syscall_func)))
 		regs->eax = -ENOSYS;
 	else if (g_syscall_handlers[regs->eax])

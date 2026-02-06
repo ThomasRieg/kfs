@@ -13,6 +13,7 @@ void handle_serial(void) {
 void serial1_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
 	c = inb(PORT_COM1);
+	tty_add_input(c);
 	// pic_eoi(INT_SERIAL1);
 }
 

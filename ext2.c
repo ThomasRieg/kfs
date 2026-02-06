@@ -324,6 +324,9 @@ bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	out->st_uid = inode.base.uid;
 	out->st_gid = inode.base.gid;
 	out->st_size = inode.base.size;
+	out->st_mtim = (struct timespec){.tv_sec = inode.base.modification_time};
+	out->st_atim = (struct timespec){.tv_sec = inode.base.access_time};
+	out->st_ctim = (struct timespec){.tv_sec = inode.base.creation_time};
 	return 0;
 }
 

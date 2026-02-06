@@ -20,6 +20,7 @@ struct statx_timestamp
 {
 	int64_t tv_sec;		  /* Seconds since the Epoch (UNIX time) */
 	unsigned int tv_nsec; /* Nanoseconds since tv_sec */
+	int _reserved;
 };
 
 struct statx
@@ -75,6 +76,8 @@ filled fields */
 	unsigned int stx_atomic_write_unit_max_opt;
 };
 
+_Static_assert(sizeof(struct statx) <= 256, "struct statx is overflowing glibc definition");
+
 static t_file *get_file_from_fd(int fd)
 {
 	t_file *file = fd >= 0 && (unsigned int)fd < MAX_OPEN_FILES ? g_curr_task->open_files[fd] : 0;
@@ -105,6 +108,9 @@ static void fill_statx_from_stat(struct statx *statx, struct stat *stat)
 	statx->stx_blocks = stat->st_blocks;
 	statx->stx_size = stat->st_size;
 	statx->stx_mode = stat->st_mode;
+	statx->stx_atime = (struct statx_timestamp){.tv_sec=stat->st_atim.tv_sec};
+	statx->stx_ctime = (struct statx_timestamp){.tv_sec=stat->st_ctim.tv_sec};
+	statx->stx_mtime = (struct statx_timestamp){.tv_sec=stat->st_mtim.tv_sec};
 }
 
 uint32_t syscall_statx(t_interrupt_data *regs)

@@ -1,10 +1,12 @@
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
-#include <sys/stat.h>
 #include <sys/types.h>
+#include <linux/stat.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
@@ -40,6 +42,8 @@ int main(void)
 	printf("sizeof(long unsigned int) = %u\n", sizeof(long unsigned int));
 	printf("sizeof(unsigned int) = %u\n", sizeof(unsigned int));
 	printf("sizeof(struct stat) = %u\n", sizeof(struct stat));
+	printf("sizeof(struct statx) = %u\n", sizeof(struct statx));
+	printf("sizeof(struct statx_timestamp) = %u\n", sizeof(struct statx_timestamp));
 
 	printf("\t\t//// CHANGING CWD TO `/etc`\n");
 	chdir("/etc");

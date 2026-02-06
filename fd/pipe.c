@@ -64,9 +64,13 @@ static uint32_t pipe_write_ring(t_pipe *p, const uint8_t *src, uint32_t n)
 
 int32_t pipe_read(t_file *f, void *buf_, size_t n)
 {
-	// printk("pipe_read called\n");
-	t_pipe *pipe = ((t_pipe_end *)f->priv)->p;
-	uint8_t *buf = (uint8_t *)buf_;
+	t_pipe_end *pipe_end = (t_pipe_end *)f->priv;
+	if (!pipe_end || !pipe_end->is_read_end)
+		return (-EBADFD);
+	t_pipe *pipe = pipe_end->p;
+	if (!pipe)
+		return (-EBADFD);
+	uint8_t *buf = (uint8_t *)buf_; //we syscall_read validated this buffer already
 	uint32_t readed = 0;
 	while (readed < n)
 	{
@@ -99,7 +103,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 	t_pipe *pipe = pipe_end->p;
 	if (!pipe)
 		return (-EBADFD);
-	uint8_t *buf = (uint8_t *)buf_;
+	uint8_t *buf = (uint8_t *)buf_; //we syscall_read validated this buffer already
 	uint32_t wrote = 0;
 	while (wrote < n)
 	{

@@ -13,7 +13,6 @@
 #include "pipe.h"
 #include "../tasks/task.h"
 #include "../errno.h"
-#include <asm-generic/errno.h>
 
 t_file_ops g_pipe_read_ops = {.read = pipe_read, .write = NULL, .close = pipe_close};
 t_file_ops g_pipe_write_ops = {.read = NULL, .write = pipe_write, .close = pipe_close};
@@ -66,10 +65,10 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 {
 	t_pipe_end *pipe_end = (t_pipe_end *)f->priv;
 	if (!pipe_end || !pipe_end->is_read_end)
-		return (-EBADFD);
+		return (-EBADF);
 	t_pipe *pipe = pipe_end->p;
 	if (!pipe)
-		return (-EBADFD);
+		return (-EBADF);
 	uint8_t *buf = (uint8_t *)buf_; //we syscall_read validated this buffer already
 	uint32_t readed = 0;
 	while (readed < n)
@@ -99,10 +98,10 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 {
 	t_pipe_end *pipe_end = (t_pipe_end *)f->priv;
 	if (!pipe_end || pipe_end->is_read_end)
-		return (-EBADFD);
+		return (-EBADF);
 	t_pipe *pipe = pipe_end->p;
 	if (!pipe)
-		return (-EBADFD);
+		return (-EBADF);
 	uint8_t *buf = (uint8_t *)buf_; //we syscall_read validated this buffer already
 	uint32_t wrote = 0;
 	while (wrote < n)
@@ -136,10 +135,10 @@ int32_t pipe_close(t_file *f)
 {
 	t_pipe_end *pipe_end = (t_pipe_end *)f->priv;
 	if (!pipe_end)
-		return (-EBADFD);
+		return (-EBADF);
 	t_pipe *pipe = pipe_end->p;
 	if (!pipe)
-		return (-EBADFD);
+		return (-EBADF);
 	if (pipe_end->is_read_end)
 	{
 		if (pipe->readers)

@@ -27,6 +27,7 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 	struct timespec start = rtc_get_time();
 	struct timespec now;
 	do {
+		printk("nanosleep yielded\n");
 		yield();
 		now = rtc_get_time();
 	} while (now.tv_sec - start.tv_sec < req->tv_sec);
@@ -341,6 +342,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 		// enable_interrupts();
 
+		printk("wait4 yielded\n");
 		yield();
 	}
 }

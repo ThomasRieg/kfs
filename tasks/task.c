@@ -429,7 +429,6 @@ void task_reap_zombie(t_task *t)
 void yield()
 {
 	g_tick = 0;
-	printk("something yielded \n");
 	asm volatile("int $0x81" ::: "memory");
 }
 

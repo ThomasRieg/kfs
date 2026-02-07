@@ -32,13 +32,32 @@ void print_cpu_state(t_interrupt_data *regs)
 		printk("useresp %u; ss %u\n", regs->useresp, regs->ss);
 }
 
+void print_vmas(t_task *task)
+{
+	t_vma *curr = task->proc_memory.vma_list;
+	printk("listing task's VMAs:\n");
+	while (curr)
+	{
+		t_vma *next = curr->next;
+		printk("start: %p, end: %p, flags: %u, prots: %u\n", curr->start, curr->end, curr->flags, curr->prots);
+		curr = next;
+	}
+}
+
 __attribute__((noreturn)) void kernel_panic(const char *message, t_interrupt_data *regs)
 {
 	disable_interrupts();
 	vga_set_color(VGA_RED, VGA_BLACK);
 	if (regs)
 		print_cpu_state(regs);
-	// stack_dump_words(0);
+	if (g_curr_task)
+	{
+		printk("pid %u\n", g_curr_task->task_id);
+		printk("task kernel stack bot %u, top %u\n", g_curr_task->k_stack, g_curr_task->k_stack + TASK_KERNEL_SIZE);
+		print_vmas(g_curr_task);
+	}
+	else
+		stack_dump_words(0);
 	writes("/!\\Kernel Panic/!\\\n");
 	writes(message);
 	while (1)

@@ -21,6 +21,7 @@
 #define TASK_STACK_TOP KERNEL_VIRT_BASE - PAGE_SIZE
 #define NB_TICKS_PER_TASK 1u // nb of timer irq before we context switch to next task
 #define MAX_OPEN_FILES 256u
+#define TASK_KERNEL_SIZE 16384
 
 typedef void (*t_sig_handler)(int);
 #define SIG_IGN 1u // ignore this signal
@@ -126,7 +127,7 @@ typedef struct task
 	phys_ptr pd;
 	struct user_desc user_gdt_segment;
 	uint32_t k_esp;
-	uint8_t k_stack[16384]; // stack tss will returns to on interrupt
+	uint8_t k_stack[TASK_KERNEL_SIZE]; // stack tss will returns to on interrupt
 	t_sig_handler sig_handlers[32];
 	struct task *next; // circular linked list, TODO do better
 	t_mm proc_memory;

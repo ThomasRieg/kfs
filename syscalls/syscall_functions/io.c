@@ -120,6 +120,10 @@ uint32_t syscall_statx(t_interrupt_data *regs)
 	unsigned int flags = regs->edx;
 	unsigned int mask = regs->esi;
 	struct statx *buffer = (struct statx *)regs->edi;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	if (!user_range_ok(buffer, sizeof(*buffer), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	printk("statx at eip %p: %u %s %u %u %p\n", regs->eip, dirfd, path, flags, mask, buffer);
 	if (path[0] == 0)
 	{
@@ -166,6 +170,8 @@ uint32_t syscall_fstatat(t_interrupt_data *regs)
 	const char *path = (char *)regs->ecx;
 	struct stat *buf = (struct stat *)regs->edx;
 	if (!user_range_ok(buf, sizeof(*buf), false, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	unsigned int flags = regs->esi;
 	printk("fstatat at eip %p: %u %s %p %u\n", regs->eip, dirfd, path, buf, flags);
@@ -239,6 +245,8 @@ uint32_t syscall_open(t_interrupt_data *regs)
 	const char *path = (char *)regs->ebx;
 	int flags = regs->ecx;
 	unsigned int mode = regs->edx;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	printk("open: %s %d %u\n", path, flags, mode);
 	return do_open(path, g_curr_task->cwd_inode_nr, flags, mode);
 }
@@ -249,6 +257,8 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 	const char *path = (char *)regs->ecx;
 	int open_flag = regs->edx;
 	unsigned int mode = regs->edi;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	printk("openat: %u %s %u %u\n", dirfd, path, open_flag, mode);
 	unsigned int dir_inode;
 	if (dirfd == AT_FDCWD)
@@ -426,14 +436,13 @@ uint32_t do_pipe(int32_t *pipe_fd, uint32_t flags) {
 
 uint32_t syscall_pipe(t_interrupt_data *regs)
 {
-	int32_t *pipe_fd = (int32_t *)regs->ebx;
+	int32_t *pipe_fd = (int32_t *)regs->ebx; //validity of pointer verified in do_pipe
 	return do_pipe(pipe_fd, 0);
 }
 
 uint32_t syscall_pipe2(t_interrupt_data *regs)
 {
-	int32_t *pipe_fd = (int32_t *)regs->ebx;
-	// TODO: handle O_CLOEXEC, O_DIRECT and O_NONBLOCK
+	int32_t *pipe_fd = (int32_t *)regs->ebx; //validity of pointer verified in do_pipe
 	int flags = (int)regs->ecx;
 	return do_pipe(pipe_fd, flags);
 }
@@ -441,6 +450,8 @@ uint32_t syscall_pipe2(t_interrupt_data *regs)
 uint32_t syscall_chdir(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	printk("chdir: %s\n", path);
 	unsigned int inode_nr = path_to_inode(path, g_curr_task->cwd_inode_nr);
 	printk("chdir: inode_nr = %u\n", inode_nr);

@@ -23,6 +23,7 @@ void *memchr(const void *s, int c, unsigned int n);
 phys_ptr get_phys_ptr(virt_ptr va); // will pagefault if va is not mapped
 typedef struct s_mm t_mm;
 bool user_range_ok(const virt_ptr uaddr, uint32_t size, bool write, t_mm *mm);
+bool user_str_ok(const char *str, bool write, uint32_t max_size, t_mm *mm);
 
 char *strchr(const char *s, int c);
 unsigned int strlen(const char *s);

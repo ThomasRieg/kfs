@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "libk.h"
+#include <stdint.h>
 
 void *memchr(const void *s, int c, unsigned int n)
 {
@@ -201,4 +202,35 @@ bool user_range_ok(const virt_ptr uaddr, uint32_t size, bool write, t_mm *mm)
 			va = (uint32_t)vma->end;
 	}
 	return 1;
+}
+
+// returns true if process have access to this string
+bool user_str_ok(const char *str, bool write, uint32_t max_size, t_mm *mm)
+{
+	if (!str)
+		return 1;
+
+	if ((uintptr_t)str >= KERNEL_VIRT_BASE)
+		return 0;
+
+
+	uint32_t start_page = align_down_u32((uintptr_t)str, PAGE_SIZE);
+	uint32_t end_addr = align_down_u32(start_page + max_size, PAGE_SIZE);
+
+	for (uint32_t va = start_page; va < end_addr; va += PAGE_SIZE)
+	{
+		t_vma *vma = vma_for_address(mm, va);
+		if (!vma)
+			return (false);
+		else if (vma->prots & PROT_NONE)
+			return (false);
+		else if (write && !(vma->prots & PROT_WRITE))
+			return (false);
+		for (uint32_t i = 0; i < PAGE_SIZE; i++)
+		{
+			if (!((char*)va)[i])
+				return (true);
+		}
+	}
+	return (false);
 }

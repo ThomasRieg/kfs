@@ -23,6 +23,10 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 {
 	const struct timespec *req = (struct timespec *)regs->ebx;
 	struct timespec *rem = (struct timespec *)regs->ecx;
+	if (!user_range_ok((virt_ptr)req, sizeof(struct timespec), false, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	if (!user_range_ok((virt_ptr)rem, sizeof(struct timespec), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 
 	struct timespec start = rtc_get_time();
 	struct timespec now;
@@ -92,6 +96,8 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 {
 	struct pollfd *fds = (struct pollfd *)regs->ebx;
 	int nfds = regs->ecx;
+	if (!user_range_ok((virt_ptr)fds, sizeof(struct pollfd) * nfds, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	//void *tmo_p = (void *)regs->edx;
 	//void *sigmask = (void *)regs->esi;
 	//printk("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
@@ -162,6 +168,8 @@ uint32_t syscall_uname(t_interrupt_data *regs)
 {
 	// We be doppelgänging as Linux to get glibc to work :D
 	struct utsname *buf = (void *)regs->ebx;
+	if (!user_range_ok((virt_ptr)buf, sizeof(struct utsname), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	memcpy(buf->sysname, "Linux", 6);
 	memcpy(buf->nodename, "kfs", 4);
 	memcpy(buf->release, "6.8.0-40-generic", 17);
@@ -187,6 +195,8 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	// https://github.com/lattera/glibc/blob/895ef79e04a953cac1493863bcae29ad85657ee1/sysdeps/i386/nptl/tls.h#L217
 
 	struct user_desc *desc = (struct user_desc *)regs->ebx;
+	if (!user_range_ok((virt_ptr)desc, sizeof(struct user_desc), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	printk("set thread area %p\n", desc);
 
 	desc->entry_number = 8; // entry #8 in GDT
@@ -220,6 +230,8 @@ uint32_t syscall_writev(t_interrupt_data *regs)
 	// printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
 	struct iovec *iovecs = (struct iovec *)regs->ecx;
 	uint32_t written = 0;
+	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * regs->edx, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
 	for (unsigned int i = 0; i < regs->edx; i++)
 	{
 		written += iovecs[i].iov_len;
@@ -632,8 +644,16 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	const char *filename = (const char *)regs->ebx;
 	const char *const *argv = (const char *const *)regs->ecx;
 	const char *const *envp = (const char *const *)regs->edx;
-	//  if ((user_range_ok(filename, strlen(filename), false)) //TODO do this
-	disable_interrupts();
+	if (!user_str_ok(filename, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	if (argv)
+		for (uint32_t i = 0; argv[i]; i++)
+			if (!user_str_ok(argv[i], false, 2000000,&g_curr_task->proc_memory))
+				return (-EFAULT);
+	if (envp)
+		for (uint32_t i = 0; envp[i]; i++)
+			if (!user_str_ok(envp[i], false, 2000000,  &g_curr_task->proc_memory))
+				return (-EFAULT);
 
 	extern struct VecU8 read_full_file(const char *path);
 	struct VecU8 binary = read_full_file(filename);

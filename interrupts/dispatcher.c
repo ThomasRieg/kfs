@@ -36,6 +36,7 @@ void isr_dispatch_c(t_interrupt_data *regs)
 		printk("received unhandled interrupt %u\n", regs->int_no); // TODO add better handling here, idk how to make something robust for when we implement software interrupts and processes, so WIP
 		kernel_panic("unhandled interrupt", regs);
 	}
+	//printk("end of interrupt, will iret at %p", regs->eip);
 	//printk("\e[31m\ndone servicing interrupt %u\e[0m\n", regs->int_no);
 }
 

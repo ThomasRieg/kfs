@@ -420,7 +420,7 @@ void task_reap_zombie(t_task *t)
 		kernel_panic("reaped last task in task_reap_zombie", NULL);
 
 	if (g_curr_task == t)
-		g_curr_task = t->next;
+		kernel_panic("task wants to reap itself, wtf", NULL);//g_curr_task = t->next;
 
 	prev->next = t->next;
 

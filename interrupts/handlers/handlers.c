@@ -222,6 +222,8 @@ void page_fault_handler(t_interrupt_data *regs)
 		if (vma->backing == VMA_ANON)
 		{
 			t_shm_anon *backing = (t_shm_anon *)vma->backing_obj;
+			if (!backing)
+				kernel_panic("incoherent state of vma anon shared with NULL backing obj", regs);
 			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
 			phys_ptr frame = find_frame_from_shm_anon(backing, virtual_address_page_start);
 			if (!frame)
@@ -281,7 +283,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		}
 		else
 		{
-			// last referencce, just make it rw
+			// last reference, just make it rw
 			pmm_free_frame(frame); // will just decrease the refcount here
 			*pte |= PTE_RW;
 			*pte &= ~PTE_COW;

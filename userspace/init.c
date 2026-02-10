@@ -100,16 +100,16 @@ int main(void)
 		perror("mmap");
 		return (-1);
 	}
-	int forkr = syscall(2);
+	/*int forkr = syscall(2);
 	if (forkr == 0) {
 		char *const argv[] = {"/bin/sh", 0};
 		char *const envp[] = {0};
 		execve("/bin/sh", argv, envp);
 	} else {
 		while (1);
-	}
+	}*/
 
-	memset(shared, 0, 4096);
+	memset(shared, 69, 4096);
 	u_int32_t skibidi = 67;
 	int pipe_fd[2];
 	if (pipe(pipe_fd))
@@ -126,11 +126,20 @@ int main(void)
 	}
 	else if (pid == 0)
 	{
+		int childpid = syscall(2);
+		if (childpid == 0)
+		{
+			write(pipe_fd[1], "coucou from grandchild\n", 23);
+			close(pipe_fd[1]);
+			printf("grandchild exiting\n");
+			//while (1) ;
+			exit(0);
+		}
 		printf("hello from pid %u (child)\n", getpid());
 		skibidi = 0;
 		write(pipe_fd[1], "coucou from pipe", 16);
-		for (u_int32_t i = 0; i < 10000; i++)
-			fdprintf(pipe_fd[1], 4096,  "%u", i);
+		//for (u_int32_t i = 0; i < 10000; i++)
+		//	fdprintf(pipe_fd[1], 4096,  "%u", i);
 		printf("child modified skybidi to %u in child\n", skibidi);
 		shared[0] = 42;
 		printf("child modified shared[0] to %u in child\n", shared[0]);
@@ -139,10 +148,12 @@ int main(void)
 			p[i] = 42;
 		free(p);*/
 		close(pipe_fd[1]);
+		syscall(114, childpid, 0, 0, 0);
 		exit(0);
 	}
 	else
 	{
+		close(pipe_fd[1]);
 		printf("hello from pid %u (parent)\n", getpid());
 		char buff[8093];
 		int ret = read(pipe_fd[0], buff, 8092);

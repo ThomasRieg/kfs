@@ -389,9 +389,10 @@ void free_vmas(t_task *task)
 	while (curr)
 	{
 		t_vma *next = curr->next;
-		free_vma_range_pages(curr->start, curr->end);
 		if (curr->backing_obj)
 			free_backing_obj(curr);
+		else
+		 	free_vma_range_pages(curr->start, curr->end);
 		vfree(curr);
 		curr = next;
 	}

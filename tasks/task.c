@@ -403,6 +403,16 @@ void cleanup_task(t_task *task)
 {
 	// disable_interrupts();
 	free_vmas(task);
+	for (uint32_t i = 0; i < MAX_OPEN_FILES; i++)
+	{
+		if (g_curr_task->open_files[i])
+		{
+			extern uint32_t syscall_close(t_interrupt_data *regs);
+			t_interrupt_data dummy;
+			dummy.ebx = i; //fd
+			syscall_close(&dummy);
+		}
+	}
 	// enable_interrupts();
 	//  TODO implement (clean up memory, fd and everything
 }

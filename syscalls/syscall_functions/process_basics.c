@@ -278,7 +278,7 @@ static void unlink_child(t_task *parent, t_task *child)
 	}
 	else if (curr)
 	{
-		while (curr->next && curr != child)
+		while (curr->next_sibling && curr != child)
 		{
 			prev_sibling = curr;
 			curr = curr->next_sibling;
@@ -286,7 +286,7 @@ static void unlink_child(t_task *parent, t_task *child)
 		if (curr == child)
 		{
 			if (prev_sibling)
-				prev_sibling->next = curr->next;
+				prev_sibling->next_sibling = curr->next_sibling;
 		}
 		else
 			kernel_panic("uncoherent state of parent/sibling relationship in unlink_child\n", NULL);

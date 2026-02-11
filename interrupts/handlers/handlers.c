@@ -280,11 +280,11 @@ void page_fault_handler(t_interrupt_data *regs)
 			invalidate_cache(virtual_address_page_start);
 			memcpy(virtual_address_page_start, page_buff, PAGE_SIZE);
 			g_curr_task->proc_memory.physical_pages++;
+			pmm_free_frame(frame); // will just decrease the refcount here
 		}
 		else
 		{
 			// last reference, just make it rw
-			pmm_free_frame(frame); // will just decrease the refcount here
 			*pte |= PTE_RW;
 			*pte &= ~PTE_COW;
 			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);

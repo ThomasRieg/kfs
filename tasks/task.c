@@ -22,6 +22,7 @@
 #include "../mmap/mmap.h"
 
 t_task *g_curr_task = 0;
+t_task *g_init_task = 0;
 uint32_t g_next_pid = 1;
 
 static void copy_strings(unsigned char *dst_s, struct process_strings strings, unsigned char **dst_p)
@@ -166,6 +167,7 @@ __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *f
 }
 
 // task has to be allocated by vmalloc
+// only called to create init
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary)
 {
 	if (binary->length < sizeof(struct elf_header))
@@ -197,6 +199,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 		return (false);
 	}
 	g_curr_task = task;	 // temporary
+	g_init_task = task;
 	task->next = task;	 // temporary
 	write_cr3(task->pd); // temporary
 	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);

@@ -582,6 +582,24 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	return (task->task_id);
 }
 
+//does not clear parent's list
+static void adopt_children_list(t_task *adopter, t_task *children)
+{
+	if (!children)
+		return;
+	if (!adopter->children)
+	{
+		adopter->children = children;
+		adopter->pending_signals |= (1 << SIGCHLD);
+		return;
+	}
+	t_task *last_adopter_child = adopter->children;
+	while (last_adopter_child->next_sibling)
+		last_adopter_child = last_adopter_child->next_sibling;
+	last_adopter_child->next_sibling = children;
+	adopter->pending_signals |= (1 << SIGCHLD);
+}
+
 // 1
 // int error_code
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
@@ -591,7 +609,9 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 
 	if (!g_curr_task->parent_task)
 		kernel_panic("parentless process trying to exit, no process left?\n", regs);
-
+	
+	adopt_children_list(g_init_task, g_curr_task->children);
+	g_curr_task->children = NULL;
 	g_curr_task->exit_code = regs->ebx;
 	g_curr_task->status = STATUS_ZOMBIE;
 	g_curr_task->parent_task->pending_signals |= (1 << SIGCHLD);

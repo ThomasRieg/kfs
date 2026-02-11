@@ -140,6 +140,7 @@ struct process_strings
 };
 
 extern t_task *g_curr_task;
+extern t_task *g_init_task; //pid 1
 extern uint32_t g_next_pid;
 
 void schedule_next_task();

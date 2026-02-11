@@ -100,14 +100,14 @@ int main(void)
 		perror("mmap");
 		return (-1);
 	}
-	/*int forkr = syscall(2);
+	int forkr = syscall(2);
 	if (forkr == 0) {
 		char *const argv[] = {"/bin/sh", 0};
 		char *const envp[] = {0};
 		execve("/bin/sh", argv, envp);
 	} else {
 		while (1);
-	}*/
+	}
 
 	memset(shared, 69, 4096);
 	u_int32_t skibidi = 67;

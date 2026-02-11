@@ -45,6 +45,14 @@ uint32_t syscall_getpgid(__attribute__((unused)) t_interrupt_data *regs)
 	return 0;
 }
 
+uint32_t syscall_setpgid(__attribute__((unused)) t_interrupt_data *regs)
+{
+	unsigned int pid = regs->ebx;
+	unsigned int pgid = regs->ecx;
+	printk("setpgid %u %u\n", pid, pgid);
+	return 0;
+}
+
 uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	return (g_curr_task->task_id);
@@ -197,7 +205,7 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	struct user_desc *desc = (struct user_desc *)regs->ebx;
 	if (!user_range_ok((virt_ptr)desc, sizeof(struct user_desc), true, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	printk("set thread area %p\n", desc);
+	printk("set thread area base=%p\n", desc, desc->base_addr);
 
 	desc->entry_number = 8; // entry #8 in GDT
 	g_curr_task->user_gdt_segment = *desc;
@@ -205,12 +213,10 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	return (0);
 }
 
-// dummy used by all non-implemented syscalls at the moment
 uint32_t syscall_set_tid_address(t_interrupt_data *regs)
 {
-	printk("stub syscall #%u at eip %p\n", regs->eax, regs->eip);
-	// TODO: return task ID
-	return (-ENOSYS);
+	printk("set tid address: %p\n", regs->ebx);
+	return (g_curr_task->task_id);
 }
 
 uint32_t syscall_mprotect(__attribute__((unused)) t_interrupt_data *regs)
@@ -591,6 +597,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 // int error_code
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 {
+	printk("exit: %u\n", regs->ebx);
 	disable_interrupts(); // doesn't need to reenable because parent's task will override cpu flags
 
 	if (!g_curr_task->parent_task)
@@ -678,7 +685,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	struct process_strings argv_s = strings_collect(argv);
 	struct process_strings envp_s = strings_collect(envp);
 
-	cleanup_task(g_curr_task);
+	free_vmas(&g_curr_task->proc_memory);
 
 	virt_ptr user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory);
 	if (user_stack_bot == MAP_FAILED)

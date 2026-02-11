@@ -187,6 +187,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(45, syscall_brk);
 	add_syscall(48, syscall_signal);
 	add_syscall(54, syscall_ioctl);
+	add_syscall(57, syscall_setpgid);
 	add_syscall(63, syscall_dup2);
 	add_syscall(64, syscall_getppid);
 	add_syscall(85, syscall_readlink);
@@ -199,7 +200,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(168, syscall_poll);
 	add_syscall(174, syscall_rt_sigaction);
 	add_syscall(175, syscall_rt_sigprocmask);
-	add_syscall(191, syscall_set_tid_address); // TODO: implement
+	//add_syscall(191, syscall_set_tid_address); // TODO: implement
 	add_syscall(192, syscall_mmap2);
 	add_syscall(199, syscall_getuid);
 	add_syscall(200, syscall_getgid);
@@ -211,18 +212,18 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(243, syscall_set_thread_area);
 	add_syscall(244, syscall_get_thread_area);
 	add_syscall(252, syscall_exit);
-	add_syscall(258, syscall_set_tid_address); // TODO: implement
+	add_syscall(258, syscall_set_tid_address);
 	add_syscall(265, syscall_clock_gettime);
 	add_syscall(295, syscall_openat);
 	add_syscall(300, syscall_fstatat);
-	add_syscall(305, syscall_set_tid_address); // TODO: implement
-	add_syscall(311, syscall_set_tid_address); // TODO: implement
+	//add_syscall(305, syscall_set_tid_address); // TODO: implement
+	//add_syscall(311, syscall_set_tid_address); // TODO: implement
 	add_syscall(331, syscall_pipe2);
-	add_syscall(355, syscall_set_tid_address); // TODO: implement
+	//add_syscall(355, syscall_set_tid_address); // TODO: implement
 	add_syscall(383, syscall_statx);
-	add_syscall(386, syscall_set_tid_address); // TODO: implement
+	//add_syscall(386, syscall_set_tid_address); // TODO: implement
 	add_syscall(384, syscall_archprctl);
-	add_syscall(403, syscall_set_tid_address); // TODO: implement
+	//add_syscall(403, syscall_set_tid_address); // TODO: implement
 
 	setup_pics();
 	writes("PICs configured.\n");

@@ -44,8 +44,13 @@ void init_active_tty(void)
 	tty->cmd.finished = 0;
 	tty->cmd.buffer = vmalloc(g_ttys[g_current_tty].cmd.size);
 	tty->read_eof = false;
-	tty->termios.c_lflag = ECHO;
-	tty->termios.c_cc[VEOF] = VEOF;
+	tty->termios.c_iflag = ICRNL | IXON;
+	tty->termios.c_oflag = OPOST | ONLCR;
+	tty->termios.c_cflag = B38400 | CS8 | CREAD | HUPCL;
+	tty->termios.c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN;
+	tty->termios.c_cc[VINTR] = 0x03;
+	tty->termios.c_cc[VEOF] = 0x04;
+	tty->termios.c_cc[VERASE] = 0x7f;
 	if (!tty->cmd.buffer)
 		kernel_panic("couldn't allocate memory for the new tty", NULL);
 }

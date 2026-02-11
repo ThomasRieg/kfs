@@ -42,10 +42,14 @@ $(DISK_FILE):
 	$(MAKE) -C userspace
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
 	cp userspace/init root/bin
-	for bin in ash cat chmod cp date dd df echo hostname kill ln ls mkdir mv ps pwd rm rmdir sleep; do \
+	i=1; \
+	BUSY_BOX_PROGRAMS="ash cat chmod cp date dd df echo hostname kill ln ls mkdir mv ps pwd rm rmdir sleep login hexdump sed sort su tail head tar time whoami vi w wall wc xxd xargs xz users uniq uname less stty";\
+	for bin in $$BUSY_BOX_PROGRAMS; do \
 		if [[ ! -x root/bin/$$bin ]]; then\
-			curl -v -o root/bin/$$bin https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_$$(echo $$bin | tr [:lower:] [:upper:]) ; \
+			echo $$bin \($$i/$$(echo $$BUSY_BOX_PROGRAMS | wc -w)\);\
+			curl -o root/bin/$$bin https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_$$(echo $$bin | tr [:lower:] [:upper:]) ; \
 		fi; \
+		: $$((i++));\
 	done
 	cp root/bin/{ash,sh}
 	chmod +x root/bin/*

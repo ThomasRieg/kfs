@@ -236,6 +236,7 @@ void kernel_main(struct s_mb2_info *multi)
 
 	mem_test_all();
 	pci_init_all();
+	pci_enumerate();
 
 	print_header();
 

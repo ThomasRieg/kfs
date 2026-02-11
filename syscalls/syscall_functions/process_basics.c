@@ -390,17 +390,6 @@ static t_vma *dup_vma(t_vma *src)
 	return (ret);
 }
 
-static void free_vmas(t_mm *mm)
-{
-	t_vma *curr = mm->vma_list;
-	while (curr)
-	{
-		t_vma *next = curr->next;
-		vfree(curr);
-		curr = next;
-	}
-}
-
 // returns 0 on success, or negative error code on error
 // sets new_mm->physical_pages = 0;
 static uint32_t copy_mm(t_mm *new_mm, t_mm *to_copy)
@@ -686,6 +675,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	struct process_strings envp_s = strings_collect(envp);
 
 	free_vmas(&g_curr_task->proc_memory);
+	g_curr_task->proc_memory.vma_list = NULL;
 
 	virt_ptr user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory);
 	if (user_stack_bot == MAP_FAILED)

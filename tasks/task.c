@@ -383,9 +383,9 @@ void free_backing_obj(t_vma *vma)
 	}
 }
 
-void free_vmas(t_task *task)
+void free_vmas(t_mm *mm)
 {
-	t_vma *curr = task->proc_memory.vma_list;
+	t_vma *curr = mm->vma_list;
 	while (curr)
 	{
 		t_vma *next = curr->next;
@@ -396,13 +396,13 @@ void free_vmas(t_task *task)
 		vfree(curr);
 		curr = next;
 	}
-	task->proc_memory.vma_list = NULL;
 }
 // does not free the task struct itself
 void cleanup_task(t_task *task)
 {
 	// disable_interrupts();
-	free_vmas(task);
+	free_vmas(&task->proc_memory);
+	task->proc_memory.vma_list = NULL;
 	for (uint32_t i = 0; i < MAX_OPEN_FILES; i++)
 	{
 		if (g_curr_task->open_files[i])

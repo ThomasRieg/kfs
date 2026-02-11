@@ -148,6 +148,7 @@ void cleanup_task(t_task *task);
 void task_reap_zombie(t_task *t);
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary);
 void add_child(t_task *parent, t_task *child);
+void free_vmas(t_mm *mm);
 void yield();
 
 #endif

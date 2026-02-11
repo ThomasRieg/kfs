@@ -41,7 +41,7 @@ void ide_init(struct pci_installed *installed);
 void pci_init_device(struct pci_installed *installed) {
 	if (installed->vendor == VENDOR_REALTEK && installed->device == DEVICE_REALTEK_RTL8139) {
 		rtl_8139_init(installed);
-	} else if (installed->vendor == VENDOR_INTEL && installed->device == DEVICE_INTEL_82371SB_IDE) {
+	} else if (installed->class_code == 1 && installed->subclass == 1) {
 		ide_init(installed);
 	}
 }

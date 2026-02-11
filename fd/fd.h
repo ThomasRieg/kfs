@@ -35,13 +35,16 @@ typedef struct s_file t_file;
 typedef int32_t (*read_fn)(t_file *f, void *buf, uint32_t n);
 typedef int32_t (*write_fn)(t_file *f, const void *buf, uint32_t n);
 typedef int32_t (*close_fn)(t_file *f);
+typedef int32_t (*ioctl_fn)(t_file *f, unsigned int op, unsigned int val);
 
 typedef struct s_file_ops
 {
 	read_fn read;
 	write_fn write;
-	close_fn close; //only called when fd refcnt becomes 0 in syscall_close
-	// later: ioctl, poll, mmap, seek, readdir, fstat...
+	close_fn close;
+	ioctl_fn ioctl;
+	//only called when fd refcnt becomes 0 in syscall_close
+	// later: poll, mmap, seek, readdir, fstat...
 } t_file_ops;
 
 typedef struct s_file

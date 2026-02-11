@@ -17,8 +17,13 @@ void handle_ps2(unsigned char scancode) {
 				c = layout[1][scancode];
 			else
 				c = layout[0][scancode];
+
+			if (lctrl_held && c >= 'a' && c <= 'd')
+				c -= 0x40 + 32;
+
 			if (caps_lock)
 				c = invert_caps(c);
+
 			if (lctrl_held && c == '+')
 			{
 				save_tty();
@@ -30,33 +35,21 @@ void handle_ps2(unsigned char scancode) {
 				prev_tty();
 			}
 			else if (c)
-			{
 				tty_add_input(c);
-			}
 			else if (scancode == SET1_QW_CAPLOCK)
-			{
 				caps_lock = !caps_lock;
-			}
 			else if (scancode == SET1_QW_SHIFT)
-			{
 				shift_held = true;
-			}
 			else if (scancode == SET1_QW_LCTRL)
-			{
 				lctrl_held = true;
-			}
 		}
 		else
 		{ // if release
 			scancode &= 0x7F;
 			if (scancode == SET1_QW_SHIFT)
-			{
 				shift_held = false;
-			}
 			else if (scancode == SET1_QW_LCTRL)
-			{
 				lctrl_held = false;
-			}
 		}
 		scancode = 0;
 	}

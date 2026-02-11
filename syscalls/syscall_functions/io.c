@@ -477,21 +477,6 @@ uint32_t syscall_chdir(t_interrupt_data *regs)
 	return 0;
 }
 
-struct winsize
-{
-	unsigned short ws_row;
-	unsigned short ws_col;
-	unsigned short ws_xpixel; /* unused */
-	unsigned short ws_ypixel; /* unused */
-};
-
-#define TCGETS 0x5401
-#define TCSETS 0x5402
-#define TIOCGPGRP 0x540F
-#define TIOCSPGRP 0x5410
-#define TIOCGWINSZ 0x5413
-#define TIOCGWINSZ 0x5413
-
 // TODO add this to file->ops instead of doing a switch in this function
 uint32_t syscall_ioctl(t_interrupt_data *regs)
 {
@@ -501,28 +486,8 @@ uint32_t syscall_ioctl(t_interrupt_data *regs)
 	t_file *file = get_file_from_fd(fd);
 	if (!file)
 		return -EBADF;
-	if (file->type == FILE_TERMINAL)
-	{
-		if (op == TIOCGWINSZ)
-		{
-			struct winsize *ws = (struct winsize *)regs->edx;
-			ws->ws_row = 25;
-			ws->ws_col = 80;
-			ws->ws_xpixel = 0;
-			ws->ws_ypixel = 0;
-			return 0;
-		}
-		else if (op == TIOCGPGRP)
-		{
-			unsigned int *pgrp = (unsigned int *)regs->edx;
-			*pgrp = 0;
-			return 0;
-		}
-		else if (op == TCGETS || op == TCSETS || op == TIOCSPGRP)
-		{
-			return 0;
-		}
-	}
+	if (file->ops->ioctl)
+		return file->ops->ioctl(file, op, regs->edx);
 	return (-EINVAL);
 }
 

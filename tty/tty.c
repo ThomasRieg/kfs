@@ -43,6 +43,9 @@ void init_active_tty(void)
 	tty->cmd.size = 1024;
 	tty->cmd.finished = 0;
 	tty->cmd.buffer = vmalloc(g_ttys[g_current_tty].cmd.size);
+	tty->read_eof = false;
+	tty->termios.c_lflag = ECHO;
+	tty->termios.c_cc[VEOF] = VEOF;
 	if (!tty->cmd.buffer)
 		kernel_panic("couldn't allocate memory for the new tty", NULL);
 }
@@ -64,40 +67,46 @@ void next_tty()
 		g_active_tty++;
 		init_active_tty();
 		vga_clear_screen();
-		writes("> ");
 	}
 }
 
 void handle_command(unsigned char len, const unsigned char *cmd);
 
-/*static inline void serial_delete_char(void)
+static inline void serial_delete_char(void)
 {
 	outb(PORT_COM1, '\b');
 	outb(PORT_COM1, ' ');
 	outb(PORT_COM1, '\b');
-}*/
+}
 
 void tty_add_input(char c)
 {
 	t_tty *curr = &g_ttys[g_current_tty];
 
-	// echo mode
-	/*if (c == '\r')
-		write(&(char){'\n'}, 1);
-	else if (c == '\b' || c == 0x7F)
-	{
-		if (curr->cmd.index != 0)
-		{
-			curr->cmd.index--;
-			serial_delete_char();
-			g_vga_text_location -= 2;
-			g_vga_text_buf[g_vga_text_location] = 0;
-			update_cursor(g_vga_text_location / 2);
-		}
+	if (c == curr->termios.c_cc[VEOF]) {
+		curr->read_eof = true;
 		return;
 	}
-	else
-		write(&c, 1);*/
+
+	// echo mode
+	if (curr->termios.c_lflag & ECHO) {
+		if (c == '\r')
+			write(&(char){'\n'}, 1);
+		else if (c == '\b' || c == 0x7F)
+		{
+			if (curr->cmd.index != 0)
+			{
+				curr->cmd.index--;
+				serial_delete_char();
+				g_vga_text_location -= 2;
+				g_vga_text_buf[g_vga_text_location] = 0;
+				update_cursor(g_vga_text_location / 2);
+			}
+			return;
+		}
+		else
+			write(&c, 1);
+	}
 
 	if (!ft_vector_pushback(&(curr->cmd), c))
 		kernel_panic("out of memory in the OS trying to allocate memory for tty command", NULL);

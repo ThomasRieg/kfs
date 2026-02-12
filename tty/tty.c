@@ -93,6 +93,9 @@ void tty_add_input(char c)
 		return;
 	}
 
+	if (c == '\r' && curr->termios.c_lflag & ICANON)
+		c = '\n';
+
 	// echo mode
 	if (curr->termios.c_lflag & ECHO) {
 		if (c == '\r')

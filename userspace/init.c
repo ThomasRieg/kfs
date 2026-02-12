@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,7 +107,12 @@ int main(void)
 		char *const envp[] = {0};
 		execve("/bin/sh", argv, envp);
 	} else {
-		while (1);
+		uint32_t status;
+		uint32_t ret = 0;
+		while (!ret)
+			ret = syscall(114, forkr, &status, WNOHANG, 0);
+		printf("shell pid %i exited with status %u\n", ret, status);
+		return (status);
 	}
 
 	memset(shared, 69, 4096);

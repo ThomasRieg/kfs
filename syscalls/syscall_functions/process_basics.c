@@ -597,6 +597,12 @@ static void adopt_children_list(t_task *adopter, t_task *children)
 	while (last_adopter_child->next_sibling)
 		last_adopter_child = last_adopter_child->next_sibling;
 	last_adopter_child->next_sibling = children;
+	t_task *curr_child = children;
+	while (curr_child)
+	{
+		curr_child->parent_task = adopter;
+		curr_child = curr_child->next_sibling;
+	}
 	adopter->pending_signals |= (1 << SIGCHLD);
 }
 

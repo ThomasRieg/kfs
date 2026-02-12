@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/12 05:10:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/12 16:46:56 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,6 @@ void waitq_wake_one(t_waitq *q)
 
 void sleep_on(t_waitq *q, t_wait_reason reason)
 {
-    disable_interrupts();
 
     // remove if already sleeping somewhere (shouldn't happen)
     if (g_curr_task->sleep_q)
@@ -98,8 +97,6 @@ void sleep_on(t_waitq *q, t_wait_reason reason)
     g_curr_task->wait_reason = reason;
     g_curr_task->status = STATUS_SLEEP;
     waitq_add(q, g_curr_task);
-
-    enable_interrupts();
 
     // Switch away (yield or schedule)
     yield();

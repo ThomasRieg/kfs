@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/12 05:12:52 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/12 17:04:49 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,12 +87,14 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		{
 			return readed ? (int32_t)(readed) : (-EAGAIN);
 		}
-		else if(readed < n)
+		else if(readed < n && pipe->writers)
 		{
-			printk("debug, yieded in pipe read\n");
+			printk("debug, sleeping in pipe read pid %u\n", g_curr_task->task_id);
 			sleep_on(&pipe->wait_read, WAIT_PIPE_READ);
 		}
 	}
+	if (pipe->used)
+		waitq_wake_one(&pipe->wait_read); //in case another reader is waiting but no writer sleeping on wait_write to wake them up
 	return (readed);
 }
 
@@ -123,12 +125,14 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		{
 			return wrote ? (int32_t)(wrote) : (-EAGAIN);
 		}
-		else if(wrote < n)
+		else if(wrote < n && pipe->readers)
 		{
 			printk("debug, yieded in pipe write\n");
 			sleep_on(&pipe->wait_write, WAIT_PIPE_WRITE);
 		}
 	}
+	if (pipe->used != sizeof(pipe->buf))
+		waitq_wake_one(&pipe->wait_write); //in case another writer is waiting but no reader sleeping on wait_read to wake them up
 	return (wrote);
 }
 

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   pipe.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:19 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 17:42:33 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/12 04:41:02 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include "../common.h"
 #include "fd.h"
+#include "../waitq/waitq.h"
 
 #define PIPE_SIZE 8192
 
@@ -25,7 +26,8 @@ typedef struct s_pipe
 	uint32_t used;
 	uint32_t readers;
 	uint32_t writers;
-	// wait queues / blocked lists if you have them
+	t_waitq wait_read; //wait inside read, so wake up these when you write something
+	t_waitq wait_write; //wait inside write, so wake up these when you write something
 } t_pipe;
 
 typedef struct s_pipe_end

@@ -15,6 +15,7 @@
 #include "../libk/vec.h"
 #include "../dt/dt.h"
 #include "../fd/fd.h"
+#include "../waitq/waitq.h"
 
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
@@ -35,12 +36,6 @@ enum task_status
 	STATUS_RUNNABLE,
 	STATUS_SLEEP,
 	STATUS_ZOMBIE,
-};
-
-enum wait_reason
-{
-	WAIT_NONE,
-	WAIT_CHILD,
 };
 
 /*struct open_file
@@ -120,7 +115,7 @@ typedef struct task
 	unsigned int suid;
 	unsigned int gid;
 	unsigned int egid;
-	unsigned int exit_code;
+	unsigned int exit_code; //status returned by wait, signal on last byte, exit number on second to last byte
 	unsigned int pending_signals;
 	t_file *open_files[MAX_OPEN_FILES];
 	unsigned int cwd_inode_nr;
@@ -131,6 +126,9 @@ typedef struct task
 	t_sig_handler sig_handlers[32];
 	struct task *next; // circular linked list, TODO do better
 	t_mm proc_memory;
+	t_waitq_node wq_node;  // used when sleeping
+    t_waitq *sleep_q;      // which queue we’re in (for removal)
+	t_waitq wait_child;  // waitq owned by this struct, 
 } t_task;
 
 struct process_strings

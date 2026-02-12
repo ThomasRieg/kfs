@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   process_basics.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/05 17:33:46 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/12 04:33:35 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -329,7 +329,6 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 		if (z)
 		{
 			uint32_t child_pid = z->task_id;
-			uint32_t status = ((uint32_t)(z->exit_code & 0xFF) << 8);
 
 			unlink_child(g_curr_task, z);
 
@@ -340,7 +339,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 			{
 				if (!user_range_ok((virt_ptr)stat_uaddr, sizeof(uint32_t), true, &g_curr_task->proc_memory))
 					return (uint32_t)(-EFAULT);
-				*(uint32_t *)(uintptr_t)stat_uaddr = status;
+				*(uint32_t *)(uintptr_t)stat_uaddr = z->exit_code;
 			}
 
 			task_reap_zombie(z);
@@ -360,8 +359,9 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 		// enable_interrupts();
 
-		printk("wait4 yielded\n");
-		yield();
+		printk("wait4 sleeps in pid %u\n", g_curr_task->task_id);
+		sleep_on(&g_curr_task->wait_child, WAIT_CHILD);
+		printk("wait4 wakes up in pid %u\n", g_curr_task->task_id);
 	}
 }
 
@@ -549,6 +549,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->gid = g_curr_task->gid;
 	task->egid = g_curr_task->egid;
 	task->user_gdt_segment = g_curr_task->user_gdt_segment;
+	waitq_init(&task->wait_child);
 	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
 	for (unsigned short i = 0; i < sizeof(task->open_files) / sizeof(task->open_files[0]); i++)
 		if (task->open_files[i])
@@ -618,16 +619,12 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 	
 	adopt_children_list(g_init_task, g_curr_task->children);
 	g_curr_task->children = NULL;
-	g_curr_task->exit_code = regs->ebx;
+	g_curr_task->exit_code = (regs->ebx & 0xFF) << 8;
 	g_curr_task->status = STATUS_ZOMBIE;
 	g_curr_task->parent_task->pending_signals |= (1 << SIGCHLD);
 
-	if (g_curr_task->parent_task->status == STATUS_SLEEP &&
-		g_curr_task->parent_task->wait_reason == WAIT_CHILD)
-	{
-		g_curr_task->parent_task->status = STATUS_RUNNABLE;
-		g_curr_task->parent_task->wait_reason = WAIT_NONE;
-	}
+    // wake any wait4 sleepers
+    waitq_wake_all(&g_curr_task->parent_task->wait_child);
 	cleanup_task(g_curr_task);
 	context_switch(g_curr_task->parent_task);
 	__builtin_unreachable();

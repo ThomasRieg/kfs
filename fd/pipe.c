@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   pipe.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/05 17:54:53 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/12 05:12:52 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,8 +69,9 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 	t_pipe *pipe = pipe_end->p;
 	if (!pipe)
 		return (-EBADF);
-	uint8_t *buf = (uint8_t *)buf_; //we syscall_read validated this buffer already
+	uint8_t *buf = (uint8_t *)buf_; //syscall_read validated this buffer already
 	uint32_t readed = 0;
+	//bool was_full = (pipe->used == sizeof(pipe->buf));
 	while (readed < n)
 	{
 		if (pipe->used)
@@ -81,6 +82,7 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		{
 			return (readed); // no read = readed 0 = eof
 		}
+		waitq_wake_one(&pipe->wait_write);
 		if (f->flags & O_NONBLOCK)
 		{
 			return readed ? (int32_t)(readed) : (-EAGAIN);
@@ -88,7 +90,7 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		else if(readed < n)
 		{
 			printk("debug, yieded in pipe read\n");
-			yield(); // TODO implement real sleep
+			sleep_on(&pipe->wait_read, WAIT_PIPE_READ);
 		}
 	}
 	return (readed);
@@ -102,8 +104,9 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 	t_pipe *pipe = pipe_end->p;
 	if (!pipe)
 		return (-EBADF);
-	uint8_t *buf = (uint8_t *)buf_; //we syscall_read validated this buffer already
+	uint8_t *buf = (uint8_t *)buf_; //syscall_write validated this buffer already
 	uint32_t wrote = 0;
+	//bool was_empty = pipe->used == 0;
 	while (wrote < n)
 	{
 		if (!pipe->readers)
@@ -115,6 +118,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		{
 			wrote += pipe_write_ring(pipe, buf + wrote, (uint32_t)(n - wrote));
 		}
+		waitq_wake_one(&pipe->wait_read);
 		if (f->flags & O_NONBLOCK)
 		{
 			return wrote ? (int32_t)(wrote) : (-EAGAIN);
@@ -122,7 +126,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		else if(wrote < n)
 		{
 			printk("debug, yieded in pipe write\n");
-			yield(); // TODO implement real sleep
+			sleep_on(&pipe->wait_write, WAIT_PIPE_WRITE);
 		}
 	}
 	return (wrote);
@@ -145,7 +149,7 @@ int32_t pipe_close(t_file *f)
 			pipe->readers = 0;
 		else
 		 	kernel_panic("uncoherent pipe state \n", NULL);
-		// TODO wake writers if 0 readers when sleep system implemented
+		waitq_wake_all(&pipe->wait_write);
 	}
 	else
 	{
@@ -153,7 +157,7 @@ int32_t pipe_close(t_file *f)
 			pipe->writers = 0;
 		else
 		 	kernel_panic("uncoherent pipe state \n", NULL);
-		// TODO wake writers if 0 readers when sleep system implemented
+		waitq_wake_all(&pipe->wait_read);
 	}
 	if (!pipe->readers && !pipe->writers)
 	{

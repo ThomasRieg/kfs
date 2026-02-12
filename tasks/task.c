@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 19:21:39 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/12 04:21:18 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -189,6 +189,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->uid = task->euid = task->suid = user_id;
 	task->gid = task->egid = user_id;
 	task->pd = copy_current_pd();
+	waitq_init(&task->wait_child);
 	if (!task->pd)
 		return (false);
 	task->proc_memory.heap_current = 0; // temporary

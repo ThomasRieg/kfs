@@ -508,3 +508,12 @@ uint32_t syscall_getdents64(t_interrupt_data *regs)
 		((t_inode *)file->priv)->file_offset += written;
 	return written;
 }
+
+uint32_t syscall_getcwd(t_interrupt_data *regs) {
+	char *buf = (char *)regs->ebx;
+	unsigned int size = regs->ecx;
+	printk("getcwd: %p %u\n", buf, size);
+	if (!user_range_ok(buf, size, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	return getdirname(g_curr_task->cwd_inode_nr, buf, size);
+}

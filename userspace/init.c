@@ -49,6 +49,11 @@ int main(void)
 
 	printf("\t\t//// CHANGING CWD TO `/etc`\n");
 	chdir("/etc");
+	char buf[4096];
+	if (getcwd(buf, sizeof(buf)))
+		printf("cwd: %s\n", buf);
+	else
+		perror("getcwd");
 
 	printf("\t\t//// OPENING `hostname`\n");
 

@@ -398,7 +398,7 @@ int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int cou
 	struct ext2_direntry *direntry = (struct ext2_direntry *)(contents.data + offset);
 	while ((unsigned char *)direntry < contents.data + contents.length && direntry->inode) {
 		unsigned int reclen = sizeof(struct linux_dirent64) + direntry->name_length + 1;
-		printk("%u", (unsigned int)sizeof(struct linux_dirent64));
+		//printk("%u", (unsigned int)sizeof(struct linux_dirent64));
 		reclen = (reclen + 7) & (~7);
 		if (written_count + reclen > count)
 			break;
@@ -417,6 +417,53 @@ int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int cou
 	VecU8_destruct(&contents);
 
 	return written_count;
+}
+
+// TODO: this currently writes path in reverse order (better than nothing I guess)
+int getdirname(unsigned int inode_nr, char *buf, unsigned int size) {
+	if (!ext2_mounted.mounted) return -EBADF;
+	if (size == 0)
+		return -ERANGE;
+
+	struct ext2_inode_extended inode;
+
+	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
+	*buf = '/';
+
+	unsigned written_count = 1;
+	while (1) {
+		if ((inode.base.mode >> 12) != MODE_DIRECTORY)
+			return -ENOTDIR;
+
+		unsigned int parent_inode_nr = ext2_path_to_inode(&ext2_mounted, "..", inode_nr);
+		if (parent_inode_nr == 0) return -EBADF;
+		if (parent_inode_nr == inode_nr) {
+			if (size == written_count)
+				return -ERANGE;
+			buf[written_count++] = '\0';
+			return written_count; // root reached
+		}
+
+		if (!ext2_get_inode(&ext2_mounted, parent_inode_nr, &inode)) return -EBADF;
+
+		struct VecU8 contents = ext2_read_inode(&ext2_mounted, &inode);
+
+		struct ext2_direntry *direntry = (struct ext2_direntry *)(contents.data);
+		while ((unsigned char *)direntry < contents.data + contents.length && direntry->inode) {
+			if (direntry->inode == inode_nr) {
+				if (written_count + direntry->name_length > size) {
+					VecU8_destruct(&contents);
+					return -ERANGE;
+				}
+				memcpy(buf + written_count, direntry->name, direntry->name_length);
+				written_count += direntry->name_length;
+			}
+
+			direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
+		}
+		VecU8_destruct(&contents);
+		inode_nr = parent_inode_nr;
+	}
 }
 
 struct VecU8 read_full_file(const char *path) {

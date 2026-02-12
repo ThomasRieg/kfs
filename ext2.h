@@ -16,3 +16,4 @@ int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned i
 struct VecU8 read_full_file(const char *path);
 unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr);
 bool stat_inode(unsigned int inode_nr, struct stat *out);
+int getdirname(unsigned int inode_nr, char *buf, unsigned int size);

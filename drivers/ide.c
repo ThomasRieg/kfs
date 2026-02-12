@@ -102,7 +102,7 @@ _Static_assert(offsetof(union ata_ident, max_lba) == 120, "incorrect ata_ident s
 _Static_assert(offsetof(union ata_ident, command_sets) == 164, "incorrect ata_ident struct");
 _Static_assert(offsetof(union ata_ident, max_lba_ext) == 200, "incorrect ata_ident struct");
 
-void ide_read_sector(struct ide_drive *drive, unsigned int lba48, unsigned char buffer[512]) {
+static void ide_select_lba(struct ide_drive *drive, unsigned int lba48) {
 	unsigned int base = drive->base;
 	outb(base + ATA_REG_HDDEVSEL, 0xE0 | (drive->slave << 4));
 
@@ -116,7 +116,11 @@ void ide_read_sector(struct ide_drive *drive, unsigned int lba48, unsigned char 
 	outb(base + ATA_REG_LBA0, lba48 & 0xFF);
 	outb(base + ATA_REG_LBA1, (lba48 & 0xFF00) >> 8);
 	outb(base + ATA_REG_LBA2, (lba48 & 0xFF0000) >> 16);
+}
 
+void ide_read_sector(struct ide_drive *drive, unsigned int lba48, unsigned char buffer[512]) {
+	unsigned int base = drive->base;
+	ide_select_lba(drive, lba48);
 	outb(base + ATA_REG_COMMAND, ATA_CMD_READ_PIO_EXT);
 	while (1) {
 		unsigned char status = inb(base + ATA_REG_STATUS);
@@ -132,6 +136,25 @@ void ide_read_sector(struct ide_drive *drive, unsigned int lba48, unsigned char 
 		unsigned short word = inw(base + ATA_REG_DATA);
 		buffer[i] = word & 0xFF;
 		buffer[i + 1] = word >> 8;
+	}
+}
+
+void ide_write_sector(struct ide_drive *drive, unsigned int lba48, unsigned char buffer[512]) {
+	unsigned int base = drive->base;
+	ide_select_lba(drive, lba48);
+	outb(base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO_EXT);
+	while (1) {
+		unsigned char status = inb(base + ATA_REG_STATUS);
+		if (status & ATA_SR_ERR) {
+			unsigned char error = inb(base + ATA_REG_ERROR);
+			print_ata_error(error);
+			return;
+		}
+		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) break;
+	}
+
+	for (unsigned short i = 0; i < 512; i += 2) {
+		outw(base + ATA_REG_DATA, (buffer[i + 1] << 8) | buffer[i]);
 	}
 }
 

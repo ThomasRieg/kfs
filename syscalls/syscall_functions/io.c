@@ -202,6 +202,7 @@ uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribut
 	}
 	if (i >= MAX_OPEN_FILES)
 		return (-EMFILE);
+	printk("open: free fd=%u\n", i);
 	if (strcmp(path, "/dev/tty1") == 0)
 	{
 		t_file *file = vmalloc(sizeof(*file));
@@ -245,9 +246,11 @@ uint32_t syscall_open(t_interrupt_data *regs)
 	const char *path = (char *)regs->ebx;
 	int flags = regs->ecx;
 	unsigned int mode = regs->edx;
+	printk("open: %s %d %u\n", path, flags, mode);
+	if (!path)
+		return -EFAULT;
 	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	printk("open: %s %d %u\n", path, flags, mode);
 	return do_open(path, g_curr_task->cwd_inode_nr, flags, mode);
 }
 
@@ -257,9 +260,11 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 	const char *path = (char *)regs->ecx;
 	int open_flag = regs->edx;
 	unsigned int mode = regs->edi;
+	printk("openat: %u %s %u %u\n", dirfd, path, open_flag, mode);
+	if (!path)
+		return -EFAULT;
 	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	printk("openat: %u %s %u %u\n", dirfd, path, open_flag, mode);
 	unsigned int dir_inode;
 	if (dirfd == AT_FDCWD)
 		dir_inode = g_curr_task->cwd_inode_nr;
@@ -337,12 +342,32 @@ uint32_t syscall_close(t_interrupt_data *regs)
 	return (0);
 }
 
+#define F_DUPFD 0
+#define F_DUPFD_CLOEXEC 1030
 uint32_t syscall_fcntl64(t_interrupt_data *regs)
 {
 	int fd = regs->ebx;
 	int cmd = regs->ecx;
 	printk("fcntl64: %u %u\n", fd, cmd);
-	return 0;
+	t_file *file = get_file_from_fd(fd);
+	if (!file)
+		return (-EBADF);
+	if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) {
+		// TODO: handle CLOEXEC
+		int ge_fd = regs->edx;
+		printk("fcntl64 ge_fd=%u\n", ge_fd);
+		if (ge_fd < 0 || (unsigned)ge_fd >= MAX_OPEN_FILES)
+			return -EBADF;
+		while ((unsigned int)ge_fd < MAX_OPEN_FILES && g_curr_task->open_files[ge_fd])
+			ge_fd++;
+		if ((unsigned int)ge_fd >= MAX_OPEN_FILES)
+			return -EMFILE;
+		printk("fcntl free_ge_fd=%u\n", ge_fd);
+		g_curr_task->open_files[ge_fd] = file;
+		file->refcnt += 1;
+		return ge_fd;
+	}
+	return -EINVAL;
 }
 
 uint32_t syscall_read(t_interrupt_data *regs)

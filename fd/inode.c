@@ -27,6 +27,7 @@ int32_t inode_read(t_file *f, void *buf, size_t n)
 
 int32_t inode_write(t_file *f, const void *buf, size_t n)
 {
+	return n;
 	if (f && buf && n)
 		return (-ENOSYS);
 	return (-ENOSYS);

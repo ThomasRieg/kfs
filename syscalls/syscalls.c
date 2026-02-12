@@ -30,6 +30,7 @@ void syscall_dispatcher(t_interrupt_data *regs)
 		printk("received unhandled syscall %u\n", regs->eax);
 		regs->eax = -ENOSYS;
 	}
+	//printk("return value %u\n", regs->eax);
 }
 
 void init_syscalls(void)

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 06:05:35 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 06:22:29 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -403,6 +403,12 @@ void free_backing_obj(t_vma *vma)
 		if (!backing->refcnt)
 		{
 			struct shm_page *curr = backing->pages;
+			uint32_t *pte = get_pte(curr->virt_start);
+			if (pte && !(*pte & PTE_P))
+			{
+				*pte = 0;
+				invalidate_cache(curr->virt_start);
+			}
 			while (curr)
 			{
 				struct shm_page *next = curr->next;

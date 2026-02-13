@@ -231,7 +231,7 @@ uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribut
 	if (i >= MAX_OPEN_FILES)
 		return (-EMFILE);
 	print_debug("open: free fd=%u\n", i);
-	if (strcmp(path, "/dev/tty1") == 0)
+	if (strcmp(path, "/dev/tty1") == 0 || strcmp(path, "/dev/tty") == 0)
 	{
 		t_file *file = vmalloc(sizeof(*file));
 		if (!file)

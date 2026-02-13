@@ -105,13 +105,24 @@ struct timespec rtc_get_time(void) {
 	return (struct timespec){seconds_since_epoch, 0};
 }
 
-uint32_t syscall_clock_gettime(t_interrupt_data *regs)
+static uint32_t syscall_clock_gettime(t_interrupt_data *regs)
 {
 	if (regs->ebx > 0)
 		return (-EINVAL);
 
 	struct timespec *dst = (struct timespec *)regs->ecx;
 	*dst = rtc_get_time();
+	return (0);
+}
+
+static uint32_t syscall_clock_gettime64(t_interrupt_data *regs)
+{
+	if (regs->ebx > 0)
+		return (-EINVAL);
+
+	struct timespec64 *dst = (struct timespec64 *)regs->ecx;
+	struct timespec time = rtc_get_time();
+	*dst = (struct timespec64){.tv_sec=time.tv_sec,.tv_nsec=time.tv_nsec};
 	return (0);
 }
 
@@ -212,6 +223,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(202, syscall_getegid32);
 	add_syscall(220, syscall_getdents64);
 	add_syscall(221, syscall_fcntl64);
+	add_syscall(224, syscall_gettid);
 	add_syscall(238, syscall_tkill);
 	add_syscall(243, syscall_set_thread_area);
 	add_syscall(244, syscall_get_thread_area);
@@ -227,7 +239,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(383, syscall_statx);
 	//add_syscall(386, syscall_set_tid_address); // TODO: implement
 	add_syscall(384, syscall_archprctl);
-	//add_syscall(403, syscall_set_tid_address); // TODO: implement
+	add_syscall(403, syscall_clock_gettime64);
 
 	setup_pics();
 	writes("PICs configured.\n");

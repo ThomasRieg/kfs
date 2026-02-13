@@ -50,6 +50,11 @@ struct timespec
 	unsigned int tv_sec;
 	unsigned int tv_nsec;
 };
+struct timespec64
+{
+	unsigned long long int tv_sec;
+	unsigned int tv_nsec;
+};
 struct timespec rtc_get_time(void);
 
 typedef unsigned long int dev_t;

@@ -58,6 +58,11 @@ uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)
 	return (g_curr_task->task_id);
 }
 
+uint32_t syscall_gettid(__attribute__((unused)) t_interrupt_data *regs)
+{
+	return (g_curr_task->task_id);
+}
+
 uint32_t syscall_getppid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	if (!g_curr_task->parent_task)

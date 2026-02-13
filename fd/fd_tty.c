@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 03:15:11 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/14 00:53:57 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,7 +67,6 @@ int32_t tty_write(t_file *f, const void *buf, size_t n)
 	if (!tty)
 		return (-EBADF);
 	write(buf, n);
-	waitq_wake_one(&tty->wait_read);
 	return (n);
 }
 

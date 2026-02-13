@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/13 05:38:12 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 06:07:08 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 07:08:21 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,6 +70,8 @@ uint32_t munmap(t_mm *mm, virt_ptr addr, size_t len)
 
         virt_ptr os = maxv(start, v->start);
         virt_ptr oe = minv(end,   v->end);
+        
+        zap_range_pages(v, os, oe);
 
         //remove
         if (start <= v->start && end >= v->end)
@@ -84,8 +86,6 @@ uint32_t munmap(t_mm *mm, virt_ptr addr, size_t len)
             v = next;
             continue;
         }
-
-        zap_range_pages(v, os, oe);
 
         if (start <= v->start && end < v->end)
         {

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 03:02:36 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 03:22:04 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -472,7 +472,7 @@ void unlink_task_from_runq(t_task *task)
 {
 	if (task->next == task)
 	{
-		print_warn("run queue empty, last task unlinked pid %u\n", task->task_id);
+		print_debug("run queue empty, last task unlinked pid %u\n", task->task_id);
 		g_curr_task = NULL;
 	}
 	t_task *next = task->next;

@@ -5,6 +5,7 @@
 #include "io.h"
 
 #include <stddef.h>
+#include <stdint.h>
 #include "interrupts/s_regs.h"
 
 #if __STDC_VERSION__ < 202311l
@@ -92,5 +93,28 @@ static inline void enable_interrupts(void)
 {
 	asm volatile("sti");
 }
+
+enum e_print_level
+{
+	PRINT_TRACE = 0,
+    PRINT_DEBUG = 1,
+    PRINT_INFO  = 2,
+    PRINT_WARN  = 3,
+    PRINT_ERROR = 4,
+};
+
+extern enum e_print_level debug_print_level; //set in main.c
+
+#define printk_if(level, fmt, ...)                           \
+    do {                                                      \
+        if ((level) >= debug_print_level)                    \
+            printk(fmt, ##__VA_ARGS__);                       \
+    } while (0)
+
+#define print_trace(fmt, ...) printk_if(PRINT_TRACE, fmt, ##__VA_ARGS__)
+#define print_debug(fmt, ...) printk_if(PRINT_DEBUG, fmt, ##__VA_ARGS__)
+#define print_info(fmt, ...)  printk_if(PRINT_INFO,  fmt, ##__VA_ARGS__)
+#define print_warn(fmt, ...)  printk_if(PRINT_WARN,  fmt, ##__VA_ARGS__)
+#define print_err(fmt, ...)   printk_if(PRINT_ERROR, fmt, ##__VA_ARGS__)
 
 #endif

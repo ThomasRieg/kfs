@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   mem_tester.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/08 00:19:00 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/19 20:29:59 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:24:01 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ static void hexdump16(const void *ptr, uint32_t n)
 	for (uint32_t i = 0; i < n; ++i)
 	{
 		if ((i & 15u) == 0)
-			printk("\n  %p: ", (void *)(p + i));
+			print_info("\n  %p: ", (void *)(p + i));
 		uint8_t b = p[i];
 		const char *hex = "0123456789abcdef";
 		char out[3] = {hex[b >> 4], hex[b & 0xF], 0};
@@ -39,7 +39,7 @@ static void hexdump16(const void *ptr, uint32_t n)
 
 __attribute__((noreturn)) static void test_panic(const char *msg)
 {
-	printk("\n[TEST PANIC] %s\n", msg);
+	print_info("\n[TEST PANIC] %s\n", msg);
 	asm volatile("cli");
 	for (;;)
 		asm volatile("hlt");
@@ -48,7 +48,7 @@ __attribute__((noreturn)) static void test_panic(const char *msg)
 #define TEST_FAILF(fmt, ...)                         \
 	do                                               \
 	{                                                \
-		printk("\n[FAIL] " fmt "\n", ##__VA_ARGS__); \
+		print_err("\n[FAIL] " fmt "\n", ##__VA_ARGS__); \
 		test_panic("allocator test failed");         \
 	} while (0)
 
@@ -114,7 +114,7 @@ static void test_kmmap_stress(uint32_t iters, uint32_t pages_each, uint32_t flag
 	}
 
 	*cs_out ^= cs;
-	printk("[kmmap] %s iters=%u pages=%u cs=%p [OK]\n",
+	print_info("[kmmap] %s iters=%u pages=%u cs=%p [OK]\n",
 		   name, iters, pages_each, (void *)cs);
 }
 
@@ -184,7 +184,7 @@ static void test_kmmap_fragmentation(uint32_t rounds, uint32_t flags_contig, uin
 			kmunmap(hold[i], hold_pages[i]);
 
 	*cs_out ^= cs;
-	printk("[kmmap] frag rounds=%u cs=%p [OK]\n", rounds, (void *)cs);
+	print_info("[kmmap] frag rounds=%u cs=%p [OK]\n", rounds, (void *)cs);
 }
 
 static void test_vmalloc_fragmentation(uint32_t count, bool contig)
@@ -241,7 +241,7 @@ static void test_vmalloc_fragmentation(uint32_t count, bool contig)
 
 		if (b[0] != 0xA5 || b[sz - 1] != 0x5A)
 		{
-			printk("[dbg] phase=A i=%u p=%p sz=%u\n", i, p, sz);
+			print_info("[dbg] phase=A i=%u p=%p sz=%u\n", i, p, sz);
 			hexdump16(p, (sz < 64) ? sz : 64);
 			TEST_FAILF("cannot read back memory (phase=A i=%u p=%p sz=%u)", i, p, sz);
 		}
@@ -256,7 +256,7 @@ static void test_vmalloc_fragmentation(uint32_t count, bool contig)
 		uint32_t sz = sizes[i];
 		if (b[0] != 0xA5 || b[sz - 1] != 0x5A)
 		{
-			printk("[dbg] phase=B pre-free i=%u p=%p sz=%u\n", i, ptrs[i], sz);
+			print_info("[dbg] phase=B pre-free i=%u p=%p sz=%u\n", i, ptrs[i], sz);
 			hexdump16(ptrs[i], (sz < 64) ? sz : 64);
 			TEST_FAILF("corrupted block before free (phase=B i=%u p=%p sz=%u)", i, ptrs[i], sz);
 		}
@@ -292,7 +292,7 @@ static void test_vmalloc_fragmentation(uint32_t count, bool contig)
 
 		if (b[0] != 0xCC || b[sz - 1] != 0x33)
 		{
-			printk("[dbg] phase=C k=%u p=%p sz=%u\n", k, p, sz);
+			print_info("[dbg] phase=C k=%u p=%p sz=%u\n", k, p, sz);
 			hexdump16(p, (sz < 64) ? sz : 64);
 			TEST_FAILF("cannot read back canaries (phase=C k=%u p=%p sz=%u)", k, p, sz);
 		}
@@ -309,7 +309,7 @@ static void test_vmalloc_fragmentation(uint32_t count, bool contig)
 		uint32_t sz = sizes[i];
 		if (b[0] != 0xA5 || b[sz - 1] != 0x5A)
 		{
-			printk("[dbg] phase=D pre-free i=%u p=%p sz=%u\n", i, ptrs[i], sz);
+			print_info("[dbg] phase=D pre-free i=%u p=%p sz=%u\n", i, ptrs[i], sz);
 			hexdump16(ptrs[i], (sz < 64) ? sz : 64);
 			TEST_FAILF("corrupted block before free (phase=D i=%u p=%p sz=%u)", i, ptrs[i], sz);
 		}
@@ -318,7 +318,7 @@ static void test_vmalloc_fragmentation(uint32_t count, bool contig)
 		ptrs[i] = NULL;
 	}
 
-	printk("[%s] rounds=%u [OK]\n", contig ? "kmalloc" : "vmalloc", count);
+	print_info("[%s] rounds=%u [OK]\n", contig ? "kmalloc" : "vmalloc", count);
 }
 
 static void test_vrealloc_stress(uint32_t iters, uint32_t *cs_out)
@@ -374,7 +374,7 @@ static void test_vrealloc_stress(uint32_t iters, uint32_t *cs_out)
 	}
 
 	*cs_out ^= cs;
-	printk("[vrealloc] iters=%u cs=%p [OK]\n", iters, (void *)cs);
+	print_info("[vrealloc] iters=%u cs=%p [OK]\n", iters, (void *)cs);
 }
 
 static void check_phys_contiguous(virt_ptr p, uint32_t size)
@@ -403,7 +403,7 @@ static void test_kmalloc_contiguous(uint32_t rounds)
 {
 	uint32_t seed = 0xBADC0FFEu;
 
-	printk("[kmalloc] contiguous test rounds=%u\n", rounds);
+	print_info("[kmalloc] contiguous test rounds=%u\n", rounds);
 
 	for (uint32_t i = 0; i < rounds; ++i)
 	{
@@ -463,7 +463,7 @@ static void test_kmalloc_contiguous(uint32_t rounds)
 		kfree(kp);
 	}
 
-	printk("[kmalloc] contiguous + isolation [OK]\n");
+	print_info("[kmalloc] contiguous + isolation [OK]\n");
 }
 
 void mem_test_all(void)
@@ -474,7 +474,7 @@ void mem_test_all(void)
 	uint8_t background;
 	vga_get_color(&foreground, &background);
 	vga_set_color(VGA_GREEN, VGA_BLACK);
-	printk("[MEMORY TEST] cs=%p\n", (void *)cs);
+	print_info("[MEMORY TEST] cs=%p\n", (void *)cs);
 	// kmmap: fast repeated
 	test_kmmap_stress(8, 2056, PTE_RW | MMAP_CONTIG, "contig", &cs);
 	test_kmmap_stress(8, 2056, PTE_RW, "noncontig", &cs);
@@ -492,7 +492,7 @@ void mem_test_all(void)
 	// vrealloc stress
 	test_vrealloc_stress(1024, &cs);
 
-	printk("[DONE] cs=%p\n", (void *)cs);
+	print_info("[DONE] cs=%p\n", (void *)cs);
 	vga_set_color(foreground, background);
 }
 
@@ -501,7 +501,7 @@ void fill_memory(void)
 	virt_ptr *alloc_array = vmalloc(1000000 * sizeof(virt_ptr));
 	if (!alloc_array)
 	{
-		printk("couldn't allocate enough memory to setup fill_memory\n");
+		print_err("couldn't allocate enough memory to setup fill_memory\n");
 		return;
 	}
 	uint32_t nb_alloc = 0;
@@ -514,9 +514,9 @@ void fill_memory(void)
 		}
 		else
 		{
-			printk("memory filled after %u page kmmap'ed\n", nb_alloc);
+			print_info("memory filled after %u page kmmap'ed\n", nb_alloc);
 			extern uint32_t pmm_free_frames(void);
-			printk("%u physical frames left\n", pmm_free_frames());
+			print_info("%u physical frames left\n", pmm_free_frames());
 			break;
 		}
 	}
@@ -526,7 +526,7 @@ void fill_memory(void)
 	{
 		kmunmap(alloc_array[i], 1);
 	}
-	printk("memory munmap'ed\n", nb_alloc);
+	print_info("memory munmap'ed\n", nb_alloc);
 	// try to realloc as many pages as we got before
 	bool success = true;
 	for (uint32_t i = 0; i < nb_alloc; i++)
@@ -534,21 +534,21 @@ void fill_memory(void)
 		alloc_array[i] = kmmap(0, 1, PTE_RW);
 		if (!alloc_array[i])
 		{
-			printk("ERROR couldn't get back as many pages as we just kmunmap'ed, memory filled after %u page kmmap'ed (%u less than expected)\n", i, nb_alloc - i);
+			print_err("ERROR couldn't get back as many pages as we just kmunmap'ed, memory filled after %u page kmmap'ed (%u less than expected)\n", i, nb_alloc - i);
 			nb_alloc = i;
 			success = false;
 			break;
 		}
 	}
 	if (success)
-		printk("successfully managed to realloc every page we just freed\n");
+		print_info("successfully managed to realloc every page we just freed\n");
 	virt_ptr first_va_round_two = nb_alloc ? alloc_array[0] : 0;
-	printk("address of first alloc : %p\naddress of first alloc the 2nd time: %p\n", first_va, first_va_round_two);
+	print_info("address of first alloc : %p\naddress of first alloc the 2nd time: %p\n", first_va, first_va_round_two);
 	for (uint32_t i = 0; i < nb_alloc; i++)
 	{
 		memset(alloc_array[i], 0, PAGE_SIZE);
 	}
-	printk("entire memory set to 0, is everything still working?\n");
+	print_info("entire memory set to 0, is everything still working?\n");
 	// free everything
 	for (uint32_t i = 0; i < nb_alloc; i++)
 	{

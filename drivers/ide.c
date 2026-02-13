@@ -189,7 +189,7 @@ const char *partition_type_str(unsigned char type) {
 
 void ide_init(struct pci_installed *installed) {
 	if (installed->prog_if & 1) {
-		printk("IDE controller not in compatibility mode!!\n");
+		print_err("IDE controller not in compatibility mode!!\n");
 	} else {
 		unsigned int base_primary_channel = 0x1F0;
 		unsigned int base_primary_channel_ctrl = 0x3F6;
@@ -228,13 +228,13 @@ void ide_init(struct pci_installed *installed) {
 					char c = ident.model[i + 1];
 					if (!c)
 						break;
-					printk("%c", c);
-					printk("%c", ident.model[i]);
+					print_info("%c", c);
+					print_info("%c", ident.model[i]);
 				}
-				printk("IDE device %u.%u found\n", i, j);
+				print_info("IDE device %u.%u found\n", i, j);
 				if (ident.command_sets & (1 << 26)) {
 					// 48-bit addressing
-					printk("48-bit addressing. sectors: %u, bytes: %u\n", ident.max_lba_ext, ident.max_lba_ext * 512);
+					print_info("48-bit addressing. sectors: %u, bytes: %u\n", ident.max_lba_ext, ident.max_lba_ext * 512);
 
 					unsigned char sector[512];
 					ide_read_sector(&drive, 0, sector);
@@ -250,7 +250,7 @@ void ide_init(struct pci_installed *installed) {
 								.first_sector = partition_entry[i].first_sector_lba,
 								.sector_count = partition_entry[i].total_sectors
 							};
-							printk("partition %u: type %u %s, total sectors %u\n", i, type, partition_type_str(type), partition_entry[i].total_sectors);
+							print_info("partition %u: type %u %s, total sectors %u\n", i, type, partition_type_str(type), partition_entry[i].total_sectors);
 							if (type == PART_LINUX) {
 								ext2_test(&partition);
 							}
@@ -258,7 +258,7 @@ void ide_init(struct pci_installed *installed) {
 					}
 				} else {
 					// CHS or 28-bit addressing
-					printk("28-bit addressing. sectors: %u, bytes %u\n", ident.max_lba, ident.max_lba * 512);
+					print_info("28-bit addressing. sectors: %u, bytes %u\n", ident.max_lba, ident.max_lba * 512);
 				}
 			}
 		}
@@ -266,6 +266,6 @@ void ide_init(struct pci_installed *installed) {
 }
 
 void ata_handler(__attribute__((unused)) t_interrupt_data *regs) {
-	printk("ATA handler %u called\n", regs->int_no);
+	print_trace("ATA handler %u called\n", regs->int_no);
 }
 

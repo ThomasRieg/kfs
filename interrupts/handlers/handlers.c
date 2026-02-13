@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   handlers.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:21:05 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:20:13 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -190,11 +190,10 @@ void page_fault_handler(t_interrupt_data *regs)
 	{
 		// page fault inside kernel code
 		writes("page fault :(\n");
-		printk("error code: %u\n", regs->err_code);
-		printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
+		print_err("error code: %u\n", regs->err_code);
+		print_err("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
 		print_interrupt_frame(regs);
-		while (1)
-			asm volatile("hlt");
+		kernel_panic("page faulted while g_curr_task was NULL", regs);
 	}
 	t_vma *vma = vma_for_address(&g_curr_task->proc_memory, virtual_address);
 	uint32_t *pte = get_pte((virt_ptr)virtual_address);
@@ -228,6 +227,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			phys_ptr frame = find_frame_from_shm_anon(backing, virtual_address_page_start);
 			if (!frame)
 			{
+				print_trace("trying to allocate new shared frame at %x by pid %u\n", virtual_address, g_curr_task->task_id);
 				frame = pmm_alloc_frame();
 				if (!frame)
 					kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
@@ -241,6 +241,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			}
 			else
 			{
+				print_trace("copying shared frame %x into pid %u\n", frame, g_curr_task->task_id);
 				map_page(frame, pte, get_vma_flags(vma));
 				invalidate_cache(virtual_address_page_start);
 			}
@@ -253,7 +254,7 @@ void page_fault_handler(t_interrupt_data *regs)
 	}
 	else if (vma && !is_present_fault(regs) && (!pte || !(*pte & PTE_P)))
 	{
-		// printk("debug, allocated new zone at %x\n", virtual_address);
+		print_trace("trying to allocate new private frame at %x by pid %u\n", virtual_address, g_curr_task->task_id);
 		phys_ptr frame = pmm_alloc_frame();
 		if (!frame)
 			kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
@@ -267,10 +268,10 @@ void page_fault_handler(t_interrupt_data *regs)
 	{
 		// COW 🐂
 		phys_ptr frame = *pte & 0xFFFFF000;
-		// printk("COW at frame %x, at va %x, from pid %u\n", frame, virtual_address, g_curr_task->task_id);
 		if (pmm_get_refs(frame) > 1)
 		{
 			// copy frame
+			print_trace("COW trying to copy frame at frame %x, at va %x, from pid %u\n", frame, virtual_address, g_curr_task->task_id);
 			phys_ptr new_frame = pmm_alloc_frame();
 			if (!new_frame)
 				kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
@@ -285,6 +286,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		else
 		{
 			// last reference, just make it rw
+			print_trace("COW marking frame at owned at frame %x, at va %x, from pid %u\n", frame, virtual_address, g_curr_task->task_id);
 			*pte |= PTE_RW;
 			*pte &= ~PTE_COW;
 			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
@@ -294,17 +296,15 @@ void page_fault_handler(t_interrupt_data *regs)
 	else
 	{
 		// TODO handle just killing the process, schedule another one and return
-		writes("page fault :(\n");
-		printk("error code: %u\n", regs->err_code);
+		print_err("page fault :(\n");
+		print_err("error code: %u\n", regs->err_code);
 		if (regs->err_code & 4)
-			printk("while in userspace\n");
-		printk("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
-		printk("by pid %u\n", g_curr_task->task_id);
+			print_err("while in userspace\n");
+		print_err("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
+		print_err("by pid %u\n", g_curr_task->task_id);
 		print_interrupt_frame(regs);
 		stack_trace_ebp(32, regs->ebp);
 		kernel_panic("page fault", regs);
-		while (1)
-			asm volatile("hlt");
 	}
 	// enable_interrupts();
 }

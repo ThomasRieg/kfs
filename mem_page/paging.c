@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   paging.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/01 01:14:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 20:47:01 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:40:47 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ extern char __kstack_top;
 #define PDE_COUNT 1024
 #define PTE_COUNT 1024
 
-static void print_debug(void)
+static void print_paging_debug(void)
 {
 	printk("[paging] paging enabled\n");
 
@@ -191,5 +191,5 @@ void paging_init(void *multiboot2_info)
 
 	// unmap the low-va identity map
 	unmap_low_identity();
-	print_debug();
+	print_paging_debug();
 }

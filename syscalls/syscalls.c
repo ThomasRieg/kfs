@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   syscalls.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:48:13 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/26 15:55:39 by alier            ###   ########.fr       */
+/*   Updated: 2026/02/13 02:25:24 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,17 +20,17 @@ static t_syscall_func g_syscall_handlers[1000];
 
 void syscall_dispatcher(t_interrupt_data *regs)
 {
-	//printk("syscall %u\n", regs->eax);
+	print_trace("syscall %u\n", regs->eax);
 	if (regs->eax >= (sizeof(g_syscall_handlers) / sizeof(t_syscall_func)))
 		regs->eax = -ENOSYS;
 	else if (g_syscall_handlers[regs->eax])
 		regs->eax = g_syscall_handlers[regs->eax](regs);
 	else
 	{
-		printk("received unhandled syscall %u\n", regs->eax);
+		print_err("received unhandled syscall %u\n", regs->eax);
 		regs->eax = -ENOSYS;
 	}
-	//printk("return value %u\n", regs->eax);
+	print_trace("return value %u\n", regs->eax);
 }
 
 void init_syscalls(void)

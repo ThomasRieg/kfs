@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 01:39:45 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:38:31 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,10 +128,10 @@ void build_initial_user_frame(t_task *t, uint32_t entry, uint32_t user_stack_top
 	f->ss = udata;
 
 	t->k_esp = (uint32_t)f;
-	/*printk("IRET frame: eip=%p cs=%x eflags=%x useresp=%p ss=%x\n",
+	/*print_trace("IRET frame: eip=%p cs=%x eflags=%x useresp=%p ss=%x\n",
 		   f->eip, f->cs, f->eflags, f->useresp, f->ss);
-	printk("task kesp %X\n", t->k_esp);
-	printk("task eip %X\n", f->eip);*/
+	print_trace("task kesp %X\n", t->k_esp);
+	print_trace("task eip %X\n", f->eip);*/
 }
 
 // will copy the ring0 pages cr3 currently loaded on the cpu
@@ -231,9 +231,9 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->status = STATUS_RUNNABLE;
 	task->cwd_inode_nr = 2;
 	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));
-	/*printk("kstack top=%p bot=%p\n",
+	print_trace("kstack top=%p bot=%p\n",
 	   &task->k_stack[sizeof(task->k_stack)],
-	   &task->k_stack[0]);*/
+	   &task->k_stack[0]);
 	gdt_set_user_segment(&task->user_gdt_segment);
 	extern void timer_handler(__attribute__((unused)) t_interrupt_data *regs);
 	isr_add_handler(INT_TIMER, timer_handler); //switch to scheduler in timer handler
@@ -252,15 +252,12 @@ void add_child(t_task *parent, t_task *child)
 // called from interrupt handler
 __attribute__((noreturn)) void context_switch(t_task *next)
 {
-	//printk("context_switch\n");
+	print_trace("context_switch to pid %u\n", next->task_id);
 	g_curr_task = next;
 	tss_set_kernel_stack((uintptr_t)&(next->k_stack[sizeof(next->k_stack)]));
 	gdt_set_user_segment(&next->user_gdt_segment);
-	// printk("1\n");
 	write_cr3(next->pd);
-	// printk("2\n");
 
-	// printk("3\n");
 	iret_from_frame((t_interrupt_data *)next->k_esp);
 	__builtin_unreachable();
 }
@@ -275,7 +272,7 @@ void schedule_next_task()
 	{
 		g_sleeping = true; //prevent reentrency that would create a stack overflow of timer interrupt_data
 		enable_interrupts();
-		printk("trace: no running program, sleeping");
+		print_trace("scheduler: no running program, sleeping");
 		asm volatile("hlt");
 		disable_interrupts();
 	}
@@ -286,6 +283,7 @@ void schedule_next_task()
 		t_task *to_schedule = g_to_schedule;
 		g_to_schedule = NULL;
 		context_switch(to_schedule);
+		return;
 	}
 	t_task *next = g_curr_task->next;
 	while (next != g_curr_task)
@@ -474,7 +472,7 @@ void unlink_task_from_runq(t_task *task)
 {
 	if (task->next == task)
 	{
-		printk("warning, run queue empty, last task unlinked pid %u\n", task->task_id);
+		print_warn("run queue empty, last task unlinked pid %u\n", task->task_id);
 		g_curr_task = NULL;
 	}
 	t_task *next = task->next;

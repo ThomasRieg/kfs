@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/12 17:04:49 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:07:39 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,7 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		}
 		else if(readed < n && pipe->writers)
 		{
-			printk("debug, sleeping in pipe read pid %u\n", g_curr_task->task_id);
+			print_debug("sleeping in pipe read pid %u\n", g_curr_task->task_id);
 			sleep_on(&pipe->wait_read, WAIT_PIPE_READ);
 		}
 	}
@@ -127,7 +127,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		}
 		else if(wrote < n && pipe->readers)
 		{
-			printk("debug, yieded in pipe write\n");
+			print_debug("yieded in pipe write\n");
 			sleep_on(&pipe->wait_write, WAIT_PIPE_WRITE);
 		}
 	}

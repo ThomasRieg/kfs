@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 01:38:43 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:42:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 	struct timespec start = rtc_get_time();
 	struct timespec now;
 	do {
-		printk("nanosleep yielded\n");
+		print_trace("nanosleep yielded\n");
 		yield();
 		now = rtc_get_time();
 	} while (now.tv_sec - start.tv_sec < req->tv_sec);
@@ -49,7 +49,7 @@ uint32_t syscall_setpgid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	unsigned int pid = regs->ebx;
 	unsigned int pgid = regs->ecx;
-	printk("setpgid %u %u\n", pid, pgid);
+	print_trace("setpgid %u %u\n", pid, pgid);
 	return 0;
 }
 
@@ -89,7 +89,7 @@ uint32_t syscall_getegid32(__attribute__((unused)) t_interrupt_data *regs)
 
 uint32_t syscall_archprctl(t_interrupt_data *regs)
 {
-	printk("arch prctl %x %x\n", regs->ebx, regs->ecx);
+	print_trace("arch prctl %x %x\n", regs->ebx, regs->ecx);
 	return (-EINVAL);
 }
 
@@ -108,10 +108,10 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 		return (-EFAULT);
 	//void *tmo_p = (void *)regs->edx;
 	//void *sigmask = (void *)regs->esi;
-	//printk("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
+	//print_trace("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
 	for (unsigned short i = 0; i < nfds; i++) {
-		//printk("\tfd: %d", fds[i].fd);
-		//printk("\tevents: %d\n", fds[i].events);
+		//print_debug("\tfd: %d", fds[i].fd);
+		//print_debug("\tevents: %d\n", fds[i].events);
 		fds[i].revents = fds[i].events;
 	}
 	return (nfds);
@@ -121,7 +121,7 @@ uint32_t syscall_tkill(t_interrupt_data *regs)
 {
 	int tid = regs->ebx;
 	int sig = regs->ecx;
-	printk("tkill %d %x\n", tid, sig);
+	print_trace("tkill %d %x\n", tid, sig);
 	return (0);
 }
 
@@ -130,7 +130,7 @@ uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
 	int how = regs->ebx;
 	void *set = (void *)regs->ecx;
 	void *oldset = (void *)regs->edx;
-	printk("rt_sigprocmask %x %x %x\n", how, set, oldset);
+	print_trace("rt_sigprocmask %x %x %x\n", how, set, oldset);
 	return (0);
 }
 
@@ -139,13 +139,13 @@ uint32_t syscall_rt_sigaction(t_interrupt_data *regs)
 	int signum = regs->ebx;
 	void *act = (void *)regs->ecx;
 	void *oldact = (void *)regs->edx;
-	printk("rt_sigaction %u %x %x\n", signum, act, oldact);
+	print_trace("rt_sigaction %u %x %x\n", signum, act, oldact);
 	return (0);
 }
 
 uint32_t syscall_brk(t_interrupt_data *regs)
 {
-	printk("brk %x\n", regs->ebx);
+	print_trace("brk %x\n", regs->ebx);
 	unsigned int old_brk = (unsigned int)g_curr_task->proc_memory.heap_current;
 	if (regs->ebx == 0)
 		return old_brk;
@@ -155,7 +155,7 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	unsigned int size = (unsigned int)page_align_up((void *)(new_brk - old_brk));
 	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED)
 	{
-		printk("couldn't allocate brk\n");
+		print_debug("couldn't allocate brk\n"); //debug because program gets -enomem anyway, that's the error report
 		return -ENOMEM;
 	}
 	g_curr_task->proc_memory.heap_current = (void *)new_brk;
@@ -194,7 +194,7 @@ uint32_t syscall_mmap2(t_interrupt_data *regs)
 
 uint32_t syscall_get_thread_area(t_interrupt_data *regs)
 {
-	printk("get thread area %p\n", regs->ebx);
+	print_trace("get thread area %p\n", regs->ebx);
 	return (0);
 }
 
@@ -205,7 +205,7 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	struct user_desc *desc = (struct user_desc *)regs->ebx;
 	if (!user_range_ok((virt_ptr)desc, sizeof(struct user_desc), true, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	printk("set thread area base=%p\n", desc, desc->base_addr);
+	print_trace("set thread area base=%p\n", desc, desc->base_addr);
 
 	desc->entry_number = 8; // entry #8 in GDT
 	g_curr_task->user_gdt_segment = *desc;
@@ -215,7 +215,7 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 
 uint32_t syscall_set_tid_address(t_interrupt_data *regs)
 {
-	printk("set tid address: %p\n", regs->ebx);
+	print_trace("set tid address: %p\n", regs->ebx);
 	return (g_curr_task->task_id);
 }
 
@@ -233,7 +233,7 @@ struct iovec
 
 uint32_t syscall_writev(t_interrupt_data *regs)
 {
-	// printk("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
+	print_trace("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
 	struct iovec *iovecs = (struct iovec *)regs->ecx;
 	uint32_t written = 0;
 	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * regs->edx, true, &g_curr_task->proc_memory))
@@ -242,7 +242,7 @@ uint32_t syscall_writev(t_interrupt_data *regs)
 	{
 		written += iovecs[i].iov_len;
 		write(iovecs[i].iov_base, iovecs[i].iov_len);
-		// printk("%u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
+		//print_debug("writev: %u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
 	}
 	return (written);
 }
@@ -359,9 +359,9 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 		// enable_interrupts();
 
-		printk("wait4 sleeps in pid %u\n", g_curr_task->task_id);
+		print_debug("wait4 sleeps in pid %u\n", g_curr_task->task_id);
 		sleep_on(&g_curr_task->wait_child, WAIT_CHILD);
-		printk("wait4 wakes up in pid %u\n", g_curr_task->task_id);
+		print_debug("wait4 wakes up in pid %u\n", g_curr_task->task_id);
 	}
 }
 
@@ -578,7 +578,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	g_curr_task->next = task;
 	task->status = STATUS_RUNNABLE;
 	// enable_interrupts();
-	// printk("forked pid %u\n", task->task_id);
+	print_trace("forked pid %u\n", task->task_id);
 
 	return (task->task_id);
 }
@@ -611,7 +611,7 @@ static void adopt_children_list(t_task *adopter, t_task *children)
 // int error_code
 __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 {
-	printk("exit: %u\n", regs->ebx);
+	print_debug("exit: %u\n", regs->ebx);
 	disable_interrupts(); // doesn't need to reenable because parent's task will override cpu flags
 
 	if (!g_curr_task->parent_task)

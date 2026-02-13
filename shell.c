@@ -21,7 +21,7 @@ void net_test(void)
 	const unsigned char *gateway_mac = arp_lookup(rtl8139.gateway_ipv4);
 
 	if (!gateway_mac) {
-		printk("Couldn'\t get Ethernet MAC of IPv4 gateway :(");
+		print_err("Couldn'\t get Ethernet MAC of IPv4 gateway :(");
 		return;
 	}
 

@@ -16,6 +16,8 @@
 #include "tasks/task.h"
 #include "errno.h"
 
+enum e_print_level debug_print_level = PRINT_INFO;
+
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
 	.hdr_len = sizeof(struct multiboot2_header),

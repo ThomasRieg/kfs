@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   fd_tty.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 17:41:54 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:41:34 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,8 +37,8 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 	if (f && buf && n) {
 		t_tty *tty = f->priv;
 		while (!tty->cmd.index && !tty->read_eof) {
-			yield();
-			//printk("yielding because no tty ready\n");
+			yield(); //TODO implement sleep here
+			//print_trace("yielding because no tty ready\n");
 		}
 		if (tty->read_eof) {
 			tty->read_eof = false;

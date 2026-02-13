@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 03:17:25 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 06:48:42 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -203,6 +203,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		if (!(*pde & PTE_P))
 		{
 			// allocate the page table itself
+			print_trace("trying to allocate new page table at %x by pid %u\n", virtual_address, g_curr_task->task_id);
 			phys_ptr pde_frame = pmm_alloc_frame();
 			if (!pde_frame)
 			{

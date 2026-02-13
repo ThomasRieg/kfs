@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 06:22:29 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 07:11:27 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -415,6 +415,7 @@ void free_backing_obj(t_vma *vma)
 				pmm_free_frame(curr->frame);
 				curr = next;
 			}
+			print_trace("freed shared backing obj\n");
 			vfree(backing);
 		}
 	}

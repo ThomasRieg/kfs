@@ -169,15 +169,43 @@ uint32_t syscall_fstatat(t_interrupt_data *regs)
 	int dirfd = regs->ebx;
 	const char *path = (char *)regs->ecx;
 	struct stat *buf = (struct stat *)regs->edx;
-	if (!user_range_ok(buf, sizeof(*buf), false, &g_curr_task->proc_memory))
+	unsigned int flags = regs->esi;
+	print_trace("fstatat at eip %p: %u %s %p %u\n", regs->eip, dirfd, path, buf, flags);
+	if (!user_range_ok(buf, sizeof(*buf), true, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	unsigned int flags = regs->esi;
-	print_trace("fstatat at eip %p: %u %s %p %u\n", regs->eip, dirfd, path, buf, flags);
 	if (path[0] == 0 && !(flags & AT_EMPTY_PATH))
 		return (-ENOENT);
 	memset(buf, 0, sizeof(struct stat));
+	return (0);
+}
+
+uint32_t syscall_fstat64(t_interrupt_data *regs)
+{
+	int fd = regs->ebx;
+	struct stat64 *buf = (struct stat64 *)regs->ecx;
+	print_trace("fstat64: %u %p\n", fd, buf);
+	if (!user_range_ok(buf, sizeof(*buf), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	t_file *file = get_file_from_fd(fd);
+	if (!file || file->type != FILE_REGULAR)
+		return -EBADF;
+	struct stat stat;
+	int status = stat_inode(((t_inode*)file->priv)->inode_nr, &stat);
+	if (status)
+		return status;
+	*buf = (struct stat64){
+		.st_ino = stat.st_ino,
+		.st_mode = stat.st_mode,
+		.st_size = stat.st_size,
+		.st_blocks = stat.st_blocks,
+		.st_uid = stat.st_uid,
+		.st_gid = stat.st_gid,
+		.st_nlink = stat.st_nlink,
+		.st_atim = stat.st_atim,
+		.st_ctim = stat.st_ctim,
+		.st_mtim = stat.st_mtim};
 	return (0);
 }
 

@@ -78,6 +78,26 @@ struct stat
 	struct timespec st_ctim;
 };
 
+struct stat64
+{
+	unsigned long long st_dev;
+	unsigned char __pad0[4];
+	ino_t __st_ino;
+	unsigned int st_nlink;
+	unsigned int st_mode;
+	unsigned int st_uid;
+	unsigned int st_gid;
+	unsigned long long st_rdev;
+	unsigned char __pad3[4];
+	long long st_size;
+	unsigned int st_blksize;
+	long long st_blocks;
+	struct timespec st_atim;
+	struct timespec st_mtim;
+	struct timespec st_ctim;
+	unsigned long long st_ino;
+} __attribute__((packed));
+
 struct linux_dirent64
 {
 	uint64_t d_ino;			 /* 64-bit inode number */

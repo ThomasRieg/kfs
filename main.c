@@ -217,6 +217,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(183, syscall_getcwd);
 	//add_syscall(191, syscall_set_tid_address); // TODO: implement
 	add_syscall(192, syscall_mmap2);
+	add_syscall(197, syscall_fstat64);
 	add_syscall(199, syscall_getuid);
 	add_syscall(200, syscall_getgid);
 	add_syscall(201, syscall_geteuid32);

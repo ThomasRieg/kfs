@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:38:31 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 03:02:36 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -272,7 +272,7 @@ void schedule_next_task()
 	{
 		g_sleeping = true; //prevent reentrency that would create a stack overflow of timer interrupt_data
 		enable_interrupts();
-		print_trace("scheduler: no running program, sleeping");
+		print_trace("scheduler: no running program, sleeping\n");
 		asm volatile("hlt");
 		disable_interrupts();
 	}

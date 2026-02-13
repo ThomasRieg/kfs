@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:20:13 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 03:17:25 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -286,7 +286,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		else
 		{
 			// last reference, just make it rw
-			print_trace("COW marking frame at owned at frame %x, at va %x, from pid %u\n", frame, virtual_address, g_curr_task->task_id);
+			print_trace("COW marking frame as owned at frame %x, at va %x, from pid %u\n", frame, virtual_address, g_curr_task->task_id);
 			*pte |= PTE_RW;
 			*pte &= ~PTE_COW;
 			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);

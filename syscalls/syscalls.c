@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:48:13 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:25:24 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 03:00:01 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@ static t_syscall_func g_syscall_handlers[1000];
 
 void syscall_dispatcher(t_interrupt_data *regs)
 {
-	print_trace("syscall %u\n", regs->eax);
+	//print_trace("syscall %u\n", regs->eax);
 	if (regs->eax >= (sizeof(g_syscall_handlers) / sizeof(t_syscall_func)))
 		regs->eax = -ENOSYS;
 	else if (g_syscall_handlers[regs->eax])
@@ -30,7 +30,7 @@ void syscall_dispatcher(t_interrupt_data *regs)
 		print_err("received unhandled syscall %u\n", regs->eax);
 		regs->eax = -ENOSYS;
 	}
-	print_trace("return value %u\n", regs->eax);
+	//print_trace("return value %u\n", regs->eax);
 }
 
 void init_syscalls(void)

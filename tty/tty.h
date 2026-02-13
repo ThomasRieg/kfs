@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   tty.h                                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:10:42 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 15:22:24 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:48:48 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 
 #include "../vga/vga.h"
 #include "../libk/ft_vector.h"
+#include "../waitq/waitq.h"
 
 // https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/termbits.h
 // https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/termbits-common.h
@@ -146,6 +147,8 @@ typedef struct s_tty
 	unsigned int cursor;			 // = vga_text_location (treat it as nb chars in buf)
 	t_vector cmd;
 	struct termios termios;
+	t_waitq wait_read; //wait inside read, so wake up these when you write something
+	t_waitq wait_write; //wait inside write, so wake up these when you write something
 	bool read_eof;
 } t_tty;
 

@@ -114,8 +114,7 @@ int main(void)
 	} else {
 		uint32_t status;
 		uint32_t ret = 0;
-		while (!ret)
-			ret = syscall(114, forkr, &status, WNOHANG, 0);
+		ret = syscall(114, forkr, &status, 0, 0);
 		printf("shell pid %i exited with status %u\n", ret, status);
 		return (status);
 	}

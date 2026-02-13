@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:41:34 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 03:15:11 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include "../errno.h"
 #include "../tasks/task.h"
 #include "../libk/libk.h"
+#include <stdint.h>
 
 t_file_ops g_tty_ops = {.read = tty_read, .write = tty_write, .close = tty_close, .ioctl = tty_ioctl};
 
@@ -37,32 +38,48 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 	if (f && buf && n) {
 		t_tty *tty = f->priv;
 		while (!tty->cmd.index && !tty->read_eof) {
-			yield(); //TODO implement sleep here
-			//print_trace("yielding because no tty ready\n");
+			print_trace("tty_read: sleeping because no tty ready\n");
+			sleep_on(&tty->wait_read, WAIT_TTY_READ);
 		}
 		if (tty->read_eof) {
+			if (tty->cmd.index)
+				waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
 			tty->read_eof = false;
 			return 0;
 		}
 
-		tty->cmd.index--;
-		*(unsigned char *)buf = tty->cmd.buffer[0];
-		return 1;
+		uint32_t to_copy = n < tty->cmd.index ? n : tty->cmd.index;
+		memcpy(buf, tty->cmd.buffer, to_copy);
+		memmove(buf, buf + to_copy, tty->cmd.index - to_copy);
+		tty->cmd.index -= to_copy;
+		if (tty->cmd.index)
+				waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
+		return to_copy;
 	}
 	return (-EINVAL);
 }
 
 int32_t tty_write(t_file *f, const void *buf, size_t n)
 {
-	if (f)
-		write(buf, n);
+	if (!f)
+		return (-EBADF);
+	t_tty *tty = f->priv;
+	if (!tty)
+		return (-EBADF);
+	write(buf, n);
+	waitq_wake_one(&tty->wait_read);
 	return (n);
 }
 
 int32_t tty_close(t_file *f)
 {
-	if (f)
-		return (-ENOSYS);
+	if (!f)
+		return (-EBADF);
+	t_tty *tty = f->priv;
+	if (!tty)
+		return (-EBADF);
+	waitq_wake_all(&tty->wait_read);
+	waitq_wake_all(&tty->wait_write);
 	return (-ENOSYS);
 }
 

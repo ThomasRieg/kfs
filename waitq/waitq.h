@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:00:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/12 05:02:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 02:49:57 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,8 @@ typedef enum wait_reason
 	WAIT_CHILD,
     WAIT_PIPE_READ,
     WAIT_PIPE_WRITE,
+    WAIT_TTY_READ,
+    WAIT_TTY_WRITE,
 } t_wait_reason;
 
 typedef struct task t_task;

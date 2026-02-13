@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   tty.c                                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 01:56:38 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/15 15:59:50 by alier            ###   ########.fr       */
+/*   Updated: 2026/02/13 03:05:47 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,6 +90,7 @@ void tty_add_input(char c)
 
 	if (c == curr->termios.c_cc[VEOF]) {
 		curr->read_eof = true;
+		waitq_wake_one(&curr->wait_read);
 		return;
 	}
 
@@ -110,6 +111,7 @@ void tty_add_input(char c)
 				g_vga_text_buf[g_vga_text_location] = 0;
 				update_cursor(g_vga_text_location / 2);
 			}
+			waitq_wake_one(&curr->wait_read);
 			return;
 		}
 		else
@@ -118,6 +120,7 @@ void tty_add_input(char c)
 
 	if (!ft_vector_pushback(&(curr->cmd), c))
 		kernel_panic("out of memory in the OS trying to allocate memory for tty command", NULL);
+	waitq_wake_one(&curr->wait_read);
 }
 
 // silently does nothing if you are on the first tty, just stay on the first one

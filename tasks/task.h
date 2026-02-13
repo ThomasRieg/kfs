@@ -124,7 +124,7 @@ typedef struct task
 	uint32_t k_esp;
 	uint8_t k_stack[TASK_KERNEL_SIZE]; // stack tss will returns to on interrupt
 	t_sig_handler sig_handlers[32];
-	struct task *next; // circular linked list, TODO do better
+	struct task *next; // circular linked list, NULL means task not in run queue
 	t_mm proc_memory;
 	t_waitq_node wq_node;  // used when sleeping
     t_waitq *sleep_q;      // which queue we’re in (for removal)
@@ -140,6 +140,7 @@ struct process_strings
 extern t_task *g_curr_task;
 extern t_task *g_init_task; //pid 1
 extern uint32_t g_next_pid;
+extern t_task *g_to_schedule;
 
 void schedule_next_task();
 void context_switch(t_task *next);
@@ -149,5 +150,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 void add_child(t_task *parent, t_task *child);
 void free_vmas(t_mm *mm);
 void yield();
+void unlink_task_from_runq(t_task *task);
+void add_task_to_runq(t_task *task);
 
 #endif

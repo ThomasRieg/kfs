@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   setup_interrupts.c                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:20:35 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 18:44:41 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 01:14:22 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@ void setup_interrupts()
 	idt_install_all_stubs(idt);
 	isr_add_handler(INT_BREAKPOINT, breakpoint_handler);
 	isr_add_handler(INT_DOUBLE_FAULT, double_fault_handler); // shouldn't ever fire with this design, keeping for legacy code
-	isr_add_handler(INT_TIMER, timer_handler);
+	isr_add_handler(INT_TIMER, timer_handler_before_scheduler);
 	isr_add_handler(INT_KEYBOARD, keyboard_handler);
 	isr_add_handler(INT_PAGE_FAULT, page_fault_handler);
 	isr_add_handler(INT_SERIAL1, serial1_handler);

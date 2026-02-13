@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/12 04:21:18 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 01:39:45 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@
 #include "../dt/dt.h"
 #include "../vmalloc/vmalloc.h"
 #include "../mmap/mmap.h"
+#include "../interrupts/interrupts.h"
 
 t_task *g_curr_task = 0;
 t_task *g_init_task = 0;
@@ -234,6 +235,8 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	   &task->k_stack[sizeof(task->k_stack)],
 	   &task->k_stack[0]);*/
 	gdt_set_user_segment(&task->user_gdt_segment);
+	extern void timer_handler(__attribute__((unused)) t_interrupt_data *regs);
+	isr_add_handler(INT_TIMER, timer_handler); //switch to scheduler in timer handler
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 
 	return (true);
@@ -262,10 +265,28 @@ __attribute__((noreturn)) void context_switch(t_task *next)
 	__builtin_unreachable();
 }
 
+t_task *g_to_schedule = NULL;
+static bool g_sleeping;
+
 void schedule_next_task()
 {
-	if (!g_curr_task)
-		return;
+	//have to loop because it's not safe to exit kernel space when !g_curr_task
+	while (!g_curr_task && !g_to_schedule)
+	{
+		g_sleeping = true; //prevent reentrency that would create a stack overflow of timer interrupt_data
+		enable_interrupts();
+		printk("trace: no running program, sleeping");
+		asm volatile("hlt");
+		disable_interrupts();
+	}
+	if (g_sleeping)
+		g_sleeping = false;
+	if (g_to_schedule)
+	{
+		t_task *to_schedule = g_to_schedule;
+		g_to_schedule = NULL;
+		context_switch(to_schedule);
+	}
 	t_task *next = g_curr_task->next;
 	while (next != g_curr_task)
 	{
@@ -281,9 +302,17 @@ void schedule_next_task()
 
 static uint32_t g_tick;
 
+void timer_handler_before_scheduler(__attribute__((unused)) t_interrupt_data *regs)
+{
+	g_tick++;
+	return;
+}
+
 void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
 	g_tick++;
+	if (g_sleeping)
+		return;
 	if (g_tick >= NB_TICKS_PER_TASK)
 	{
 		g_tick = 0;
@@ -441,13 +470,50 @@ void task_reap_zombie(t_task *t)
 	vfree(t);
 }
 
+void unlink_task_from_runq(t_task *task)
+{
+	if (task->next == task)
+	{
+		printk("warning, run queue empty, last task unlinked pid %u\n", task->task_id);
+		g_curr_task = NULL;
+	}
+	t_task *next = task->next;
+	t_task *prev = task->next;
+	while (prev->next != task)
+		prev = prev->next;
+	prev->next = next;
+	task->next = NULL; //make sure we explicitly mark this task as not in the queue
+	if (task == g_curr_task)
+		g_to_schedule = next;
+}
+
+void add_task_to_runq(t_task *task)
+{
+	if (g_curr_task)
+	{
+		task->next = g_curr_task->next;
+		g_curr_task->next = task;
+	}
+	else
+	{
+		task->next = task;
+		g_curr_task = task;
+	}
+}
+
 void yield()
 {
-	g_tick = 0;
+	asm volatile("int $0x81" ::: "memory");
+}
+
+void yield_to(t_task *next_exec)
+{
+	g_to_schedule = next_exec;
 	asm volatile("int $0x81" ::: "memory");
 }
 
 void yield_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
+	g_tick = 0;
 	schedule_next_task();
 }

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 07:11:27 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 07:17:02 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -482,6 +482,7 @@ void cleanup_task(t_task *task)
 void task_reap_zombie(t_task *t)
 {
 	// Remove from circular run list: find predecessor
+	pmm_free_frame(t->pd);
 	t_task *prev = t;
 	while (prev->next != t)
 	{

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   syscalls.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 17:51:26 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 06:09:25 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,7 @@ uint32_t syscall_getpgid(__attribute__((unused)) t_interrupt_data *regs);
 uint32_t syscall_setpgid(t_interrupt_data *regs);
 
 uint32_t syscall_mmap2(t_interrupt_data *regs);
+uint32_t syscall_munmap(t_interrupt_data *regs);
 
 uint32_t syscall_readlink(t_interrupt_data *regs);
 uint32_t syscall_fstatat(t_interrupt_data *regs);

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 03:22:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 06:05:35 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -414,17 +414,40 @@ void free_backing_obj(t_vma *vma)
 	}
 }
 
+//close a vma and sets next = NULL, increment refcnt if n has a backing object
+t_vma *vma_clone(const t_vma *v)
+{
+    t_vma *n = vcalloc(1, sizeof(*n));
+    if (!n) return (NULL);
+    *n = *v;
+    n->next = NULL;
+	if (n->backing_obj)
+	{
+		if (n->backing == VMA_ANON && n->flags == MAP_SHARED)
+		{
+			t_shm_anon *backing = n->backing_obj;
+			backing->refcnt++;
+		}
+	}
+    return (n);
+}
+
+void free_vma(t_vma *curr)
+{
+	if (curr->backing_obj)
+		free_backing_obj(curr);
+	else
+	 	free_vma_range_pages(curr->start, curr->end);
+	vfree(curr);
+}
+
 void free_vmas(t_mm *mm)
 {
 	t_vma *curr = mm->vma_list;
 	while (curr)
 	{
 		t_vma *next = curr->next;
-		if (curr->backing_obj)
-			free_backing_obj(curr);
-		else
-		 	free_vma_range_pages(curr->start, curr->end);
-		vfree(curr);
+		free_vma(curr);
 		curr = next;
 	}
 }

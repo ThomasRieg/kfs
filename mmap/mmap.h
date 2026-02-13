@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   mmap.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 21:24:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/01/29 16:19:53 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 06:08:00 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,7 @@ enum e_mmap_flag
 #define MAP_FAILED ((void *)-1)
 
 void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset, t_mm *mm);
-int syscall_munmap(void *addr, size_t length);
+uint32_t munmap(t_mm *mm, virt_ptr addr, size_t len);
 
 /*Return Value
 On success, mmap() returns a pointer to the mapped area. On error, the value MAP_FAILED (that is, (void *) -1) is returned, and errno is set appropriately. On success, munmap() returns 0, on failure -1, and errno is set (probably to EINVAL).

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:42:46 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/13 06:10:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -190,6 +190,12 @@ uint32_t syscall_uname(t_interrupt_data *regs)
 uint32_t syscall_mmap2(t_interrupt_data *regs)
 {
 	return (unsigned int)mmap((void *)regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp, &g_curr_task->proc_memory);
+}
+
+//91
+uint32_t syscall_munmap(t_interrupt_data *regs)
+{
+	return munmap(&g_curr_task->proc_memory, (virt_ptr)regs->ebx, regs->ecx);
 }
 
 uint32_t syscall_get_thread_area(t_interrupt_data *regs)

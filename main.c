@@ -193,6 +193,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(63, syscall_dup2);
 	add_syscall(64, syscall_getppid);
 	add_syscall(85, syscall_readlink);
+	add_syscall(91, syscall_munmap);
 	add_syscall(114, syscall_wait4);
 	add_syscall(122, syscall_uname);
 	add_syscall(125, syscall_mprotect);

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 06:48:42 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/14 01:08:58 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -265,7 +265,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		memset(virtual_address_page_start, 0, PAGE_SIZE);
 		g_curr_task->proc_memory.physical_pages++;
 	}
-	else if ((pte && (*pte & PTE_P) && (*pte & PTE_COW)) && (regs->err_code & 2) && (vma->prots & PROT_WRITE))
+	else if (vma && (pte && (*pte & PTE_P) && (*pte & PTE_COW)) && (regs->err_code & 2) && (vma->prots & PROT_WRITE))
 	{
 		// COW 🐂
 		phys_ptr frame = *pte & 0xFFFFF000;

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 20:31:49 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 21:40:48 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,8 +107,8 @@ void sleep_on(t_waitq *q, t_wait_reason reason)
 
 void waitq_wake(t_task *task)
 {
-    task->sleep_q = NULL;
-    task->wq_node.next = NULL;
+    if (task->sleep_q)
+        waitq_remove(task);
 
     if (task->status == STATUS_SLEEP)
     {

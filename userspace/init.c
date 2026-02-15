@@ -37,7 +37,7 @@ int fdprintf(int fd, size_t bufmax, const char *fmt, ...)
 
 static volatile __sig_atomic_t got_sigchld = 0;
 
-void on_sigchld(int sig)
+static void on_sigchld(int sig)
 {
     (void)sig;
     got_sigchld = 1;
@@ -136,6 +136,7 @@ int main(void)
 	} else {
 		uint32_t status;
 		uint32_t ret = 0;
+		//kill(forkr, 6);
 		ret = syscall(114, forkr, &status, 0, 0);
 		printf("shell pid %i exited with status %u\n", ret, status);
 		return (status);

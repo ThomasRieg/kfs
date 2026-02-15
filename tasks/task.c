@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 20:21:17 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 21:46:16 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -506,17 +506,17 @@ void task_reap_zombie(t_task *t)
 {
 	// Remove from circular run list: find predecessor
 	pmm_free_frame(t->pd);
-	t_task *prev = t;
-	while (prev->next != t)
-	{
-		prev = prev->next;
-	}
-	if (prev == t) // should never happen unless list corrupt
-		kernel_panic("reaped last task in task_reap_zombie", NULL);
-
 	if (g_curr_task == t)
 		kernel_panic("task wants to reap itself, wtf", NULL);//g_curr_task = t->next;
-
+	t_task *prev = t;
+	if (prev->next)
+	{
+		//prev is in runqueue
+		while (prev->next != t && prev->next)
+		{
+			prev = prev->next;
+		}
+	}
 	t_task *prev_all = t;
 	while (prev_all->next_all_task != t)
 	{
@@ -525,7 +525,8 @@ void task_reap_zombie(t_task *t)
 	if (prev_all == t) // should never happen unless list corrupt
 		kernel_panic("reaped last task in task_reap_zombie", NULL);
 
-	prev->next = t->next;
+	if (prev->next)
+		prev->next = t->next; //else it means child was not in run queue
 	prev_all->next_all_task = t->next_all_task;
 
 	vfree(t);

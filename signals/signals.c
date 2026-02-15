@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 20:34:18 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 21:44:05 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,7 +72,7 @@ void task_terminate_by_signal(t_task *t, int sig)
 	g_curr_task->children = NULL;
 	g_curr_task->exit_code = sig;
 	g_curr_task->status = STATUS_ZOMBIE;
-	g_curr_task->parent_task->pending_signals |= (1 << SIGCHLD);
+    enqueue_sig(g_curr_task->parent_task, SIGCHLD);
 
     // wake any wait4 sleepers
     waitq_wake_all(&g_curr_task->parent_task->wait_child);

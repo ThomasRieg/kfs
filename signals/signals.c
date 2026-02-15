@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 19:53:29 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:34:18 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -146,5 +146,6 @@ bool enqueue_sig(t_task *task, int sig)
     //if (task->blocked_signals &= (1u << sig))
         //return (false);
     task->pending_signals |= (1u << sig);
+    waitq_wake(task); //remove sleep status if task sleeping
     return (true);
 }

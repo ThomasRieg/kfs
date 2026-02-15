@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 19:56:28 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:24:52 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -595,7 +595,7 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 	g_curr_task->children = NULL;
 	g_curr_task->exit_code = (regs->ebx & 0xFF) << 8;
 	g_curr_task->status = STATUS_ZOMBIE;
-	g_curr_task->parent_task->pending_signals |= (1 << SIGCHLD);
+	enqueue_sig(g_curr_task->parent_task, SIGCHLD);
 
     // wake any wait4 sleepers
     waitq_wake_all(&g_curr_task->parent_task->wait_child);

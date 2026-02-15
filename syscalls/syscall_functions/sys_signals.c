@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 17:59:47 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:34:19 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,7 +136,7 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
     if (!target)
         return (-ESRCH);
     enqueue_sig(target, sig);
-	return (0); // 0 for success
+	return (0); // success
 }
 
 uint32_t syscall_tkill(t_interrupt_data *regs)

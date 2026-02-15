@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:00:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:49:57 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:30:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,5 +45,7 @@ void waitq_wake_all(t_waitq *q);
 void waitq_wake_one(t_waitq *q);
 
 void sleep_on(t_waitq *q, t_wait_reason reason);
+
+void waitq_wake(t_task *task);
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 00:55:39 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:31:49 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,4 +103,17 @@ void sleep_on(t_waitq *q, t_wait_reason reason)
 
     // Switch away (yield or schedule)
     yield();
+}
+
+void waitq_wake(t_task *task)
+{
+    task->sleep_q = NULL;
+    task->wq_node.next = NULL;
+
+    if (task->status == STATUS_SLEEP)
+    {
+        task->status = STATUS_RUNNABLE;
+        task->wait_reason = WAIT_NONE;
+        add_task_to_runq(task);
+    }
 }

@@ -105,25 +105,63 @@ struct timespec rtc_get_time(void) {
 	return (struct timespec){seconds_since_epoch, 0};
 }
 
+/* Identifier for system-wide realtime clock.  */
+# define CLOCK_REALTIME			0
+/* Monotonic system-wide clock.  */
+# define CLOCK_MONOTONIC		1
+/* High-resolution timer from the CPU.  */
+# define CLOCK_PROCESS_CPUTIME_ID	2
+/* Thread-specific CPU-time clock.  */
+# define CLOCK_THREAD_CPUTIME_ID	3
+/* Monotonic system-wide clock, not adjusted for frequency scaling.  */
+# define CLOCK_MONOTONIC_RAW		4
+/* Identifier for system-wide realtime clock, updated only on ticks.  */
+# define CLOCK_REALTIME_COARSE		5
+/* Monotonic system-wide clock, updated only on ticks.  */
+# define CLOCK_MONOTONIC_COARSE		6
+/* Monotonic system-wide clock that includes time spent in suspension.  */
+# define CLOCK_BOOTTIME			7
+/* Like CLOCK_REALTIME but also wakes suspended system.  */
+# define CLOCK_REALTIME_ALARM		8
+/* Like CLOCK_BOOTTIME but also wakes suspended system.  */
+# define CLOCK_BOOTTIME_ALARM		9
+/* Like CLOCK_REALTIME but in International Atomic Time.  */
+# define CLOCK_TAI			11
+
 static uint32_t syscall_clock_gettime(t_interrupt_data *regs)
 {
-	if (regs->ebx > 0)
-		return (-EINVAL);
+	unsigned int clock_id = regs->ebx;
 
-	struct timespec *dst = (struct timespec *)regs->ecx;
-	*dst = rtc_get_time();
-	return (0);
+	if (clock_id == CLOCK_REALTIME || clock_id == CLOCK_MONOTONIC) {
+		struct timespec *dst = (struct timespec *)regs->ecx;
+		*dst = rtc_get_time();
+		return 0;
+	}
+	return (-EINVAL);
 }
 
 static uint32_t syscall_clock_gettime64(t_interrupt_data *regs)
 {
-	if (regs->ebx > 0)
-		return (-EINVAL);
+	unsigned int clock_id = regs->ebx;
 
-	struct timespec64 *dst = (struct timespec64 *)regs->ecx;
-	struct timespec time = rtc_get_time();
-	*dst = (struct timespec64){.tv_sec=time.tv_sec,.tv_nsec=time.tv_nsec};
-	return (0);
+	if (clock_id == CLOCK_REALTIME || clock_id == CLOCK_MONOTONIC) {
+		struct timespec64 *dst = (struct timespec64 *)regs->ecx;
+		struct timespec time = rtc_get_time();
+		*dst = (struct timespec64){.tv_sec=time.tv_sec,.tv_nsec=time.tv_nsec};
+		return 0;
+	}
+	return (-EINVAL);
+}
+
+static uint32_t syscall_sendto(t_interrupt_data *regs)
+{
+	int sockfd = regs->ebx;
+	unsigned char *buf = (unsigned char *)regs->ecx;
+	unsigned int size = regs->edx;
+	int flags = regs->esi;
+	void *dest_addr = (void *)regs->edi;
+	print_trace("sendto: %d %s %u %d %p\n", sockfd, buf, size, flags, dest_addr);
+	return (-ENOSYS);
 }
 
 static void print_header(void)
@@ -237,6 +275,7 @@ void kernel_main(struct s_mb2_info *multi)
 	//add_syscall(311, syscall_set_tid_address); // TODO: implement
 	add_syscall(331, syscall_pipe2);
 	//add_syscall(355, syscall_set_tid_address); // TODO: implement
+	add_syscall(369, syscall_sendto);
 	add_syscall(383, syscall_statx);
 	//add_syscall(386, syscall_set_tid_address); // TODO: implement
 	add_syscall(384, syscall_archprctl);

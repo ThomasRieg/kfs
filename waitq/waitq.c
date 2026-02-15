@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 21:40:48 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 21:49:36 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,8 +61,8 @@ void waitq_wake_all(t_waitq *q)
         {
             t->status = STATUS_RUNNABLE;
             t->wait_reason = WAIT_NONE;
+            add_task_to_runq(t);
         }
-        add_task_to_runq(t);
         n = next;
     }
 }
@@ -85,8 +85,8 @@ void waitq_wake_one(t_waitq *q)
     {
         t->status = STATUS_RUNNABLE;
         t->wait_reason = WAIT_NONE;
+        add_task_to_runq(t);
     }
-    add_task_to_runq(t);
 }
 
 void sleep_on(t_waitq *q, t_wait_reason reason)

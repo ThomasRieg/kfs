@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 21:46:16 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 21:49:04 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -512,7 +512,7 @@ void task_reap_zombie(t_task *t)
 	if (prev->next)
 	{
 		//prev is in runqueue
-		while (prev->next != t && prev->next)
+		while (prev->next != t)
 		{
 			prev = prev->next;
 		}

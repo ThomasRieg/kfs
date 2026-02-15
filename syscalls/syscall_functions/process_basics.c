@@ -660,6 +660,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	const char *filename = (const char *)regs->ebx;
 	const char *const *argv = (const char *const *)regs->ecx;
 	const char *const *envp = (const char *const *)regs->edx;
+	print_trace("execve: %s %p %p\n", filename, argv, envp);
 	if (!user_str_ok(filename, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	if (argv)

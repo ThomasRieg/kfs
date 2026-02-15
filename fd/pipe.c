@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:07:39 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 19:55:29 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -113,7 +113,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 	{
 		if (!pipe->readers)
 		{
-			g_curr_task->pending_signals |= SIGPIPE;
+			enqueue_sig(g_curr_task, SIGPIPE);
 			return (-EPIPE);
 		}
 		else if (pipe_space(pipe))

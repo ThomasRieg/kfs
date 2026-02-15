@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 17:58:52 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:21:17 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -233,7 +233,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 				void *end = page_align_up((char *)virt + base[i].mem_size + to_add);
 				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory) == MAP_FAILED)
 				{
-					kernel_panic("couldn't map for process", 0);
+					kernel_panic("couldn't map for first process", 0);
 				}
 				memcpy((void *)base[i].virt_addr, binary->data + base[i].file_offset, base[i].file_size);
 				if ((unsigned int)task->proc_memory.heap_current < (unsigned int)end)

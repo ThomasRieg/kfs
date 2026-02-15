@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 18:01:45 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 19:56:28 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -565,7 +565,7 @@ void adopt_children_list(t_task *adopter, t_task *children)
 	if (!adopter->children)
 	{
 		adopter->children = children;
-		adopter->pending_signals |= (1 << SIGCHLD);
+		enqueue_sig(adopter, SIGCHLD);
 		return;
 	}
 	t_task *last_adopter_child = adopter->children;
@@ -578,7 +578,7 @@ void adopt_children_list(t_task *adopter, t_task *children)
 		curr_child->parent_task = adopter;
 		curr_child = curr_child->next_sibling;
 	}
-	adopter->pending_signals |= (1 << SIGCHLD);
+	enqueue_sig(adopter, SIGCHLD);
 }
 
 // 1

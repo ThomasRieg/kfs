@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   kmmap.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/07 13:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/03 16:21:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:20:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,7 @@ static void map_one(uint32_t va, phys_ptr pa, uint32_t flags)
 	if (!ensure_page_table(pdi))
 	{
 		// TODO handle that cleaner
-		kernel_panic("fatal error, probably out of memory in map_one\n", NULL);
+		kernel_panic("fatal error, probably out of memory in kmmap map_one\n", NULL);
 	}
 
 	uint32_t *pt = pt_page_va(pdi);

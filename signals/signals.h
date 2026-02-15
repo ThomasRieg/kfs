@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 17:41:50 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:09:28 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ typedef void (*t_sig_handler)(int);
 #define SIGCHLD 17u // list here https://man7.org/linux/man-pages/man7/signal.7.html
 #define SIGPIPE 13u
 #define SIGSEGV 11u
+#define SIGKILL 9u
 
 #define NSIG 32
 

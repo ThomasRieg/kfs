@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:37:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:59:44 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:08:45 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,8 +33,8 @@ void isr_dispatch_c(t_interrupt_data *regs)
 	}
 	else
 	{
-		print_err("received unhandled interrupt %u\n", regs->int_no); // TODO add better handling here, just kill process.
-		kernel_panic("unhandled interrupt", regs);
+		print_err("received unhandled interrupt %u by pid %u\n", regs->int_no, g_curr_task->task_id);
+		enqueue_sig(g_curr_task, SIGKILL);
 	}
 	//print_trace("end of interrupt, will iret at %p", regs->eip);
 	//print_trace("\e[31m\ndone servicing interrupt %u\e[0m\n", regs->int_no);

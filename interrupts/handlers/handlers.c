@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/14 01:08:58 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 20:19:01 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -207,7 +207,8 @@ void page_fault_handler(t_interrupt_data *regs)
 			phys_ptr pde_frame = pmm_alloc_frame();
 			if (!pde_frame)
 			{
-				kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+				enqueue_sig(g_curr_task, SIGKILL); // TODO instead of kill liberate memory of a process (when oom killer implemented)
+				return;
 			}
 			map_page(pde_frame, pde, PTE_US | PTE_RW | PTE_P); // set permissive flags
 			uint32_t *page_table = (uint32_t *)(uintptr_t)(PT_BASE_VA + PDE_INDEX(virtual_address) * PAGE_SIZE);
@@ -231,13 +232,19 @@ void page_fault_handler(t_interrupt_data *regs)
 				print_trace("trying to allocate new shared frame at %x by pid %u\n", virtual_address, g_curr_task->task_id);
 				frame = pmm_alloc_frame();
 				if (!frame)
-					kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+				{
+					print_err("out of physical memory in page_fault_handler lazy allocator by pid %u\n", g_curr_task->task_id);
+					enqueue_sig(g_curr_task, SIGKILL); // TODO instead of kill liberate memory of a process (when oom killer implemented)
+					return;
+				}
 				map_page(frame, pte, get_vma_flags(vma));
 				invalidate_cache(virtual_address_page_start);
 				memset(virtual_address_page_start, 0, PAGE_SIZE);
 				if (!add_page_to_shm_anon(backing, virtual_address_page_start, frame))
 				{
-					kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+					print_err("out of physical memory in page_fault_handler lazy allocator by pid %u\n", g_curr_task->task_id);
+					enqueue_sig(g_curr_task, SIGKILL); // TODO instead of kill liberate memory of a process (when oom killer implemented)
+					return;
 				}
 			}
 			else
@@ -250,7 +257,9 @@ void page_fault_handler(t_interrupt_data *regs)
 		}
 		else
 		{
-			kernel_panic("unhandled backing for shared memory\n", regs);
+			print_err("unhandled backing for shared memory\n", g_curr_task->task_id);
+			enqueue_sig(g_curr_task, SIGKILL); // TODO instead of kill liberate memory of a process (when oom killer implemented)
+			return;
 		}
 	}
 	else if (vma && !is_present_fault(regs) && (!pte || !(*pte & PTE_P)))
@@ -258,7 +267,11 @@ void page_fault_handler(t_interrupt_data *regs)
 		print_trace("trying to allocate new private frame at %x by pid %u\n", virtual_address, g_curr_task->task_id);
 		phys_ptr frame = pmm_alloc_frame();
 		if (!frame)
-			kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+		{
+			print_err("out of physical memory in page_fault_handler lazy allocator by pid %u\n", g_curr_task->task_id);
+			enqueue_sig(g_curr_task, SIGKILL); // TODO instead of kill liberate memory of a process (when oom killer implemented)
+			return;
+		}
 		map_page(frame, pte, get_vma_flags(vma));
 		virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
 		invalidate_cache(virtual_address_page_start);
@@ -275,7 +288,11 @@ void page_fault_handler(t_interrupt_data *regs)
 			print_trace("COW trying to copy frame at frame %x, at va %x, from pid %u\n", frame, virtual_address, g_curr_task->task_id);
 			phys_ptr new_frame = pmm_alloc_frame();
 			if (!new_frame)
-				kernel_panic("out of physical memory in page_fault_handler lazy allocator\n", regs); // TODO not panic here, liberate memory of a process (when oom killer implemented)
+			{
+				print_err("out of physical memory in page_fault_handler lazy allocator by pid %u\n", g_curr_task->task_id);
+				enqueue_sig(g_curr_task, SIGKILL); // TODO instead of kill liberate memory of a process (when oom killer implemented)
+				return;
+			}
 			virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
 			memcpy(page_buff, virtual_address_page_start, PAGE_SIZE);
 			map_page(new_frame, pte, get_vma_flags(vma));
@@ -297,15 +314,16 @@ void page_fault_handler(t_interrupt_data *regs)
 	else
 	{
 		// TODO handle just killing the process, schedule another one and return
-		print_err("page fault :(\n");
-		print_err("error code: %u\n", regs->err_code);
+		print_debug("page fault :(\n");
+		print_debug("error code: %u\n", regs->err_code);
 		if (regs->err_code & 4)
-			print_err("while in userspace\n");
-		print_err("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
-		print_err("by pid %u\n", g_curr_task->task_id);
-		print_interrupt_frame(regs);
-		stack_trace_ebp(32, regs->ebp);
-		kernel_panic("page fault", regs);
+			print_debug("while in userspace\n");
+		print_debug("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
+		print_debug("by pid %u\n", g_curr_task->task_id);
+		//print_interrupt_frame(regs);
+		//stack_trace_ebp(32, regs->ebp);
+		enqueue_sig(g_curr_task, SIGSEGV);
+		return;
 	}
 	// enable_interrupts();
 }

@@ -16,7 +16,7 @@
 #include "tasks/task.h"
 #include "errno.h"
 
-enum e_print_level debug_print_level = PRINT_INFO;
+enum e_print_level debug_print_level = PRINT_TRACE;
 
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,
@@ -206,6 +206,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(85, syscall_readlink);
 	add_syscall(91, syscall_munmap);
 	add_syscall(114, syscall_wait4);
+	add_syscall(119, syscall_sigreturn);
 	add_syscall(122, syscall_uname);
 	add_syscall(125, syscall_mprotect);
 	add_syscall(132, syscall_getpgid);

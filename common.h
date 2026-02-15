@@ -19,6 +19,8 @@ typedef _Bool bool;
 #define KERNEL_PHYS_BASE 0x00200000u // must match linker
 #define KERNEL_VIRT_BASE 0xC0000000u // must match linker
 
+#define PAGE_ALIGN_DOWN(x) ((uintptr_t)(x) & ~0xFFFu)
+
 typedef void *virt_ptr;
 typedef uint32_t phys_ptr;
 

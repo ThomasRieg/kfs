@@ -55,6 +55,9 @@ SECTIONS
 	.kmap ALIGN(4K) : AT(ADDR(.kmap) - KERNEL_VIRT_BASE) {
 		*(.kmap)
 	}
+	.signaltrampoline ALIGN(4K) : AT(ADDR(.signaltrampoline) - KERNEL_VIRT_BASE) {
+		*(.signaltrampoline)
+	}
 	__kernel_end = .;
 	__kernel_end_phys = __kernel_end - KERNEL_VIRT_BASE;
 }

@@ -16,20 +16,14 @@
 #include "../dt/dt.h"
 #include "../fd/fd.h"
 #include "../waitq/waitq.h"
+#include "../signals/signals.h"
 
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
-#define TASK_STACK_TOP KERNEL_VIRT_BASE - PAGE_SIZE
+#define TASK_STACK_TOP KERNEL_VIRT_BASE - (PAGE_SIZE * 2) //just below signal trampoline
 #define NB_TICKS_PER_TASK 1u // nb of timer irq before we context switch to next task
 #define MAX_OPEN_FILES 256u
 #define TASK_KERNEL_SIZE 16384
-
-typedef void (*t_sig_handler)(int);
-#define SIG_IGN 1u // ignore this signal
-#define SIG_DFL 0u // default behavior (stop process)
-
-#define SIGCHLD 17u // list here https://man7.org/linux/man-pages/man7/signal.7.html
-#define SIGPIPE 13u
 
 enum task_status
 {
@@ -116,14 +110,16 @@ typedef struct task
 	unsigned int gid;
 	unsigned int egid;
 	unsigned int exit_code; //status returned by wait, signal on last byte, exit number on second to last byte
-	unsigned int pending_signals;
+	uint32_t pending_signals;
+	uint32_t blocked_signals; //mask of blocked signals (can't add them to pending if is this mask)
+	bool in_signal; //temporary mostly for debug
 	t_file *open_files[MAX_OPEN_FILES];
 	unsigned int cwd_inode_nr;
 	phys_ptr pd;
 	struct user_desc user_gdt_segment;
 	uint32_t k_esp;
 	uint8_t k_stack[TASK_KERNEL_SIZE]; // stack tss will returns to on interrupt
-	t_sig_handler sig_handlers[32];
+	t_sigaction_k sigact[NSIG]; // index by sig (0 unused), memset to 0 creates correct behavior (handler SIG_DFL, mask and flag 0)
 	struct task *next; // circular linked list, NULL means task not in run queue
 	t_mm proc_memory;
 	t_waitq_node wq_node;  // used when sleeping
@@ -151,6 +147,7 @@ void add_child(t_task *parent, t_task *child);
 void free_vmas(t_mm *mm);
 void free_vma(t_vma *curr);
 void yield();
+void yield_to(t_task *next_exec);
 void unlink_task_from_runq(t_task *task);
 void add_task_to_runq(t_task *task);
 t_vma *vma_clone(const t_vma *v);

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 06:10:46 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 15:15:23 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,15 +136,6 @@ uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
 	void *set = (void *)regs->ecx;
 	void *oldset = (void *)regs->edx;
 	print_trace("rt_sigprocmask %x %x %x\n", how, set, oldset);
-	return (0);
-}
-
-uint32_t syscall_rt_sigaction(t_interrupt_data *regs)
-{
-	int signum = regs->ebx;
-	void *act = (void *)regs->ecx;
-	void *oldact = (void *)regs->edx;
-	print_trace("rt_sigaction %u %x %x\n", signum, act, oldact);
 	return (0);
 }
 
@@ -376,13 +367,6 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 	}
 }
 
-// 48
-// int sig | __sighandler_t handler
-uint32_t syscall_signal(__attribute__((unused)) t_interrupt_data *regs)
-{
-	return (g_curr_task->uid); // todo implement
-}
-
 // 37
 //  	pid_t pid | int sig
 // TODO handle pid = 0 (process group) and pid = -1 (all killeable process)
@@ -538,6 +522,8 @@ uint32_t copy_current_user_memory(uint32_t pd_to_copy, t_mm *mm)
 		}
 		curr = curr->next;
 	}
+	if (!map_signal_trampoline())
+		return (-ENOMEM);
 	return (0);
 }
 
@@ -595,7 +581,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 }
 
 //does not clear parent's list
-static void adopt_children_list(t_task *adopter, t_task *children)
+void adopt_children_list(t_task *adopter, t_task *children)
 {
 	if (!children)
 		return;
@@ -637,7 +623,7 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
     // wake any wait4 sleepers
     waitq_wake_all(&g_curr_task->parent_task->wait_child);
 	cleanup_task(g_curr_task);
-	context_switch(g_curr_task->parent_task);
+	yield_to(g_curr_task->parent_task);
 	__builtin_unreachable();
 }
 
@@ -728,6 +714,8 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	g_curr_task->proc_memory.user_stack_top = user_stack_top;
 	g_curr_task->pd = new_pd;
 	write_cr3(g_curr_task->pd);
+	if (!map_signal_trampoline())
+		return (-ENOMEM);
 
 	unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings argv, struct process_strings envp);
 	// This takes ownership of the argv, envp vectors so no need to clean them up after here

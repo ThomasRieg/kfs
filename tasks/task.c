@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 07:17:02 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 15:26:19 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -167,6 +167,17 @@ __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *f
 	__builtin_unreachable();
 }
 
+__attribute__((noreturn)) static inline void iret_from_frame_with_signals(t_interrupt_data *frame)
+{
+	__asm__ volatile(
+		"movl %0, %%esp \n"
+		"jmp isr_common_epilogue_with_signals \n"
+		:
+		: "r"(frame)
+		: "memory");
+	__builtin_unreachable();
+}
+
 // task has to be allocated by vmalloc
 // only called to create init
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary)
@@ -200,10 +211,11 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 		pmm_free_frame(task->pd);
 		return (false);
 	}
-	g_curr_task = task;	 // temporary
+	g_curr_task = task;
 	g_init_task = task;
-	task->next = task;	 // temporary
-	write_cr3(task->pd); // temporary
+	task->next = task;
+	write_cr3(task->pd);
+	map_signal_trampoline();
 	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 	{
 		struct elf_program_header *base = (struct elf_program_header *)(binary->data + header->program_hdrs_offset);
@@ -258,7 +270,7 @@ __attribute__((noreturn)) void context_switch(t_task *next)
 	gdt_set_user_segment(&next->user_gdt_segment);
 	write_cr3(next->pd);
 
-	iret_from_frame((t_interrupt_data *)next->k_esp);
+	iret_from_frame_with_signals((t_interrupt_data *)next->k_esp);
 	__builtin_unreachable();
 }
 
@@ -462,15 +474,22 @@ void free_vmas(t_mm *mm)
 void cleanup_task(t_task *task)
 {
 	// disable_interrupts();
-	free_vmas(&task->proc_memory);
+	if (task != g_curr_task)
+		free_vmas(&task->proc_memory);
+	else
+	{
+		write_cr3(task->pd);
+		free_vmas(&task->proc_memory);
+		write_cr3(g_curr_task->pd);
+	}
 	task->proc_memory.vma_list = NULL;
 	for (uint32_t i = 0; i < MAX_OPEN_FILES; i++)
 	{
-		if (g_curr_task->open_files[i])
+		if (task->open_files[i])
 		{
 			extern uint32_t syscall_close(t_interrupt_data *regs);
 			t_interrupt_data dummy;
-			dummy.ebx = i; //fd
+			dummy.ebx = i;
 			syscall_close(&dummy);
 		}
 	}

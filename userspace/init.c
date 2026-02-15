@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <stdarg.h>
+#include <signal.h>
 
 #define BYTES 10000000
 #define AT_EMPTY_PATH 0x1000 /* Allow empty relative pathname */
@@ -32,6 +33,18 @@ int fdprintf(int fd, size_t bufmax, const char *fmt, ...)
 	write(fd, buffer, n);
 	free(buffer);
 	return n;
+}
+
+static volatile __sig_atomic_t got_sigchld = 0;
+
+void on_sigchld(int sig)
+{
+    (void)sig;
+    got_sigchld = 1;
+
+    // Avoid printf in signal handlers in real POSIX; write is async-signal-safe.
+    const char msg[] = "[handler] SIGCHLD received\n";
+    write(1, msg, sizeof(msg) - 1);
 }
 
 int main(void)
@@ -100,12 +113,21 @@ int main(void)
 	free(p);
 #define GOODBYE "\t\t//// GOODBYE\n"
 	write(1, GOODBYE, sizeof(GOODBYE) - 1);
-	char *shared = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	char *shared = mmap(NULL, 4096 * 4, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 	if (shared == MAP_FAILED)
 	{
 		perror("mmap");
 		return (-1);
 	}
+	struct sigaction sa;
+    sa.sa_handler = on_sigchld;
+    sa.sa_flags = 0;
+    memset(&sa.sa_mask, 0, sizeof(sa.sa_mask));
+    if (sigaction(SIGCHLD, &sa, NULL) != 0)
+    {
+        perror("sigaction(SIGCHLD)");
+        return 1;
+    }
 	int forkr = syscall(2);
 	if (forkr == 0) {
 		char *const argv[] = {"/bin/sh", 0};
@@ -119,7 +141,7 @@ int main(void)
 		return (status);
 	}
 
-	memset(shared, 69, 4096);
+	memset(shared, 69, 4096 * 4);
 	u_int32_t skibidi = 67;
 	int pipe_fd[2];
 	if (pipe(pipe_fd))
@@ -143,7 +165,7 @@ int main(void)
 			close(pipe_fd[1]);
 			printf("grandchild exiting\n");
 			//while (1) ;
-			exit(0);
+			return(0);
 		}
 		printf("hello from pid %u (child)\n", getpid());
 		skibidi = 0;
@@ -151,7 +173,9 @@ int main(void)
 		//for (u_int32_t i = 0; i < 10000; i++)
 		//	fdprintf(pipe_fd[1], 4096,  "%u", i);
 		printf("child modified skybidi to %u in child\n", skibidi);
+		munmap(shared + 4096, 4096);
 		shared[0] = 42;
+		shared[4096 * 2] = 42;
 		printf("child modified shared[0] to %u in child\n", shared[0]);
 		/*p = malloc(BYTES * 200);
 		for (unsigned int i = 0; i < BYTES * 200; i++)
@@ -159,7 +183,7 @@ int main(void)
 		free(p);*/
 		close(pipe_fd[1]);
 		syscall(114, childpid, 0, 0, 0);
-		exit(0);
+		return (0);
 	}
 	else
 	{
@@ -180,11 +204,10 @@ int main(void)
 		printf("waiting for child to exit\n");
 		syscall(114, pid, 0, 0, 0);
 		printf("skibidy still %u in parent\n", skibidi);
-		printf("shared[0] changed to %u in parent\n", shared[0]);
+		printf("shared[0] changed to %u in parent, can still access shared[4097] : %u\n", shared[0], shared[4097]);
 		/*p = malloc(BYTES * 200); // test that the child has been cleanup correctly (if this worked in child but not in parentm it means child cleanup didn't happen after exit)
 		for (unsigned int i = 0; i < BYTES * 200; i++)
 			p[i] = 42;*/
-		while (1)
-			;
+		return (0);
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 15:26:19 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 17:58:52 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,8 @@
 t_task *g_curr_task = 0;
 t_task *g_init_task = 0;
 uint32_t g_next_pid = 1;
+
+t_task *g_task_list = NULL; //linked list of every task, no matter their state
 
 static void copy_strings(unsigned char *dst_s, struct process_strings strings, unsigned char **dst_p)
 {
@@ -213,7 +215,9 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	}
 	g_curr_task = task;
 	g_init_task = task;
+	g_task_list = task;
 	task->next = task;
+	task->next_all_task = task;
 	write_cr3(task->pd);
 	map_signal_trampoline();
 	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
@@ -513,7 +517,16 @@ void task_reap_zombie(t_task *t)
 	if (g_curr_task == t)
 		kernel_panic("task wants to reap itself, wtf", NULL);//g_curr_task = t->next;
 
+	t_task *prev_all = t;
+	while (prev_all->next_all_task != t)
+	{
+		prev_all = prev_all->next_all_task;
+	}
+	if (prev_all == t) // should never happen unless list corrupt
+		kernel_panic("reaped last task in task_reap_zombie", NULL);
+
 	prev->next = t->next;
+	prev_all->next_all_task = t->next_all_task;
 
 	vfree(t);
 }

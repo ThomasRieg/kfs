@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 16:37:28 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 17:59:47 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,7 +88,7 @@ uint32_t syscall_sigreturn(t_interrupt_data *f)
     // restore full user context into interrupt frame
     memcpy(f, &uf->saved_context, sizeof(*f));
 
-    return (0); // interrupt will push back  
+    return (0); // interrupt will pop back the modified frame
 }
 
 //48
@@ -110,4 +110,49 @@ uint32_t syscall_signal(t_interrupt_data *r)
     a->restorer = NULL;
 
     return (uint32_t)(uintptr_t)old;
+}
+
+// 37
+//  	pid_t pid | int sig
+// TODO handle pid = 0 (process group) and pid = -1 (all killeable process)
+uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
+{
+    int pid = regs->ebx;
+	int sig = regs->ecx;
+    print_trace("tkill %d %x\n", pid, sig);
+    t_task *target = NULL;
+    t_task *curr = g_task_list;
+    if (sig > NSIG || sig < 1)
+        return (-EINVAL);
+    while (curr)
+    {
+        if ((int)curr->task_id == pid)
+        {
+            target = curr;
+            break;
+        }
+        curr = curr->next;
+    }
+    if (!target)
+        return (-ESRCH);
+    enqueue_sig(target, sig);
+	return (0); // 0 for success
+}
+
+uint32_t syscall_tkill(t_interrupt_data *regs)
+{
+	int tid = regs->ebx;
+	int sig = regs->ecx;
+	print_trace("tkill %d %x\n", tid, sig);
+    syscall_kill(regs); //temporary TODO implement
+	return (0);
+}
+
+uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
+{
+	int how = regs->ebx;
+	void *set = (void *)regs->ecx;
+	void *oldset = (void *)regs->edx;
+	print_trace("rt_sigprocmask %x %x %x\n", how, set, oldset);
+	return (0);
 }

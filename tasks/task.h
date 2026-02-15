@@ -104,6 +104,7 @@ typedef struct task
 	struct task *parent_task;  // should NEVER be null, put init if parent dies (except for init)
 	struct task *children;	   // head of linked list
 	struct task *next_sibling; // link in parent list
+	struct task *next_all_task; // link of g_task_list, circular linked list
 	unsigned int uid;
 	unsigned int euid;
 	unsigned int suid;
@@ -137,6 +138,7 @@ extern t_task *g_curr_task;
 extern t_task *g_init_task; //pid 1
 extern uint32_t g_next_pid;
 extern t_task *g_to_schedule;
+extern t_task *g_task_list; //head of linked list of every task, no matter their state
 
 void schedule_next_task();
 void context_switch(t_task *next);

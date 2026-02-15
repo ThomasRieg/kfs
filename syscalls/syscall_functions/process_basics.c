@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 15:15:23 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 18:01:45 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,23 +120,6 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 		fds[i].revents = fds[i].events;
 	}
 	return (nfds);
-}
-
-uint32_t syscall_tkill(t_interrupt_data *regs)
-{
-	int tid = regs->ebx;
-	int sig = regs->ecx;
-	print_trace("tkill %d %x\n", tid, sig);
-	return (0);
-}
-
-uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
-{
-	int how = regs->ebx;
-	void *set = (void *)regs->ecx;
-	void *oldset = (void *)regs->edx;
-	print_trace("rt_sigprocmask %x %x %x\n", how, set, oldset);
-	return (0);
 }
 
 uint32_t syscall_brk(t_interrupt_data *regs)
@@ -367,14 +350,6 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 	}
 }
 
-// 37
-//  	pid_t pid | int sig
-// TODO handle pid = 0 (process group) and pid = -1 (all killeable process)
-uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
-{
-	return (g_curr_task->uid); // TODO implement (find efficient way to find the task struct of target pid)
-}
-
 static t_vma *dup_vma(t_vma *src)
 {
 	t_vma *ret = vmalloc(sizeof(*ret));
@@ -572,7 +547,9 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
 	((t_interrupt_data *)task->k_esp)->eax = 0;
 	task->next = g_curr_task->next;
+	task->next_all_task = g_curr_task->next_all_task;
 	g_curr_task->next = task;
+	g_curr_task->next_all_task = task;
 	task->status = STATUS_RUNNABLE;
 	// enable_interrupts();
 	print_trace("forked pid %u\n", task->task_id);

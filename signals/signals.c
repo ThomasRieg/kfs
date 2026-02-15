@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 17:41:26 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/15 19:53:29 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,8 +143,8 @@ void signal_deliver_if_needed(t_interrupt_data *f)
 
 bool enqueue_sig(t_task *task, int sig)
 {
-    if (task->blocked_signals &= (1u << sig))
-        return (false);
+    //if (task->blocked_signals &= (1u << sig))
+        //return (false);
     task->pending_signals |= (1u << sig);
     return (true);
 }

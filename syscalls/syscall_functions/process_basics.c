@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/16 17:04:43 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 00:26:31 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,8 @@
 #include "../../mem_page/mem_paging.h"
 #include "../../errno.h"
 #include "../../tty/tty.h"
-#include <stdint.h>
+#include "../../common.h"
+#include "../../signals/signals.h"
 
 uint32_t syscall_nanosleep(t_interrupt_data *regs)
 {
@@ -549,6 +550,9 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 		return (-ENOMEM);
 
 	task->pending_signals = 0;
+	task->blocked_signals = g_curr_task->blocked_signals;
+	task->in_signal = false;
+	memcpy(task->sigact, g_curr_task->sigact, sizeof(task->sigact));
 	task->task_id = g_next_pid++;
 	task->parent_task = g_curr_task;
 	task->cwd_inode_nr = g_curr_task->cwd_inode_nr;
@@ -558,6 +562,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->suid = g_curr_task->suid;
 	task->gid = g_curr_task->gid;
 	task->egid = g_curr_task->egid;
+	task->pgid = g_curr_task->pgid;
 	task->user_gdt_segment = g_curr_task->user_gdt_segment;
 	waitq_init(&task->wait_child);
 	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
@@ -722,16 +727,22 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		pmm_free_frame(new_pd);
 		return (-ENOMEM);
 	}
-	g_curr_task->pending_signals = 0;
+	//g_curr_task->pending_signals = 0;
+	//g_curr_task->blocked_signals = 0;
+	g_curr_task->in_signal =false; //should be false anyway but this is important
 	g_curr_task->proc_memory.heap_current = 0; // temporary
 	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 
 	g_curr_task->proc_memory.user_stack_bot = user_stack_bot;
 	g_curr_task->proc_memory.user_stack_top = user_stack_top;
+	pmm_free_frame(g_curr_task->pd);
 	g_curr_task->pd = new_pd;
 	write_cr3(g_curr_task->pd);
 	if (!map_signal_trampoline())
+	{
+		enqueue_sig(g_curr_task, SIGKILL); //should never happen, but this is too late to come back
 		return (-ENOMEM);
+	}
 
 	unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings argv, struct process_strings envp);
 	// This takes ownership of the argv, envp vectors so no need to clean them up after here
@@ -761,7 +772,6 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	}
 	regs->eip = header->entrypoint;
 	VecU8_destruct(&binary);
-	g_curr_task->status = STATUS_RUNNABLE;
 
 	/*volatile t_dt_entry_32 *gdt = (volatile t_dt_entry_32 *)(KERNEL_VIRT_BASE + GDT_START);
 
@@ -776,6 +786,25 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		: : "m"(gp));*/
 	// enable_interrupts();
 
+	//close CLOEXEC FDs
+	for (uint32_t i = 0; i < sizeof(g_curr_task->open_files) / sizeof(g_curr_task->open_files[0]); i++)
+	{
+		if (g_curr_task->open_files[i] && (g_curr_task->open_files[i]->flags & O_CLOEXEC))
+		{
+			t_interrupt_data dummy;
+			dummy.ebx = i;
+			syscall_close(&dummy);
+		}
+	}
+
+	//reset userspace signal handlers
+	for (uint32_t i = 0; i < NSIG; i++)
+	{
+		if ((g_curr_task->sigact[i].handler != SIG_IGN) && (g_curr_task->sigact[i].handler != SIG_DFL))
+			g_curr_task->sigact[i].handler = SIG_DFL;
+	}
+
+	g_curr_task->status = STATUS_RUNNABLE;
 	iret_from_frame(regs);
 	__builtin_unreachable();
 }

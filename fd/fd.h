@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   fd.h                                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:39:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/04 17:22:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 00:16:48 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,9 +17,10 @@
 
 enum e_flags
 {
-	O_RDONLY = 1,
-	O_WRONLY = (1 << 1),
-	O_NONBLOCK = (1 << 2),
+	O_RDONLY = 0,
+	O_WRONLY = 1,
+	O_NONBLOCK = 2048,
+	O_CLOEXEC = 524288,
 };
 
 enum open_file_type

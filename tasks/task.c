@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 21:49:04 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/16 17:05:03 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -578,4 +578,20 @@ void yield_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
 	g_tick = 0;
 	schedule_next_task();
+}
+
+t_task *find_task_by_pid(int pid)
+{
+    for (t_task *t = g_task_list; t; t = t->next_all_task)
+        if ((int)t->task_id == pid)
+            return t;
+    return NULL;
+}
+
+bool pgid_exists(unsigned int pgid)
+{
+    for (t_task *t = g_task_list; t; t = t->next_all_task)
+        if (t->pgid == pgid)
+            return true;
+    return false;
 }

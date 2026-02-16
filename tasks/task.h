@@ -154,5 +154,7 @@ void yield_to(t_task *next_exec);
 void unlink_task_from_runq(t_task *task);
 void add_task_to_runq(t_task *task);
 t_vma *vma_clone(const t_vma *v);
+t_task *find_task_by_pid(int pid);
+bool pgid_exists(unsigned int pgid);
 
 #endif

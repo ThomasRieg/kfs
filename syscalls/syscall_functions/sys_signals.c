@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/16 16:29:06 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/16 16:39:44 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -221,7 +221,7 @@ uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
     if (set_u && !user_range_ok((virt_ptr)set_u, sizeof(uint32_t), false, &g_curr_task->proc_memory))
         return (uint32_t)(-EFAULT);
 
-    print_trace("rt_sigprocmask x%x x%x\n", set_u ? *set_u : 0, old_u ? *old_u : 0);
+    print_trace("rt_sigprocmask new x%x old x%x how %d size %u\n", set_u ? *set_u : 0, old_u ? *old_u : 0, how, sigsetsize);
 
     // TODO upgrade to 8 bytes masks, because libc uses that.
     if (sigsetsize < sizeof(uint32_t))

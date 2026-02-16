@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/16 15:47:36 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/16 17:04:43 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include "../../mem_page/mem_paging.h"
 #include "../../errno.h"
 #include "../../tty/tty.h"
+#include <stdint.h>
 
 uint32_t syscall_nanosleep(t_interrupt_data *regs)
 {
@@ -42,15 +43,56 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 
 uint32_t syscall_getpgid(__attribute__((unused)) t_interrupt_data *regs)
 {
-	return 0;
+	int pid = (int)regs->ebx;
+
+    t_task *t = NULL;
+    if (pid == 0)
+        t = g_curr_task;
+    else if (pid > 0)
+        t = find_task_by_pid(pid);
+    else
+        return (uint32_t)(-EINVAL);
+
+    if (!t)
+        return (uint32_t)(-ESRCH);
+
+    return (uint32_t)t->pgid;
 }
 
 uint32_t syscall_setpgid(__attribute__((unused)) t_interrupt_data *regs)
 {
-	unsigned int pid = regs->ebx;
-	unsigned int pgid = regs->ecx;
+    int pid  = (int)regs->ebx;
+    int pgid = (int)regs->ecx;
 	print_trace("setpgid %u %u\n", pid, pgid);
-	return 0;
+
+    t_task *target = NULL;
+    if (pid == 0)
+        target = g_curr_task;
+    else if (pid > 0)
+        target = find_task_by_pid(pid);
+    else
+        return (uint32_t)(-EINVAL);
+
+    if (!target)
+        return (uint32_t)(-ESRCH);
+
+    // permissions: minimal
+    if (target != g_curr_task && target->parent_task != g_curr_task)
+        return (uint32_t)(-EPERM);
+
+    if (pgid == 0)
+        pgid = (int)target->task_id;
+
+    if (pgid < 0)
+        return (uint32_t)(-EINVAL);
+
+    // Allow creating a new group if pgid == target pid.
+    // Otherwise require that group exists.
+    if ((unsigned)pgid != target->task_id && !pgid_exists((unsigned)pgid))
+        return (uint32_t)(-EINVAL);
+
+    target->pgid = (uint32_t)pgid;
+    return 0;
 }
 
 uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 20:49:47 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/16 15:47:36 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -303,19 +303,16 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 	for (;;)
 	{
 		// disable_interrupts();
-		print_trace("loop 1\n");
 
 		if (!g_curr_task->children)
 		{
 			// enable_interrupts();
 			return (uint32_t)(-ECHILD);
 		}
-		print_trace("loop 2\n");
 
 		t_task *z = find_zombie_child(g_curr_task, pid);
 		if (z)
 		{
-			print_trace("loop 3\n");
 			uint32_t child_pid = z->task_id;
 
 			unlink_child(g_curr_task, z);
@@ -329,7 +326,6 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 					return (uint32_t)(-EFAULT);
 				*(uint32_t *)(uintptr_t)stat_uaddr = z->exit_code;
 			}
-			print_trace("loop 4\n");
 
 			task_reap_zombie(z);
 			return child_pid;
@@ -341,11 +337,6 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 			// enable_interrupts();
 			return 0;
 		}
-		print_trace("loop 5\n");
-
-		// Sleep until a child changes state
-		g_curr_task->wait_reason = WAIT_CHILD;
-		g_curr_task->status = STATUS_SLEEP;
 
 		// enable_interrupts();
 

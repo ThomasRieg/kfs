@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 20:34:19 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/16 15:50:18 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -131,7 +131,7 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
             target = curr;
             break;
         }
-        curr = curr->next;
+        curr = curr->next_all_task;
     }
     if (!target)
         return (-ESRCH);

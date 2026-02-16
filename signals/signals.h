@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 20:09:28 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/16 16:10:01 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@ typedef void (*t_sig_handler)(int);
 #define SIG_IGN ((t_sig_handler)1) // ignore this signal
 #define SIG_DFL ((t_sig_handler)0) // default behavior (stop process)
 
+#define SIGSTOP 19u
 #define SIGCHLD 17u // list here https://man7.org/linux/man-pages/man7/signal.7.html
 #define SIGPIPE 13u
 #define SIGSEGV 11u

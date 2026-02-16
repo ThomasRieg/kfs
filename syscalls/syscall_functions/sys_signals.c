@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/16 15:50:18 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/16 16:29:06 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,8 +21,8 @@ static int sig_forbidden(int sig) { return (sig == 9 /*SIGKILL*/ || sig == 19 /*
 uint32_t syscall_rt_sigaction(t_interrupt_data *r)
 {
     int sig = (int)r->ebx;
-    t_sigaction_k *act_u  = (t_sigaction_k *)r->ecx;   // user ptr or 0
-    t_sigaction_u *oact_u = (t_sigaction_u *)r->edx;   // user ptr or 0
+    t_sigaction_k *act_u  = (t_sigaction_k *)(uintptr_t)r->ecx;   // user ptr or 0
+    t_sigaction_u *oact_u = (t_sigaction_u *)(uintptr_t)r->edx;   // user ptr or 0
     uint32_t sigsetsize = r->esi;
     print_trace("rt_sigaction %u %x %x\n", sig, act_u, oact_u);
 
@@ -112,6 +112,13 @@ uint32_t syscall_signal(t_interrupt_data *r)
     return (uint32_t)(uintptr_t)old;
 }
 
+static bool can_signal(t_task *src, t_task *dst)
+{
+    if (!src || !dst) return false;
+    if (src->euid == 0) return true;
+    return (src->uid == dst->uid) || (src->euid == dst->uid) || (src->uid == dst->euid);
+}
+
 // 37
 //  	pid_t pid | int sig
 // TODO handle pid = 0 (process group) and pid = -1 (all killeable process)
@@ -120,22 +127,75 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
     int pid = regs->ebx;
 	int sig = regs->ecx;
     print_trace("tkill %d %x\n", pid, sig);
-    t_task *target = NULL;
-    t_task *curr = g_task_list;
     if (sig > NSIG || sig < 1)
         return (-EINVAL);
-    while (curr)
+    bool found_one = false;
+    t_task *curr = g_task_list;
+    if (pid > 0)
     {
-        if ((int)curr->task_id == pid)
+        t_task *target = NULL;
+        while (curr)
         {
-            target = curr;
-            break;
+            if ((int)curr->task_id == pid)
+            {
+                target = curr;
+                break;
+            }
+            curr = curr->next_all_task;
         }
-        curr = curr->next_all_task;
+        if (!target)
+            return (-ESRCH);
+        if (!can_signal(g_curr_task, target))
+            return (-EPERM);
+        found_one = true;
+        enqueue_sig(target, sig);
     }
-    if (!target)
+    else if (pid == 0)
+    {
+        int target_pgid = g_curr_task->pgid;
+        while (curr)
+        {
+            if ((int)curr->pgid == target_pgid && can_signal(g_curr_task, curr))
+            {
+                enqueue_sig(curr, sig);
+                found_one = true;
+                break;
+            }
+            curr = curr->next_all_task;
+        }
+    }
+    else if (pid == -1)
+    {
+        while (curr)
+        {
+            if (can_signal(g_curr_task, curr))
+            {
+                if (curr == g_init_task) continue; //don't signal init
+                enqueue_sig(curr, sig);
+                found_one = true;
+                break;
+            }
+            curr = curr->next_all_task;
+        }
+    }
+    else
+    {
+        int target_pgid = -pid;
+        while (curr)
+        {
+            if ((int)curr->pgid == target_pgid && can_signal(g_curr_task, curr))
+            {
+                enqueue_sig(curr, sig);
+                found_one = true;
+                break;
+            }
+            curr = curr->next_all_task;
+        }
+    }
+    if (!found_one)
+    {
         return (-ESRCH);
-    enqueue_sig(target, sig);
+    }
 	return (0); // success
 }
 
@@ -150,9 +210,55 @@ uint32_t syscall_tkill(t_interrupt_data *regs)
 
 uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
 {
-	int how = regs->ebx;
-	void *set = (void *)regs->ecx;
-	void *oldset = (void *)regs->edx;
-	print_trace("rt_sigprocmask %x %x %x\n", how, set, oldset);
-	return (0);
+	
+    int how = (int)regs->ebx;
+    uint32_t *set_u   = (uint32_t *)(uintptr_t)regs->ecx;  // can be NULL
+    uint32_t *old_u   = (uint32_t *)(uintptr_t)regs->edx;  // can be NULL
+    uint32_t sigsetsize = (uint32_t)regs->esi;
+
+    if (old_u && !user_range_ok((virt_ptr)old_u, sizeof(uint32_t), true, &g_curr_task->proc_memory))
+        return (uint32_t)(-EFAULT);
+    if (set_u && !user_range_ok((virt_ptr)set_u, sizeof(uint32_t), false, &g_curr_task->proc_memory))
+        return (uint32_t)(-EFAULT);
+
+    print_trace("rt_sigprocmask x%x x%x\n", set_u ? *set_u : 0, old_u ? *old_u : 0);
+
+    // TODO upgrade to 8 bytes masks, because libc uses that.
+    if (sigsetsize < sizeof(uint32_t))
+        return (uint32_t)(-EINVAL);
+
+    if (old_u)
+    {
+        // Return old mask
+        *(uint32_t *)(uintptr_t)old_u = g_curr_task->blocked_signals;
+    }
+
+    if (!set_u)
+        return (0); // just asking for old mask
+
+    uint32_t set = *(uint32_t *)(uintptr_t)set_u;
+
+    // Cannot block SIGKILL and SIGSTOP
+    set &= ~(1 << SIGKILL);
+    set &= ~(1 << SIGSTOP);
+
+    switch (how)
+    {
+        //SIG_BLOCK
+        case 0:
+            g_curr_task->blocked_signals |= set;
+            break;
+        //SIG_UNBLOCK
+        case 1:
+            g_curr_task->blocked_signals &= ~set;
+            break;
+        //SIG_SETMASK
+        case 2:
+            g_curr_task->blocked_signals = set;
+            break;
+        default:
+            return (uint32_t)(-EINVAL);
+    }
+
+    return (0); //success
 }

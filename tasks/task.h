@@ -110,6 +110,7 @@ typedef struct task
 	unsigned int suid;
 	unsigned int gid;
 	unsigned int egid;
+	unsigned int pgid; //process group id
 	unsigned int exit_code; //status returned by wait, signal on last byte, exit number on second to last byte
 	uint32_t pending_signals;
 	uint32_t blocked_signals; //mask of blocked signals (can't add them to pending if is this mask)

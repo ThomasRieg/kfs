@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 01:47:49 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 02:43:29 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,8 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 		while (!tty->cmd.index && !tty->read_eof) {
 			print_trace("tty_read: sleeping because no tty ready\n");
 			sleep_on(&tty->wait_read, WAIT_TTY_READ);
+			if (!tty->cmd.index && !tty->read_eof)
+				return (-EINTR); //TODO only do that depending on SA_RESTART
 		}
 		if (tty->read_eof) {
 			if (tty->cmd.index)
@@ -50,7 +52,7 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 
 		uint32_t to_copy = n < tty->cmd.index ? n : tty->cmd.index;
 		memcpy(buf, tty->cmd.buffer, to_copy);
-		memmove(buf, buf + to_copy, tty->cmd.index - to_copy);
+		memmove(tty->cmd.buffer, tty->cmd.buffer + to_copy, tty->cmd.index - to_copy);
 		tty->cmd.index -= to_copy;
 		if (tty->cmd.index)
 				waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
@@ -85,6 +87,8 @@ int32_t tty_close(t_file *f)
 int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 {
 	t_tty *tty = f->priv;
+	print_trace("tty_ioctl(op=0x%x, val=0x%x) pid=%u pgid=%u fg_pgid=%u\n",
+        op, val, g_curr_task->task_id, g_curr_task->pgid, tty->fg_pgid);
 	switch (op) {
 	case TIOCGWINSZ:
 		if (!user_range_ok((virt_ptr)val, sizeof(struct winsize), true, &g_curr_task->proc_memory))

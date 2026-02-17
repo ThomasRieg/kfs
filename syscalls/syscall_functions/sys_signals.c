@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 01:29:46 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 03:04:25 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -240,8 +240,8 @@ uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
     uint32_t set = *(uint32_t *)(uintptr_t)set_u;
 
     // Cannot block SIGKILL and SIGSTOP
-    set &= ~(1 << SIGKILL);
-    set &= ~(1 << SIGSTOP);
+    set &= ~SIGBIT(SIGKILL);
+    set &= ~SIGBIT(SIGSTOP);
 
     switch (how)
     {

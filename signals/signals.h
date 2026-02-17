@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 01:07:29 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 03:19:49 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,8 @@ typedef void (*t_sig_handler)(int);
 #define SIG_IGN ((t_sig_handler)1) // ignore this signal
 #define SIG_DFL ((t_sig_handler)0) // default behavior (stop process)
 
+#define SIGTTOU 22u
+#define SIGTTIN 21u
 #define SIGSTOP 19u
 #define SIGCHLD 17u // list here https://man7.org/linux/man-pages/man7/signal.7.html
 #define SIGPIPE 13u
@@ -30,7 +32,11 @@ typedef void (*t_sig_handler)(int);
 #define SIGKILL 9u
 #define SIGINT 2u
 
+#define SIGBIT(sig) (1u << ((sig) - 1))
+
 #define NSIG 32
+
+#define SA_RESTART 0x10000000
 
 typedef struct s_sigaction_k {
     t_sig_handler handler;
@@ -60,5 +66,7 @@ void task_terminate_by_signal(t_task *t, int sig);
 void signal_deliver_if_needed(t_interrupt_data *f);
 bool enqueue_sig(t_task *task, int sig);
 bool can_signal(t_task *src, t_task *dst);
+bool has_pending_signals(t_task *task);
+uint32_t flags_first_pending_signal(t_task *task);
 
 #endif

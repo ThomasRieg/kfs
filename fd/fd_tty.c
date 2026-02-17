@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 02:43:29 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 03:34:40 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 #include "../errno.h"
 #include "../tasks/task.h"
 #include "../libk/libk.h"
-#include <stdint.h>
+#include "../common.h"
 
 t_file_ops g_tty_ops = {.read = tty_read, .write = tty_write, .close = tty_close, .ioctl = tty_ioctl};
 
@@ -37,12 +37,32 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 {
 	if (f && buf && n) {
 		t_tty *tty = f->priv;
+		if (g_curr_task->pgid != tty->fg_pgid)
+		{
+			print_trace("attemting to read on unowned terminal by pid %u\n", g_curr_task->task_id);
+			int target_pgid = tty->fg_pgid;
+			t_task *curr = g_task_list;
+			while (curr)
+			{
+				if ((int)curr->pgid == target_pgid)
+				{
+					enqueue_sig(curr, SIGTTIN);
+				}
+				curr = curr->next_all_task;
+				if (curr == g_task_list) break;
+			}
+			return (-EINTR);
+		}
 		while (!tty->cmd.index && !tty->read_eof) {
 			print_trace("tty_read: sleeping because no tty ready\n");
 			sleep_on(&tty->wait_read, WAIT_TTY_READ);
-			if (!tty->cmd.index && !tty->read_eof)
-				return (-EINTR); //TODO only do that depending on SA_RESTART
+			if (!tty->cmd.index && !tty->read_eof && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+			{
+				print_trace("tty_read: woken up by signal without SA_RESTART, return -EINTR\n");
+				return (-EINTR);
+			}
 		}
+		print_trace("tty_read: readed something\n");
 		if (tty->read_eof) {
 			if (tty->cmd.index)
 				waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
@@ -68,6 +88,22 @@ int32_t tty_write(t_file *f, const void *buf, size_t n)
 	t_tty *tty = f->priv;
 	if (!tty)
 		return (-EBADF);
+	if (g_curr_task->pgid != tty->fg_pgid)
+	{
+		print_trace("attemting to write on unowned terminal by pid %u\n", g_curr_task->task_id);
+		int target_pgid = tty->fg_pgid;
+		t_task *curr = g_task_list;
+		while (curr)
+		{
+			if ((int)curr->pgid == target_pgid)
+			{
+				enqueue_sig(curr, SIGTTOU);
+			}
+			curr = curr->next_all_task;
+			if (curr == g_task_list) break;
+		}
+		return (-EINTR);
+	}
 	write(buf, n);
 	return (n);
 }

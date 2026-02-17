@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 21:44:05 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 03:18:55 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,7 @@ __attribute__((noreturn)) static inline void iret_from_frame(t_interrupt_data *f
 
 static int pick_signal(uint32_t pending_unblocked) {
     for (int sig = 1; sig < NSIG; sig++)
-        if (pending_unblocked & (1u << sig))
+        if (pending_unblocked & SIGBIT(sig))
             return sig;
     return 0;
 }
@@ -101,7 +101,7 @@ void signal_deliver_if_needed(t_interrupt_data *f)
     t_sig_handler h = act->handler;
 
     if (h == SIG_IGN /*SIG_IGN*/) {
-        t->pending_signals &= ~(1u << sig);
+        t->pending_signals &= ~SIGBIT(sig);
         return;
     }
     if (h ==SIG_DFL /*SIG_DFL*/) {
@@ -128,8 +128,8 @@ void signal_deliver_if_needed(t_interrupt_data *f)
     memcpy(&uf->saved_context, f, sizeof(*f));
 
     // update task signal state
-    t->pending_signals &= ~(1u << sig);
-    t->blocked_signals |= (1u << sig);      // block itself during handler
+    t->pending_signals &= ~SIGBIT(sig);
+    t->blocked_signals |= SIGBIT(sig);      // block itself during handler
     t->blocked_signals |= act->mask;
     t->in_signal = true;
 
@@ -143,9 +143,23 @@ void signal_deliver_if_needed(t_interrupt_data *f)
 
 bool enqueue_sig(t_task *task, int sig)
 {
-    //if (task->blocked_signals &= (1u << sig))
+    //if (task->blocked_signals &= SIGBIT(sig))
         //return (false);
-    task->pending_signals |= (1u << sig);
+    task->pending_signals |= SIGBIT(sig);
     waitq_wake(task); //remove sleep status if task sleeping
     return (true);
+}
+
+bool has_pending_signals(t_task *task)
+{
+    return (task->pending_signals & ~task->blocked_signals);
+}
+
+uint32_t flags_first_pending_signal(t_task *task)
+{
+    uint32_t pend = task->pending_signals & ~task->blocked_signals;
+    if (!pend) return (0);
+    int sig = pick_signal(pend);
+    t_sigaction_k *act = &task->sigact[sig];
+    return (act->flags);
 }

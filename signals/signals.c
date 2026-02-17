@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 03:18:55 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 03:51:00 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,7 @@ void signal_deliver_if_needed(t_interrupt_data *f)
     // only when returning to usermode
     if ((f->cs & 3) != 3) return;
 
-    if (t->in_signal) return;
+    //if (t->in_signal) return;
 
     uint32_t pend = t->pending_signals & ~t->blocked_signals;
     if (!pend) return;

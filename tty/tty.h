@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 03:10:42 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 02:48:48 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 01:46:02 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -150,6 +150,8 @@ typedef struct s_tty
 	t_waitq wait_read; //wait inside read, so wake up these when you write something
 	t_waitq wait_write; //wait inside write, so wake up these when you write something
 	bool read_eof;
+	uint32_t fg_pgid;        // foreground process group
+    uint32_t session_sid;    // session leader
 } t_tty;
 
 // not sure if I actually want them extern or if I want them static, if I only access it from tty.c they should be static but for now extern is easier

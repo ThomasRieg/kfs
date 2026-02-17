@@ -1,6 +1,7 @@
 #include "../scancode.h"
 #include "../tty/tty.h"
 #include "../libk/libk.h"
+#include "../tasks/task.h"
 #include "../common.h"
 
 static bool shift_held = false;
@@ -17,7 +18,23 @@ void handle_ps2(unsigned char scancode) {
 				c = layout[1][scancode];
 			else
 				c = layout[0][scancode];
-
+			if (lctrl_held && c == 'c')
+			{
+				print_trace("ctrl+c\n");
+				t_tty *curr_tty = &g_ttys[g_current_tty];
+				int target_pgid = curr_tty->fg_pgid;
+				t_task *curr = g_task_list;
+				while (curr)
+				{
+					if ((int)curr->pgid == target_pgid)
+					{
+						print_trace("sending SIGINT from keyboard handler to pid %u\n", curr->task_id);
+						enqueue_sig(curr, SIGINT);
+					}
+					curr = curr->next_all_task;
+					if (curr == g_task_list) break;
+				}
+			}
 			if (lctrl_held && c >= 'a' && c <= 'd')
 				c -= 0x40 + 32;
 

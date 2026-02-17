@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/14 00:53:57 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 01:47:49 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,13 +97,18 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 		return 0;
 	case TIOCGPGRP:
 		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), true, &g_curr_task->proc_memory))
-			return -EFAULT;
-		unsigned int *pgrp = (unsigned int *)val;
-		*pgrp = 0;
+        return -EFAULT;
+		*(unsigned int *)val = tty->fg_pgid;
+		print_trace("TIOCGPGRP -> %u\n", tty->fg_pgid);
 		return 0;
 	case TIOCSPGRP:
 		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), false, &g_curr_task->proc_memory))
-			return -EFAULT;
+        return -EFAULT;
+		uint32_t new = *(uint32_t *)val;
+		print_trace("TIOCSPGRP <- %u\n", new);
+		if (!pgid_exists(new))
+			return (-ESRCH);
+		tty->fg_pgid = new;
 		return 0;
 	case TCGETS:
 		if (!user_range_ok((virt_ptr)val, sizeof(struct termios), true, &g_curr_task->proc_memory))

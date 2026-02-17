@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/16 16:39:44 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 01:29:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 
 static int sig_valid(int sig) { return sig > 0 && sig < NSIG; }
 
-static int sig_forbidden(int sig) { return (sig == 9 /*SIGKILL*/ || sig == 19 /*SIGSTOP*/); }
+static int sig_forbidden(int sig) { return (sig == SIGKILL || sig == SIGSTOP); }
 
 uint32_t syscall_rt_sigaction(t_interrupt_data *r)
 {
@@ -96,7 +96,7 @@ uint32_t syscall_signal(t_interrupt_data *r)
 {
     int sig = (int)r->ebx;
     uintptr_t handler = (uintptr_t)r->ecx;
-    print_trace("signal %u\n", handler);
+    print_trace("signal sig %u handler %p\n", sig, handler);
 
     if (!sig_valid(sig)) return (-EINVAL);
     if (sig_forbidden(sig)) return (-EINVAL);
@@ -112,7 +112,7 @@ uint32_t syscall_signal(t_interrupt_data *r)
     return (uint32_t)(uintptr_t)old;
 }
 
-static bool can_signal(t_task *src, t_task *dst)
+bool can_signal(t_task *src, t_task *dst)
 {
     if (!src || !dst) return false;
     if (src->euid == 0) return true;
@@ -126,7 +126,7 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
 {
     int pid = regs->ebx;
 	int sig = regs->ecx;
-    print_trace("tkill %d %x\n", pid, sig);
+    print_trace("kill %d %x\n", pid, sig);
     if (sig > NSIG || sig < 1)
         return (-EINVAL);
     bool found_one = false;
@@ -142,6 +142,7 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
                 break;
             }
             curr = curr->next_all_task;
+            if (curr == g_task_list) break;
         }
         if (!target)
             return (-ESRCH);
@@ -159,9 +160,9 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
             {
                 enqueue_sig(curr, sig);
                 found_one = true;
-                break;
             }
             curr = curr->next_all_task;
+            if (curr == g_task_list) break;
         }
     }
     else if (pid == -1)
@@ -173,9 +174,9 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
                 if (curr == g_init_task) continue; //don't signal init
                 enqueue_sig(curr, sig);
                 found_one = true;
-                break;
             }
             curr = curr->next_all_task;
+            if (curr == g_task_list) break;
         }
     }
     else
@@ -187,9 +188,9 @@ uint32_t syscall_kill(__attribute__((unused)) t_interrupt_data *regs)
             {
                 enqueue_sig(curr, sig);
                 found_one = true;
-                break;
             }
             curr = curr->next_all_task;
+            if (curr == g_task_list) break;
         }
     }
     if (!found_one)

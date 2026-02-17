@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/16 16:10:01 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 01:07:29 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ typedef void (*t_sig_handler)(int);
 #define SIGPIPE 13u
 #define SIGSEGV 11u
 #define SIGKILL 9u
+#define SIGINT 2u
 
 #define NSIG 32
 
@@ -58,5 +59,6 @@ typedef struct task t_task;
 void task_terminate_by_signal(t_task *t, int sig);
 void signal_deliver_if_needed(t_interrupt_data *f);
 bool enqueue_sig(t_task *task, int sig);
+bool can_signal(t_task *src, t_task *dst);
 
 #endif

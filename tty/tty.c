@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "tty.h"
+#include "../tasks/task.h"
 #include "../io.h"
 #include "../vga/vga.h"
 #include "../libk/libk.h"
@@ -50,7 +51,9 @@ void init_active_tty(void)
 	tty->termios.c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN;
 	tty->termios.c_cc[VINTR] = 0x03;
 	tty->termios.c_cc[VEOF] = 0x04;
-	tty->termios.c_cc[VERASE] = 0x7f;
+	tty->termios.c_cc[VERASE] = 0x7F;
+	tty->termios.c_cc[VSUSP] = 0x1A;
+	tty->termios.c_cc[VQUIT] = 0x1C;
 	if (!tty->cmd.buffer)
 		kernel_panic("couldn't allocate memory for the new tty", NULL);
 }
@@ -92,6 +95,34 @@ void tty_add_input(char c)
 		curr->read_eof = true;
 		waitq_wake_one(&curr->wait_read);
 		return;
+	}
+	if (curr->termios.c_lflag & ISIG) {
+		const struct {
+			cc_t cc;
+			int sig;
+			const char *str;
+		} signals[] = {
+			{VINTR, SIGINT, "SIGINT"},
+			{VQUIT, SIGQUIT, "SIGQUIT"},
+			{VSUSP, SIGTSTP, "SIGTSTP"},
+		};
+		for (unsigned short i = 0; i < sizeof(signals)/sizeof(signals[0]); i++) {
+			if (c == curr->termios.c_cc[signals[i].cc]) {
+				int target_pgid = curr->fg_pgid;
+				print_trace("signal %s triggered from TTY to pgid %d\n", signals[i].str, target_pgid);
+				t_task *curr_task = g_task_list;
+				while (curr_task)
+				{
+					if ((int)curr_task->pgid == target_pgid)
+					{
+						print_trace("sending %s from TTY to pid %u\n", signals[i].str, curr_task->task_id);
+						enqueue_sig(curr_task, signals[i].sig);
+					}
+					curr_task = curr_task->next_all_task;
+					if (curr_task == g_task_list) break;
+				}
+			}
+		}
 	}
 
 	if (c == '\r' && curr->termios.c_lflag & ICANON)

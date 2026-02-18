@@ -26,12 +26,25 @@ struct winsize
 	unsigned short ws_ypixel; /* unused */
 };
 
+#define KB_101 0x02
+
+// IOCTLs
+#define KDGKBTYPE 0x4B33
+#define KDGKBENT 0x4B46
 #define TCGETS 0x5401
 #define TCSETS 0x5402
+#define TCSETSW 0x5403
+#define TCSETSF 0x5404
 #define TIOCGPGRP 0x540F
 #define TIOCSPGRP 0x5410
 #define TIOCGWINSZ 0x5413
 #define TIOCGWINSZ 0x5413
+
+struct kbentry {
+	unsigned char  kb_table;
+	unsigned char  kb_index;
+	unsigned short kb_value;
+};
 
 int32_t tty_read(t_file *f, void *buf, size_t n)
 {
@@ -126,6 +139,16 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 	print_trace("tty_ioctl(op=0x%x, val=0x%x) pid=%u pgid=%u fg_pgid=%u\n",
         op, val, g_curr_task->task_id, g_curr_task->pgid, tty->fg_pgid);
 	switch (op) {
+	case KDGKBTYPE:
+		*(int *)val = KB_101;
+		return 0;
+	case KDGKBENT:
+		if (!user_range_ok((virt_ptr)val, sizeof(struct kbentry), true, &g_curr_task->proc_memory))
+			return -EFAULT;
+		struct kbentry *kbe = (struct kbentry *)val;
+		print_trace("kdgkbent: tbl %u index %u\n", kbe->kb_table, kbe->kb_index);
+		kbe->kb_value = 0;
+		return 0;
 	case TIOCGWINSZ:
 		if (!user_range_ok((virt_ptr)val, sizeof(struct winsize), true, &g_curr_task->proc_memory))
 			return -EFAULT;
@@ -156,6 +179,8 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 		*(struct termios *)val = tty->termios;
 		return 0;
 	case TCSETS:
+	case TCSETSW: // drain output before applying
+	case TCSETSF: // drain output before applying, flush input
 		if (!user_range_ok((virt_ptr)val, sizeof(struct termios), false, &g_curr_task->proc_memory))
 			return -EFAULT;
 		tty->termios = *(struct termios *)val;

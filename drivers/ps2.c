@@ -14,29 +14,14 @@ void handle_ps2(unsigned char scancode) {
 		if (!(scancode >> 7))
 		{ // if not a release event
 			char c;
+
 			if (shift_held)
 				c = layout[1][scancode];
 			else
 				c = layout[0][scancode];
-			if (lctrl_held && c == 'c')
-			{
-				print_trace("ctrl+c\n");
-				t_tty *curr_tty = &g_ttys[g_current_tty];
-				int target_pgid = curr_tty->fg_pgid;
-				t_task *curr = g_task_list;
-				while (curr)
-				{
-					if ((int)curr->pgid == target_pgid)
-					{
-						print_trace("sending SIGINT from keyboard handler to pid %u\n", curr->task_id);
-						enqueue_sig(curr, SIGINT);
-					}
-					curr = curr->next_all_task;
-					if (curr == g_task_list) break;
-				}
-			}
-			if (lctrl_held && c >= 'a' && c <= 'd')
-				c -= 0x40 + 32;
+			char upper_c = (c >= 'a' && c <= 'z') ? (c - 32) : c;
+			if (lctrl_held && upper_c >= 'A' && upper_c <= '_')
+				c = upper_c - 0x40;
 
 			if (caps_lock)
 				c = invert_caps(c);

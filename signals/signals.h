@@ -23,14 +23,17 @@ typedef void (*t_sig_handler)(int);
 #define SIG_IGN ((t_sig_handler)1) // ignore this signal
 #define SIG_DFL ((t_sig_handler)0) // default behavior (stop process)
 
-#define SIGTTOU 22u
-#define SIGTTIN 21u
-#define SIGSTOP 19u
-#define SIGCHLD 17u // list here https://man7.org/linux/man-pages/man7/signal.7.html
-#define SIGPIPE 13u
-#define SIGSEGV 11u
-#define SIGKILL 9u
+// list here https://man7.org/linux/man-pages/man7/signal.7.html
 #define SIGINT 2u
+#define SIGQUIT 3u
+#define SIGKILL 9u
+#define SIGSEGV 11u
+#define SIGPIPE 13u
+#define SIGCHLD 17u
+#define SIGSTOP 19u
+#define SIGTSTP 20u
+#define SIGTTIN 21u
+#define SIGTTOU 22u
 
 #define SIGBIT(sig) (1u << ((sig) - 1))
 

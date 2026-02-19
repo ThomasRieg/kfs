@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 15:29:13 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/17 04:12:11 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,6 +45,7 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs);
 uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs);
 uint32_t syscall_rt_sigaction(t_interrupt_data *regs);
 uint32_t syscall_sigreturn(t_interrupt_data *f);
+uint32_t syscall_rt_sigreturn(t_interrupt_data *f);
 uint32_t syscall_signal(t_interrupt_data *r);
 
 uint32_t syscall_get_thread_area(t_interrupt_data *regs);

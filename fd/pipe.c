@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 19:55:29 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 01:54:13 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,7 @@
 t_file_ops g_pipe_read_ops = {.read = pipe_read, .write = NULL, .close = pipe_close};
 t_file_ops g_pipe_write_ops = {.read = NULL, .write = pipe_write, .close = pipe_close};
 
-static inline uint32_t pipe_space(t_pipe *p) { return PIPE_SIZE - p->used; }
+static inline uint32_t pipe_space(t_pipe *p) { return sizeof(p->buf) - p->used; }
 
 static uint32_t pipe_read_ring(t_pipe *p, uint8_t *dst, uint32_t n)
 {
@@ -92,6 +92,15 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 			print_debug("sleeping in pipe read pid %u\n", g_curr_task->task_id);
 			sleep_on(&pipe->wait_read, WAIT_PIPE_READ);
 		}
+		if ((readed + pipe->used) < n && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+		{
+			print_trace("pipe_read: woken up by signal without SA_RESTART\n");
+			if (readed) break;
+			print_trace("pipe_read: didn't read anything yet, return -EINTR\n");
+			if (pipe->used)
+				waitq_wake_one(&pipe->wait_read);
+			return (-EINTR);
+		}
 	}
 	if (pipe->used)
 		waitq_wake_one(&pipe->wait_read); //in case another reader is waiting but no writer sleeping on wait_write to wake them up
@@ -130,8 +139,17 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 			print_debug("yieded in pipe write\n");
 			sleep_on(&pipe->wait_write, WAIT_PIPE_WRITE);
 		}
+		if ((wrote + pipe_space(pipe)) < n && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+		{
+			print_trace("pipe_write: woken up by signal without SA_RESTART\n");
+			if (wrote) break;
+			print_trace("pipe_write: didn't write anything yet, return -EINTR\n");
+			if (pipe_space(pipe))
+				waitq_wake_one(&pipe->wait_write);
+			return (-EINTR);
+		}
 	}
-	if (pipe->used != sizeof(pipe->buf))
+	if (pipe_space(pipe))
 		waitq_wake_one(&pipe->wait_write); //in case another writer is waiting but no reader sleeping on wait_read to wake them up
 	return (wrote);
 }

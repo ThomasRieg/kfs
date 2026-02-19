@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 03:34:40 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 02:06:56 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include "../tasks/task.h"
 #include "../libk/libk.h"
 #include "../common.h"
+#include "fd.h"
 
 t_file_ops g_tty_ops = {.read = tty_read, .write = tty_write, .close = tty_close, .ioctl = tty_ioctl};
 
@@ -66,16 +67,21 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 			}
 			return (-EINTR);
 		}
-		while (!tty->cmd.index && !tty->read_eof) {
-			print_trace("tty_read: sleeping because no tty ready\n");
-			sleep_on(&tty->wait_read, WAIT_TTY_READ);
-			if (!tty->cmd.index && !tty->read_eof && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+		//if (!(f->flags & O_NONBLOCK))
+		//{
+			while (!tty->cmd.index && !tty->read_eof)
 			{
-				print_trace("tty_read: woken up by signal without SA_RESTART, return -EINTR\n");
-				return (-EINTR);
+				print_trace("tty_read: sleeping because no tty ready\n");
+				sleep_on(&tty->wait_read, WAIT_TTY_READ);
+				if (has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+				{
+					print_trace("tty_read: woken up by signal without SA_RESTART\n");
+					if (tty->cmd.index || tty->read_eof) break;
+					print_trace("tty_read: tty buffer empty, return -EINTR\n");
+					return (-EINTR);
+				}
 			}
-		}
-		print_trace("tty_read: readed something\n");
+		//}
 		if (tty->read_eof) {
 			if (tty->cmd.index)
 				waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
@@ -89,6 +95,7 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 		tty->cmd.index -= to_copy;
 		if (tty->cmd.index)
 				waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
+		if (!to_copy) return (-EAGAIN);
 		return to_copy;
 	}
 	return (-EINVAL);

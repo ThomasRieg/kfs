@@ -251,6 +251,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(146, syscall_writev);
 	add_syscall(162, syscall_nanosleep);
 	add_syscall(168, syscall_poll);
+	add_syscall(173, syscall_rt_sigreturn);
 	add_syscall(174, syscall_rt_sigaction);
 	add_syscall(175, syscall_rt_sigprocmask);
 	add_syscall(183, syscall_getcwd);

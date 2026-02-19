@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 03:04:25 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 00:59:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,6 +60,8 @@ uint32_t syscall_rt_sigaction(t_interrupt_data *r)
         na.flags    = ua->flags;
         na.restorer = (void *)(uintptr_t)ua->restorer;
         na.mask     = ua->mask;
+        if (na.restorer)
+            print_trace("pid %u sig %d provided a restorer at %p\n", g_curr_task->task_id, sig, na.restorer);
 
         // Accept SIG_DFL (0), SIG_IGN (1), or a user pointer.
         //too hard to validate handler function is entirely in allocated userspace memory, irrelevant anyway because we'll run it in ring 3 so it will fault adequately
@@ -89,6 +91,14 @@ uint32_t syscall_sigreturn(t_interrupt_data *f)
     memcpy(f, &uf->saved_context, sizeof(*f));
 
     return (0); // interrupt will pop back the modified frame
+}
+
+// 173
+uint32_t syscall_rt_sigreturn(__attribute__((unused)) t_interrupt_data *f)
+{
+    print_err("rt_sigreturn called by pid %u\n", g_curr_task->task_id);
+    enqueue_sig(g_curr_task, SIGKILL);
+    return (0);
 }
 
 //48

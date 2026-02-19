@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/19 01:54:13 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 21:14:39 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,7 +72,7 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 	uint8_t *buf = (uint8_t *)buf_; //syscall_read validated this buffer already
 	uint32_t readed = 0;
 	//bool was_full = (pipe->used == sizeof(pipe->buf));
-	while (readed < n)
+	while (!readed)
 	{
 		if (pipe->used)
 		{
@@ -82,26 +82,27 @@ int32_t pipe_read(t_file *f, void *buf_, size_t n)
 		{
 			return (readed); // no read = readed 0 = eof
 		}
-		waitq_wake_one(&pipe->wait_write);
 		if (f->flags & O_NONBLOCK)
 		{
-			return readed ? (int32_t)(readed) : (-EAGAIN);
+			if (readed)
+			{
+				waitq_wake_one(&pipe->wait_write);
+				return (readed);
+			}
+			return (-EAGAIN);
 		}
-		else if(readed < n && pipe->writers)
+		else if(!readed && pipe->writers)
 		{
 			print_debug("sleeping in pipe read pid %u\n", g_curr_task->task_id);
 			sleep_on(&pipe->wait_read, WAIT_PIPE_READ);
 		}
-		if ((readed + pipe->used) < n && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+		if (!readed && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
 		{
-			print_trace("pipe_read: woken up by signal without SA_RESTART\n");
-			if (readed) break;
-			print_trace("pipe_read: didn't read anything yet, return -EINTR\n");
-			if (pipe->used)
-				waitq_wake_one(&pipe->wait_read);
+			print_trace("pipe_read: woken up by signal didn't read anything yet, return -EINTR\n");
 			return (-EINTR);
 		}
 	}
+	waitq_wake_one(&pipe->wait_write);
 	if (pipe->used)
 		waitq_wake_one(&pipe->wait_read); //in case another reader is waiting but no writer sleeping on wait_write to wake them up
 	return (readed);
@@ -118,7 +119,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 	uint8_t *buf = (uint8_t *)buf_; //syscall_write validated this buffer already
 	uint32_t wrote = 0;
 	//bool was_empty = pipe->used == 0;
-	while (wrote < n)
+	while (!wrote)
 	{
 		if (!pipe->readers)
 		{
@@ -129,26 +130,27 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 		{
 			wrote += pipe_write_ring(pipe, buf + wrote, (uint32_t)(n - wrote));
 		}
-		waitq_wake_one(&pipe->wait_read);
 		if (f->flags & O_NONBLOCK)
 		{
-			return wrote ? (int32_t)(wrote) : (-EAGAIN);
+			if (wrote)
+			{
+				waitq_wake_one(&pipe->wait_read);
+				return (wrote);
+			}
+			return (-EAGAIN);
 		}
-		else if(wrote < n && pipe->readers)
+		else if(!wrote && pipe->readers)
 		{
 			print_debug("yieded in pipe write\n");
 			sleep_on(&pipe->wait_write, WAIT_PIPE_WRITE);
 		}
-		if ((wrote + pipe_space(pipe)) < n && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+		if (!wrote && has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
 		{
-			print_trace("pipe_write: woken up by signal without SA_RESTART\n");
-			if (wrote) break;
-			print_trace("pipe_write: didn't write anything yet, return -EINTR\n");
-			if (pipe_space(pipe))
-				waitq_wake_one(&pipe->wait_write);
+			print_trace("pipe_write: woken up by signal, didn't write anything yet, return -EINTR\n");
 			return (-EINTR);
 		}
 	}
+	waitq_wake_one(&pipe->wait_read);
 	if (pipe_space(pipe))
 		waitq_wake_one(&pipe->wait_write); //in case another writer is waiting but no reader sleeping on wait_read to wake them up
 	return (wrote);

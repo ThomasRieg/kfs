@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:06:53 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 20:19:01 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 02:34:39 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -332,4 +332,14 @@ void breakpoint_handler(t_interrupt_data *regs)
 {
 	writes("breakpoint\n");
 	print_interrupt_frame(regs);
+}
+
+void general_protection_handler(t_interrupt_data *regs)
+{
+	if (!g_curr_task || (regs->cs & 3) != 3)
+	{
+		kernel_panic("general protection fault in kernel\n", regs);
+	}
+	print_err("process task_id %u generated a general protection fault, sending SIGKILL\n", g_curr_task->task_id);
+	enqueue_sig(g_curr_task, SIGKILL);
 }

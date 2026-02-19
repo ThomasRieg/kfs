@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 01:11:02 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 01:13:56 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 02:34:35 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,5 +28,6 @@ void keyboard_handler(__attribute__((unused)) t_interrupt_data *regs);
 void rtl8139_handler(__attribute__((unused)) t_interrupt_data *regs); // defined in drivers/rtl8139.c
 void ata_handler(__attribute__((unused)) t_interrupt_data *regs);	  // defined in drivers/ide.c
 void yield_handler(__attribute__((unused)) t_interrupt_data *regs);
+void general_protection_handler(t_interrupt_data *regs);
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 00:20:35 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/13 01:14:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 02:36:09 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@ void setup_interrupts()
 	isr_add_handler(INT_PRIMARY_ATA, ata_handler);
 	isr_add_handler(INT_SECONDARY_ATA, ata_handler);
 	isr_add_handler(INT_YIELD, yield_handler);
+	isr_add_handler(INT_GENERAL_PROTECTION_FAULT, general_protection_handler);
 	struct descriptor_table_pointer
 	{
 		unsigned short limit;

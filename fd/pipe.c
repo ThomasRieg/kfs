@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:14 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/19 21:14:39 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 22:22:24 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,7 +126,7 @@ int32_t pipe_write(t_file *f, const void *buf_, size_t n)
 			enqueue_sig(g_curr_task, SIGPIPE);
 			return (-EPIPE);
 		}
-		else if (pipe_space(pipe))
+		else if (((n <= PIPE_BUF) && (pipe_space(pipe) >= n)) || ((n > PIPE_BUF) && (pipe_space(pipe))))
 		{
 			wrote += pipe_write_ring(pipe, buf + wrote, (uint32_t)(n - wrote));
 		}

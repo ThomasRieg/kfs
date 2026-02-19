@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:35:19 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/12 04:41:02 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/19 22:14:50 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include "../waitq/waitq.h"
 
 #define PIPE_SIZE 8192
+#define PIPE_BUF 1024 //writes smaller than this are guaranted to be atomic, HAS TO BE SMALLER THAN PIPE_SIZE
 
 typedef struct s_pipe
 {

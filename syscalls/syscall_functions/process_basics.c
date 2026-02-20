@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 01:37:05 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/20 02:54:01 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -593,6 +593,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->next_all_task = g_curr_task->next_all_task;
 	g_curr_task->next = task;
 	g_curr_task->next_all_task = task;
+	task_init_kernel_context(task);
 	task->status = STATUS_RUNNABLE;
 	// enable_interrupts();
 	print_trace("forked pid %u\n", task->task_id);

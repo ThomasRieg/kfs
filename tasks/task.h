@@ -120,6 +120,7 @@ typedef struct task
 	phys_ptr pd;
 	struct user_desc user_gdt_segment;
 	uint32_t k_esp;
+	uint32_t k_context_esp;   // saved kernel context stack pointer (for yield)
 	uint8_t k_stack[TASK_KERNEL_SIZE]; // stack tss will returns to on interrupt
 	t_sigaction_k sigact[NSIG]; // index by sig (0 unused), memset to 0 creates correct behavior (handler SIG_DFL, mask and flag 0)
 	struct task *next; // circular linked list, NULL means task not in run queue
@@ -156,5 +157,8 @@ void add_task_to_runq(t_task *task);
 t_vma *vma_clone(const t_vma *v);
 t_task *find_task_by_pid(int pid);
 bool pgid_exists(unsigned int pgid);
+void task_init_kernel_context(t_task *t);
+
+extern void switch_to(uint32_t *prev_kctx_esp, uint32_t next_kctx_esp);
 
 #endif

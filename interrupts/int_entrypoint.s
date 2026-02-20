@@ -6,7 +6,7 @@
 #    By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/01/11 23:37:01 by thrieg            #+#    #+#              #
-#    Updated: 2026/02/15 15:21:03 by thrieg           ###   ########.fr        #
+#    Updated: 2026/02/20 02:43:13 by thrieg           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -57,3 +57,34 @@ isr_common_epilogue:
     add esp, 8
 
     iret
+
+
+
+.intel_syntax noprefix
+.global switch_to
+.type switch_to, @function
+
+# void switch_to(uint32_t *prev_kctx_esp, uint32_t next_kctx_esp);
+switch_to:
+    # stack at entry:
+    # [esp+0] return addr
+    # [esp+4] prev_kctx_esp*
+    # [esp+8] next_kctx_esp
+
+    push ebp
+    push ebx
+    push esi
+    push edi
+
+    mov eax, [esp + 4 + 16]    # eax = prev_kctx_esp*   (16 bytes pushed)
+    mov edx, [esp + 8 + 16]    # edx = next_kctx_esp
+
+    mov [eax], esp             # *prev_kctx_esp = current esp (after pushes)
+    mov esp, edx               # esp = next_kctx_esp
+
+    pop edi
+    pop esi
+    pop ebx
+    pop ebp
+    ret
+.size switch_to, .-switch_to

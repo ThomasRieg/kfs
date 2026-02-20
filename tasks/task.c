@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/16 17:05:03 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/20 04:17:23 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,8 @@
 #include "../mmap/mmap.h"
 #include "../interrupts/interrupts.h"
 
-t_task *g_curr_task = 0;
+t_task *g_curr_task = 0; //valid only when executing syscalls
+static t_task *g_actual_curr_task = 0; //loaded kernel stack and cr3, never set to NULL even if task is not in runqueue, keep the last ran task
 t_task *g_init_task = 0;
 uint32_t g_next_pid = 1;
 
@@ -180,6 +181,35 @@ __attribute__((noreturn)) static inline void iret_from_frame_with_signals(t_inte
 	__builtin_unreachable();
 }
 
+static void task_kentry(void)
+{
+    iret_from_frame_with_signals((t_interrupt_data *)g_curr_task->k_esp);
+    __builtin_unreachable();
+}
+
+#define TF_RESERVE   (sizeof(t_interrupt_data) + 32)
+
+void task_init_kernel_context(t_task *t)
+{
+    uintptr_t top = (uintptr_t)&t->k_stack[sizeof(t->k_stack)];
+
+    // reserve top chunk for your “fixed trapframe area”
+    uintptr_t ctx_top = top - TF_RESERVE;
+
+    // keep it aligned (16 is plenty)
+    ctx_top &= ~0xFul;
+
+    uint32_t *sp = (uint32_t *)ctx_top;
+
+    *(--sp) = (uint32_t)task_kentry; // ret addr
+    *(--sp) = 0; // ebp
+    *(--sp) = 0; // ebx
+    *(--sp) = 0; // esi
+    *(--sp) = 0; // edi
+
+    t->k_context_esp = (uint32_t)sp;
+}
+
 // task has to be allocated by vmalloc
 // only called to create init
 bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 *binary)
@@ -214,6 +244,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 		return (false);
 	}
 	g_curr_task = task;
+	g_actual_curr_task = task;
 	g_init_task = task;
 	g_task_list = task;
 	task->next = task;
@@ -253,6 +284,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	gdt_set_user_segment(&task->user_gdt_segment);
 	extern void timer_handler(__attribute__((unused)) t_interrupt_data *regs);
 	isr_add_handler(INT_TIMER, timer_handler); //switch to scheduler in timer handler
+	task_init_kernel_context(task);
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 
 	return (true);
@@ -266,16 +298,22 @@ void add_child(t_task *parent, t_task *child)
 }
 
 // called from interrupt handler
-__attribute__((noreturn)) void context_switch(t_task *next)
+void context_switch(t_task *next)
 {
-	print_trace("context_switch to pid %u\n", next->task_id);
-	g_curr_task = next;
-	tss_set_kernel_stack((uintptr_t)&(next->k_stack[sizeof(next->k_stack)]));
-	gdt_set_user_segment(&next->user_gdt_segment);
-	write_cr3(next->pd);
+	print_trace("context_switch from pid %u\n", g_curr_task->task_id);
+	t_task *prev = g_actual_curr_task;
+    if (prev == next) return;
 
-	iret_from_frame_with_signals((t_interrupt_data *)next->k_esp);
-	__builtin_unreachable();
+    g_curr_task = next;
+	g_actual_curr_task = next;
+
+    write_cr3(next->pd);
+    tss_set_kernel_stack((uintptr_t)&next->k_stack[sizeof(next->k_stack)]);
+    gdt_set_user_segment(&next->user_gdt_segment);
+
+    switch_to(&prev->k_context_esp, next->k_context_esp);
+	print_trace("context_switch came back to pid %u\n", g_curr_task->task_id);
+    // when we come back here later, we're prev again (after being rescheduled)
 }
 
 t_task *g_to_schedule = NULL;
@@ -292,8 +330,11 @@ void schedule_next_task()
 		asm volatile("hlt");
 		disable_interrupts();
 	}
+	bool was_sleeping = g_sleeping; //meaning we come from an empty run queue, so context_switch to g_curr_task even if it's the only task
 	if (g_sleeping)
+	{
 		g_sleeping = false;
+	}
 	if (g_to_schedule)
 	{
 		t_task *to_schedule = g_to_schedule;
@@ -311,6 +352,8 @@ void schedule_next_task()
 		}
 		next = next->next;
 	}
+	if (was_sleeping)
+		context_switch(g_curr_task);
 	return; // didn't find any other runnable task, don't context switch (continue current)
 }
 
@@ -565,13 +608,15 @@ void add_task_to_runq(t_task *task)
 
 void yield()
 {
-	asm volatile("int $0x81" ::: "memory");
+	//asm volatile("int $0x81" ::: "memory");
+	schedule_next_task();
 }
 
 void yield_to(t_task *next_exec)
 {
 	g_to_schedule = next_exec;
-	asm volatile("int $0x81" ::: "memory");
+	//asm volatile("int $0x81" ::: "memory");
+	schedule_next_task();
 }
 
 void yield_handler(__attribute__((unused)) t_interrupt_data *regs)

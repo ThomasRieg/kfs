@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/19 03:05:43 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/20 04:19:53 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,7 +53,7 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 		t_tty *tty = f->priv;
 		if (g_curr_task->pgid != tty->fg_pgid)
 		{
-			print_trace("attemting to read on unowned terminal by pid %u\n", g_curr_task->task_id);
+			print_debug("attemting to read on unowned terminal by pid %u\n", g_curr_task->task_id);
 			int target_pgid = g_curr_task->pgid;
 			t_task *curr = g_task_list;
 			while (curr)
@@ -71,8 +71,9 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 		//{
 			while (!tty->cmd.index && !tty->read_eof)
 			{
-				print_trace("tty_read: sleeping because no tty ready\n");
+				print_trace("tty_read: pid %u sleeping because no tty ready\n", g_curr_task->task_id);
 				sleep_on(&tty->wait_read, WAIT_TTY_READ);
+				print_trace("tty_read: pid %u woke up\n", g_curr_task->task_id);
 				if (has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
 				{
 					print_trace("tty_read: woken up by signal without SA_RESTART\n");
@@ -84,6 +85,7 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 		//}
 		if (tty->read_eof)
 		{
+			print_trace("read eof acknowledged in tty_read\n");
 			tty->read_eof = false;
 			if (!tty->cmd.index)
 			 	return 0; //posix says that EOF is treated as newline if there's already a command
@@ -93,6 +95,7 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 		memcpy(buf, tty->cmd.buffer, to_copy);
 		memmove(tty->cmd.buffer, tty->cmd.buffer + to_copy, tty->cmd.index - to_copy);
 		tty->cmd.index -= to_copy;
+		print_trace("tty_read: about to return tocopy; %u\n", to_copy);
 		if (tty->cmd.index)
 			waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
 		if (!to_copy) return (-EAGAIN);

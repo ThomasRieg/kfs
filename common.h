@@ -21,6 +21,8 @@ typedef _Bool bool;
 
 #define PAGE_ALIGN_DOWN(x) ((uintptr_t)(x) & ~0xFFFu)
 
+#define TIMER_TICK_PER_SECOND 18 //todo change to the actual value, I just measured how long a sleep 1000 was
+
 typedef void *virt_ptr;
 typedef uint32_t phys_ptr;
 

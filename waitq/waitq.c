@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/15 21:49:36 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/21 03:58:22 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -105,10 +105,39 @@ void sleep_on(t_waitq *q, t_wait_reason reason)
     yield();
 }
 
+//careful, wake_at_tick is the g_tick the task will get woken up anyway, not the timeout, we can do (g_tick + timeout) to get it
+void sleep_on_timeout(t_waitq *q, t_wait_reason reason, uint32_t wake_at_tick)
+{
+    // remove if already sleeping somewhere (shouldn't happen)
+    if (g_curr_task->sleep_q)
+        waitq_remove(g_curr_task);
+
+    g_curr_task->wait_reason = reason;
+    g_curr_task->status = STATUS_SLEEP;
+    g_curr_task->sleep_until = wake_at_tick;
+    extern void insert_in_sleep_queue(t_task *task);
+    insert_in_sleep_queue(g_curr_task);
+    g_curr_task->in_sleep_queue = true;
+    waitq_add(q, g_curr_task);
+    unlink_task_from_runq(g_curr_task);
+
+    yield();
+    if (g_curr_task->in_sleep_queue)
+    {
+        remove_from_sleep_queue(g_curr_task); //remove the timeout
+        g_curr_task->in_sleep_queue = false;
+    }
+}
+
 void waitq_wake(t_task *task)
 {
     if (task->sleep_q)
         waitq_remove(task);
+    if (task->in_sleep_queue)
+    {
+        remove_from_sleep_queue(task);
+        task->in_sleep_queue = false;
+    }
 
     if (task->status == STATUS_SLEEP)
     {

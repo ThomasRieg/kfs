@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/20 02:54:01 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/21 04:11:41 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@
 #include "../../tty/tty.h"
 #include "../../common.h"
 #include "../../signals/signals.h"
+#include <asm-generic/errno-base.h>
 
 uint32_t syscall_nanosleep(t_interrupt_data *regs)
 {
@@ -29,17 +30,30 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 		return (-EFAULT);
 	if (!user_range_ok((virt_ptr)rem, sizeof(struct timespec), true, &g_curr_task->proc_memory))
 		return (-EFAULT);
+	if ((int)req->tv_sec < 0)
+		return (-EINVAL);
+	if ((int)req->tv_nsec < 0 || (int)req->tv_nsec > 999'999'999)
+		return (-EINVAL);
 
-	struct timespec start = rtc_get_time();
-	struct timespec now;
-	do {
-		print_trace("nanosleep yielded\n");
-		yield();
-		now = rtc_get_time();
-	} while (now.tv_sec - start.tv_sec < req->tv_sec);
-	*rem = (struct timespec){0,0};
+	uint32_t target_tick = g_tick;
+	target_tick += req->tv_sec * TIMER_TICK_PER_SECOND;
+	target_tick += (uint32_t)((uint64_t)(req->tv_nsec * TIMER_TICK_PER_SECOND) / (uint64_t)1000000000u);
+	print_trace("nanosleep pid %u going to sleep until tick %u (current g_tick %u)\n", g_curr_task->task_id, target_tick, g_tick);
+	sleep_until(g_curr_task, target_tick);
+	if (time_after_eq_u32(g_tick, target_tick))
+	{
+		*rem = (struct timespec){0,0}; //todo not lie here if we get signaled or return early for some reason
+	}
+	else
+	{
+		uint32_t remaining_ticks = target_tick - g_tick;
+		rem->tv_sec = TIMER_TICK_PER_SECOND / remaining_ticks;
+		remaining_ticks = TIMER_TICK_PER_SECOND % remaining_ticks;
+		rem->tv_nsec = remaining_ticks * (1'000'000'000 / TIMER_TICK_PER_SECOND);
+		return (-EINTR);
+	}
 
-	return 0;
+	return (0);
 }
 
 uint32_t syscall_getpgid(__attribute__((unused)) t_interrupt_data *regs)

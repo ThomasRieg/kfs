@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/20 04:17:23 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/21 03:05:13 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -357,7 +357,7 @@ void schedule_next_task()
 	return; // didn't find any other runnable task, don't context switch (continue current)
 }
 
-static uint32_t g_tick;
+uint32_t g_tick = 0;
 
 void timer_handler_before_scheduler(__attribute__((unused)) t_interrupt_data *regs)
 {
@@ -368,11 +368,11 @@ void timer_handler_before_scheduler(__attribute__((unused)) t_interrupt_data *re
 void timer_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
 	g_tick++;
+	wake_due_sleeping_tasks();
 	if (g_sleeping)
 		return;
-	if (g_tick >= NB_TICKS_PER_TASK)
+	if (!(g_tick % NB_TICKS_PER_TASK))
 	{
-		g_tick = 0;
 		schedule_next_task();
 	}
 }
@@ -621,7 +621,6 @@ void yield_to(t_task *next_exec)
 
 void yield_handler(__attribute__((unused)) t_interrupt_data *regs)
 {
-	g_tick = 0;
 	schedule_next_task();
 }
 

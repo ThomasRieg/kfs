@@ -15,7 +15,7 @@ OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 		tasks/task.o\
 		mmap/mmap.o mmap/munmap.o\
 		fd/pipe.o fd/inode.o fd/fd_tty.o\
-		waitq/waitq.o\
+		waitq/waitq.o waitq/sleep.o\
 		signals/signals.o signals/signals_asm.o
 ISO := kfs.iso
 ELF := kfs.elf

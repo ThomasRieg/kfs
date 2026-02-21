@@ -17,6 +17,7 @@
 #include "../fd/fd.h"
 #include "../waitq/waitq.h"
 #include "../signals/signals.h"
+#include <stdint.h>
 
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
@@ -105,6 +106,9 @@ typedef struct task
 	struct task *children;	   // head of linked list
 	struct task *next_sibling; // link in parent list
 	struct task *next_all_task; // link of g_task_list, circular linked list
+	struct task *next_sleep_task; // link of g_sleeping_queue, null if not sleeping
+	uint32_t sleep_until; //g_tick where we need to wake this task
+	bool in_sleep_queue;
 	unsigned int uid;
 	unsigned int euid;
 	unsigned int suid;
@@ -139,6 +143,7 @@ struct process_strings
 extern t_task *g_curr_task;
 extern t_task *g_init_task; //pid 1
 extern uint32_t g_next_pid;
+extern uint32_t g_tick;
 extern t_task *g_to_schedule;
 extern t_task *g_task_list; //head of linked list of every task, no matter their state
 

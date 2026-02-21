@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/21 03:58:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/21 22:59:08 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -127,14 +127,18 @@ void sleep_on_timeout(t_waitq *q, t_wait_reason reason, uint32_t wake_at_tick)
         remove_from_sleep_queue(g_curr_task); //remove the timeout
         g_curr_task->in_sleep_queue = false;
     }
+    if (g_curr_task->sleep_q)
+        waitq_remove(g_curr_task);
 }
 
 void waitq_wake(t_task *task)
 {
+    print_trace("wake: waking up %u\n", task->task_id);
     if (task->sleep_q)
         waitq_remove(task);
     if (task->in_sleep_queue)
     {
+        print_trace("wake: manually removing pid %u from sleep queue\n", task->task_id);
         remove_from_sleep_queue(task);
         task->in_sleep_queue = false;
     }
@@ -143,6 +147,7 @@ void waitq_wake(t_task *task)
     {
         task->status = STATUS_RUNNABLE;
         task->wait_reason = WAIT_NONE;
+        print_trace("wake: adding pid %u back into the run queue\n", task->task_id);
         add_task_to_runq(task);
     }
 }

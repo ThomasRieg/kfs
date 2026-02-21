@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/22 00:05:12 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 00:42:58 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,12 +47,11 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 	else
 	{
 		uint32_t remaining_ticks = target_tick - g_tick;
-		rem->tv_sec = TIMER_TICK_PER_SECOND / remaining_ticks;
+		rem->tv_sec = remaining_ticks / TIMER_TICK_PER_SECOND;
 		remaining_ticks = TIMER_TICK_PER_SECOND % remaining_ticks;
 		rem->tv_nsec = remaining_ticks * (1'000'000'000 / TIMER_TICK_PER_SECOND);
 		return (-EINTR);
 	}
-
 	return (0);
 }
 

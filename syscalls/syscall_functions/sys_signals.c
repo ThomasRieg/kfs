@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 13:08:09 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/19 00:59:12 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 00:20:02 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,7 +61,11 @@ uint32_t syscall_rt_sigaction(t_interrupt_data *r)
         na.restorer = (void *)(uintptr_t)ua->restorer;
         na.mask     = ua->mask;
         if (na.restorer)
-            print_trace("pid %u sig %d provided a restorer at %p\n", g_curr_task->task_id, sig, na.restorer);
+            print_debug("pid %u sig %d provided a restorer at %p\n", g_curr_task->task_id, sig, na.restorer);
+        if (na.flags)
+            print_debug("pid %u sig %d provided flags : 0x%x\n", g_curr_task->task_id, sig, na.flags);
+        if (na.mask)
+            print_debug("pid %u sig %d provided a mask : 0x%x\n", g_curr_task->task_id, sig, na.mask);
 
         // Accept SIG_DFL (0), SIG_IGN (1), or a user pointer.
         //too hard to validate handler function is entirely in allocated userspace memory, irrelevant anyway because we'll run it in ring 3 so it will fault adequately

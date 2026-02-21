@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/21 04:11:41 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 00:05:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -658,6 +658,7 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
     // wake any wait4 sleepers
     waitq_wake_all(&g_curr_task->parent_task->wait_child);
 	cleanup_task(g_curr_task);
+	unlink_task_from_runq(g_curr_task);
 	yield_to(g_curr_task->parent_task);
 	__builtin_unreachable();
 }

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/21 03:05:13 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 00:14:32 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -334,19 +334,33 @@ void schedule_next_task()
 	if (g_sleeping)
 	{
 		g_sleeping = false;
+		print_trace("scheduler: a task just woke up\n");
 	}
 	if (g_to_schedule)
 	{
 		t_task *to_schedule = g_to_schedule;
 		g_to_schedule = NULL;
-		context_switch(to_schedule);
-		return;
+		if (to_schedule->status == STATUS_RUNNABLE)
+		{
+			print_debug("scheduler: scheduling g_to_schedule %u\n", to_schedule->task_id);
+			context_switch(to_schedule);
+			return;
+		}
+		else
+		{
+			print_err("unrunnable task in g_to_schedule pid %u\n", g_to_schedule->task_id);
+			if (to_schedule->status == STATUS_ZOMBIE)
+				kernel_panic("uncoherent kernel state, trying to execute a zombie child in g_to_schedule\n", NULL);
+		}
 	}
 	t_task *next = g_curr_task->next;
 	while (next != g_curr_task)
 	{
+		if (!next)
+			kernel_panic("uncoherent kernel state, unlinked task in runqueue\n", NULL);
 		if (next->status == STATUS_RUNNABLE)
 		{
+			print_debug("scheduler: found runnable task pid %u\n", next->task_id);
 			context_switch(next);
 			return;
 		}

@@ -6,12 +6,13 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/21 22:59:08 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 00:07:42 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "waitq.h"
 #include "../tasks/task.h"
+#include "../common.h"
 
 static void waitq_add(t_waitq *q, t_task *t)
 {
@@ -93,8 +94,12 @@ void sleep_on(t_waitq *q, t_wait_reason reason)
 {
 
     // remove if already sleeping somewhere (shouldn't happen)
+    print_trace("task pid %u sleep_on because %u\n", g_curr_task->task_id, (uint32_t)reason);
     if (g_curr_task->sleep_q)
+    {
         waitq_remove(g_curr_task);
+        print_err("ERROR, task was already sleeping on %p when trying to sleep, task pid %u sleep_on because %u\n", g_curr_task->sleep_q, g_curr_task->task_id, (uint32_t)reason);
+    }
 
     g_curr_task->wait_reason = reason;
     g_curr_task->status = STATUS_SLEEP;

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/22 00:42:58 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 00:45:28 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 	struct timespec *rem = (struct timespec *)regs->ecx;
 	if (!user_range_ok((virt_ptr)req, sizeof(struct timespec), false, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	if (!user_range_ok((virt_ptr)rem, sizeof(struct timespec), true, &g_curr_task->proc_memory))
+	if (rem && !user_range_ok((virt_ptr)rem, sizeof(struct timespec), true, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	if ((int)req->tv_sec < 0)
 		return (-EINVAL);
@@ -40,17 +40,20 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 	target_tick += (uint32_t)((uint64_t)(req->tv_nsec * TIMER_TICK_PER_SECOND) / (uint64_t)1000000000u);
 	print_trace("nanosleep pid %u going to sleep until tick %u (current g_tick %u)\n", g_curr_task->task_id, target_tick, g_tick);
 	sleep_until(g_curr_task, target_tick);
-	if (time_after_eq_u32(g_tick, target_tick))
+	if (rem)
 	{
-		*rem = (struct timespec){0,0}; //todo not lie here if we get signaled or return early for some reason
-	}
-	else
-	{
-		uint32_t remaining_ticks = target_tick - g_tick;
-		rem->tv_sec = remaining_ticks / TIMER_TICK_PER_SECOND;
-		remaining_ticks = TIMER_TICK_PER_SECOND % remaining_ticks;
-		rem->tv_nsec = remaining_ticks * (1'000'000'000 / TIMER_TICK_PER_SECOND);
-		return (-EINTR);
+		if (time_after_eq_u32(g_tick, target_tick))
+		{
+			*rem = (struct timespec){0,0}; //todo not lie here if we get signaled or return early for some reason
+		}
+		else
+		{
+			uint32_t remaining_ticks = target_tick - g_tick;
+			rem->tv_sec = remaining_ticks / TIMER_TICK_PER_SECOND;
+			remaining_ticks = TIMER_TICK_PER_SECOND % remaining_ticks;
+			rem->tv_nsec = remaining_ticks * (1'000'000'000 / TIMER_TICK_PER_SECOND);
+			return (-EINTR);
+		}
 	}
 	return (0);
 }

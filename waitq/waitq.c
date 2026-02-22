@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/12 04:07:52 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/22 00:07:42 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 23:46:31 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -146,6 +146,7 @@ void waitq_wake(t_task *task)
         print_trace("wake: manually removing pid %u from sleep queue\n", task->task_id);
         remove_from_sleep_queue(task);
         task->in_sleep_queue = false;
+        task->sleep_until = 0;
     }
 
     if (task->status == STATUS_SLEEP)

@@ -6,7 +6,7 @@
 /*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/21 02:11:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/21 03:59:54 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/22 23:46:46 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,9 +97,6 @@ void wake_due_sleeping_tasks()
     while (curr && time_after_eq_u32(g_tick, curr->sleep_until))
     {
         t_task *next = curr->next_sleep_task;
-        curr->next_sleep_task = NULL;
-        curr->sleep_until = 0;
-        curr->in_sleep_queue = false;
         waitq_wake(curr);
         curr = next;
     }

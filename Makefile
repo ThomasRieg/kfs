@@ -22,6 +22,9 @@ ELF := kfs.elf
 DISK_FILE := disk.raw
 SHELL := /bin/bash # for brace expansions
 GRUB_MKRESCUE := grub-mkrescue
+CC := gcc
+LD := ld
+LIBGCC := $(shell $(CC) -m32 -print-libgcc-file-name) # for 64-bit math
 
 ifeq (, $(shell which $(GRUB_MKRESCUE) 2>/dev/null))
 	GRUB_MKRESCUE := grub2-mkrescue
@@ -64,7 +67,7 @@ $(DISK_FILE):
 all: $(ISO)
 
 $(ELF): $(OBJS)
-	$(LD) -o $@ $(LDFLAGS) $(OBJS)
+	$(LD) -o $@ $(LDFLAGS) $(OBJS) $(LIBGCC)
 
 $(ISO): $(ELF) grub.cfg
 	mkdir -p iso/boot/grub

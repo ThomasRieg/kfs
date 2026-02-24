@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   task.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/22 00:14:32 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/24 15:44:30 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,12 +22,12 @@
 #include "../mmap/mmap.h"
 #include "../interrupts/interrupts.h"
 
-t_task *g_curr_task = 0; //valid only when executing syscalls
-static t_task *g_actual_curr_task = 0; //loaded kernel stack and cr3, never set to NULL even if task is not in runqueue, keep the last ran task
+t_task *g_curr_task = 0;			   // valid only when executing syscalls
+static t_task *g_actual_curr_task = 0; // loaded kernel stack and cr3, never set to NULL even if task is not in runqueue, keep the last ran task
 t_task *g_init_task = 0;
 uint32_t g_next_pid = 1;
 
-t_task *g_task_list = NULL; //linked list of every task, no matter their state
+t_task *g_task_list = NULL; // linked list of every task, no matter their state
 
 static void copy_strings(unsigned char *dst_s, struct process_strings strings, unsigned char **dst_p)
 {
@@ -82,7 +82,7 @@ unsigned int build_user_stack(uint32_t user_stack_top, struct process_strings ar
 	stck.n -= argv.string_data.length;
 	copy_strings(stck.p, argv, argv0);
 	// TODO: properly align and calculate pointer locations correctly in copy_strings
-	//stck.n &= ~(3);
+	// stck.n &= ~(3);
 
 	// ELF auxiliary vectors
 	stck.n -= 16;
@@ -183,31 +183,31 @@ __attribute__((noreturn)) static inline void iret_from_frame_with_signals(t_inte
 
 static void task_kentry(void)
 {
-    iret_from_frame_with_signals((t_interrupt_data *)g_curr_task->k_esp);
-    __builtin_unreachable();
+	iret_from_frame_with_signals((t_interrupt_data *)g_curr_task->k_esp);
+	__builtin_unreachable();
 }
 
-#define TF_RESERVE   (sizeof(t_interrupt_data) + 32)
+#define TF_RESERVE (sizeof(t_interrupt_data) + 32)
 
 void task_init_kernel_context(t_task *t)
 {
-    uintptr_t top = (uintptr_t)&t->k_stack[sizeof(t->k_stack)];
+	uintptr_t top = (uintptr_t)&t->k_stack[sizeof(t->k_stack)];
 
-    // reserve top chunk for your “fixed trapframe area”
-    uintptr_t ctx_top = top - TF_RESERVE;
+	// reserve top chunk for your “fixed trapframe area”
+	uintptr_t ctx_top = top - TF_RESERVE;
 
-    // keep it aligned (16 is plenty)
-    ctx_top &= ~0xFul;
+	// keep it aligned (16 is plenty)
+	ctx_top &= ~0xFul;
 
-    uint32_t *sp = (uint32_t *)ctx_top;
+	uint32_t *sp = (uint32_t *)ctx_top;
 
-    *(--sp) = (uint32_t)task_kentry; // ret addr
-    *(--sp) = 0; // ebp
-    *(--sp) = 0; // ebx
-    *(--sp) = 0; // esi
-    *(--sp) = 0; // edi
+	*(--sp) = (uint32_t)task_kentry; // ret addr
+	*(--sp) = 0;					 // ebp
+	*(--sp) = 0;					 // ebx
+	*(--sp) = 0;					 // esi
+	*(--sp) = 0;					 // edi
 
-    t->k_context_esp = (uint32_t)sp;
+	t->k_context_esp = (uint32_t)sp;
 }
 
 // task has to be allocated by vmalloc
@@ -279,11 +279,11 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->cwd_inode_nr = 2;
 	tss_set_kernel_stack((uintptr_t)&(task->k_stack[sizeof(task->k_stack)]));
 	print_trace("kstack top=%p bot=%p\n",
-	   &task->k_stack[sizeof(task->k_stack)],
-	   &task->k_stack[0]);
+				&task->k_stack[sizeof(task->k_stack)],
+				&task->k_stack[0]);
 	gdt_set_user_segment(&task->user_gdt_segment);
-	extern void timer_handler(__attribute__((unused)) t_interrupt_data *regs);
-	isr_add_handler(INT_TIMER, timer_handler); //switch to scheduler in timer handler
+	extern void timer_handler(__attribute__((unused)) t_interrupt_data * regs);
+	isr_add_handler(INT_TIMER, timer_handler); // switch to scheduler in timer handler
 	task_init_kernel_context(task);
 	iret_from_frame((t_interrupt_data *)task->k_esp);
 
@@ -302,18 +302,19 @@ void context_switch(t_task *next)
 {
 	print_trace("context_switch from pid %u\n", g_curr_task->task_id);
 	t_task *prev = g_actual_curr_task;
-    if (prev == next) return;
+	if (prev == next)
+		return;
 
-    g_curr_task = next;
+	g_curr_task = next;
 	g_actual_curr_task = next;
 
-    write_cr3(next->pd);
-    tss_set_kernel_stack((uintptr_t)&next->k_stack[sizeof(next->k_stack)]);
-    gdt_set_user_segment(&next->user_gdt_segment);
+	write_cr3(next->pd);
+	tss_set_kernel_stack((uintptr_t)&next->k_stack[sizeof(next->k_stack)]);
+	gdt_set_user_segment(&next->user_gdt_segment);
 
-    switch_to(&prev->k_context_esp, next->k_context_esp);
+	switch_to(&prev->k_context_esp, next->k_context_esp);
 	print_trace("context_switch came back to pid %u\n", g_curr_task->task_id);
-    // when we come back here later, we're prev again (after being rescheduled)
+	// when we come back here later, we're prev again (after being rescheduled)
 }
 
 t_task *g_to_schedule = NULL;
@@ -321,20 +322,22 @@ static bool g_sleeping;
 
 void schedule_next_task()
 {
-	//have to loop because it's not safe to exit kernel space when !g_curr_task
+	// have to loop because it's not safe to exit kernel space when !g_curr_task
 	while (!g_curr_task && !g_to_schedule)
 	{
-		g_sleeping = true; //prevent reentrency that would create a stack overflow of timer interrupt_data
+		g_sleeping = true; // prevent reentrency that would create a stack overflow of timer interrupt_data
 		enable_interrupts();
-		print_trace("scheduler: no running program, sleeping\n");
+		// print_trace("scheduler: no running program, sleeping\n");
 		asm volatile("hlt");
 		disable_interrupts();
 	}
-	bool was_sleeping = g_sleeping; //meaning we come from an empty run queue, so context_switch to g_curr_task even if it's the only task
+	bool was_sleeping = g_sleeping; // meaning we come from an empty run queue, so context_switch to g_curr_task even if it's the only task
 	if (g_sleeping)
 	{
 		g_sleeping = false;
 		print_trace("scheduler: a task just woke up\n");
+		if (g_curr_task)
+			print_trace("scheduler: curr_pid %u\n", g_curr_task->task_id);
 	}
 	if (g_to_schedule)
 	{
@@ -343,6 +346,8 @@ void schedule_next_task()
 		if (to_schedule->status == STATUS_RUNNABLE)
 		{
 			print_debug("scheduler: scheduling g_to_schedule %u\n", to_schedule->task_id);
+			if (g_curr_task)
+				print_trace("scheduler: curr_pid %u\n", g_curr_task->task_id);
 			context_switch(to_schedule);
 			return;
 		}
@@ -361,6 +366,8 @@ void schedule_next_task()
 		if (next->status == STATUS_RUNNABLE)
 		{
 			print_debug("scheduler: found runnable task pid %u\n", next->task_id);
+			if (g_curr_task)
+				print_trace("scheduler: curr_pid %u\n", g_curr_task->task_id);
 			context_switch(next);
 			return;
 		}
@@ -494,13 +501,14 @@ void free_backing_obj(t_vma *vma)
 	}
 }
 
-//close a vma and sets next = NULL, increment refcnt if n has a backing object
+// close a vma and sets next = NULL, increment refcnt if n has a backing object
 t_vma *vma_clone(const t_vma *v)
 {
-    t_vma *n = vcalloc(1, sizeof(*n));
-    if (!n) return (NULL);
-    *n = *v;
-    n->next = NULL;
+	t_vma *n = vcalloc(1, sizeof(*n));
+	if (!n)
+		return (NULL);
+	*n = *v;
+	n->next = NULL;
 	if (n->backing_obj)
 	{
 		if (n->backing == VMA_ANON && n->flags == MAP_SHARED)
@@ -509,7 +517,7 @@ t_vma *vma_clone(const t_vma *v)
 			backing->refcnt++;
 		}
 	}
-    return (n);
+	return (n);
 }
 
 void free_vma(t_vma *curr)
@@ -517,7 +525,7 @@ void free_vma(t_vma *curr)
 	if (curr->backing_obj)
 		free_backing_obj(curr);
 	else
-	 	free_vma_range_pages(curr->start, curr->end);
+		free_vma_range_pages(curr->start, curr->end);
 	vfree(curr);
 }
 
@@ -548,7 +556,7 @@ void cleanup_task(t_task *task)
 	{
 		if (task->open_files[i])
 		{
-			extern uint32_t syscall_close(t_interrupt_data *regs);
+			extern uint32_t syscall_close(t_interrupt_data * regs);
 			t_interrupt_data dummy;
 			dummy.ebx = i;
 			syscall_close(&dummy);
@@ -564,11 +572,11 @@ void task_reap_zombie(t_task *t)
 	// Remove from circular run list: find predecessor
 	pmm_free_frame(t->pd);
 	if (g_curr_task == t)
-		kernel_panic("task wants to reap itself, wtf", NULL);//g_curr_task = t->next;
+		kernel_panic("task wants to reap itself, wtf", NULL); // g_curr_task = t->next;
 	t_task *prev = t;
 	if (prev->next)
 	{
-		//prev is in runqueue
+		// prev is in runqueue
 		while (prev->next != t)
 		{
 			prev = prev->next;
@@ -583,7 +591,7 @@ void task_reap_zombie(t_task *t)
 		kernel_panic("reaped last task in task_reap_zombie", NULL);
 
 	if (prev->next)
-		prev->next = t->next; //else it means child was not in run queue
+		prev->next = t->next; // else it means child was not in run queue
 	prev_all->next_all_task = t->next_all_task;
 
 	vfree(t);
@@ -601,7 +609,7 @@ void unlink_task_from_runq(t_task *task)
 	while (prev->next != task)
 		prev = prev->next;
 	prev->next = next;
-	task->next = NULL; //make sure we explicitly mark this task as not in the queue
+	task->next = NULL; // make sure we explicitly mark this task as not in the queue
 	if (task == g_curr_task)
 		g_to_schedule = next;
 }
@@ -622,14 +630,14 @@ void add_task_to_runq(t_task *task)
 
 void yield()
 {
-	//asm volatile("int $0x81" ::: "memory");
+	// asm volatile("int $0x81" ::: "memory");
 	schedule_next_task();
 }
 
 void yield_to(t_task *next_exec)
 {
 	g_to_schedule = next_exec;
-	//asm volatile("int $0x81" ::: "memory");
+	// asm volatile("int $0x81" ::: "memory");
 	schedule_next_task();
 }
 
@@ -640,16 +648,16 @@ void yield_handler(__attribute__((unused)) t_interrupt_data *regs)
 
 t_task *find_task_by_pid(int pid)
 {
-    for (t_task *t = g_task_list; t; t = t->next_all_task)
-        if ((int)t->task_id == pid)
-            return t;
-    return NULL;
+	for (t_task *t = g_task_list; t; t = t->next_all_task)
+		if ((int)t->task_id == pid)
+			return t;
+	return NULL;
 }
 
 bool pgid_exists(unsigned int pgid)
 {
-    for (t_task *t = g_task_list; t; t = t->next_all_task)
-        if (t->pgid == pgid)
-            return true;
-    return false;
+	for (t_task *t = g_task_list; t; t = t->next_all_task)
+		if (t->pgid == pgid)
+			return true;
+	return false;
 }

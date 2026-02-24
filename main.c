@@ -16,7 +16,7 @@
 #include "tasks/task.h"
 #include "errno.h"
 
-enum e_print_level debug_print_level = PRINT_ERROR;
+enum e_print_level debug_print_level = PRINT_TRACE;
 
 struct multiboot2_header __attribute__((section(".multiboot"))) multiboot = {
 	.magic = 0xe85250d6,

@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/21 02:11:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/24 16:21:52 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/24 17:00:58 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,8 @@ static inline uint32_t ticks_left(uint32_t sleep_until)
 
 void insert_in_sleep_queue(t_task *task)
 {
+	if (task->in_sleep_queue)
+		kernel_panic("double sleep insert", NULL);
 	uint32_t target_ticks_left = ticks_left(task->sleep_until); // overflow_safe
 	if (g_sleeping_queue)
 	{
@@ -45,7 +47,10 @@ void insert_in_sleep_queue(t_task *task)
 		}
 	}
 	else
+	{
 		g_sleeping_queue = task;
+		task->next_sleep_task = NULL;
+	}
 }
 
 void remove_from_sleep_queue(t_task *task)

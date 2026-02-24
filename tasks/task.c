@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/24 15:44:30 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/24 17:04:01 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -300,7 +300,7 @@ void add_child(t_task *parent, t_task *child)
 // called from interrupt handler
 void context_switch(t_task *next)
 {
-	print_trace("context_switch from pid %u\n", g_curr_task->task_id);
+	print_trace("context_switch from pid %u, g_actual_task %u, next %u\n", g_curr_task->task_id, g_actual_curr_task->task_id, next->task_id);
 	t_task *prev = g_actual_curr_task;
 	if (prev == next)
 		return;
@@ -570,7 +570,7 @@ void cleanup_task(t_task *task)
 void task_reap_zombie(t_task *t)
 {
 	// Remove from circular run list: find predecessor
-	pmm_free_frame(t->pd);
+	waitq_wake(t); // remove from any wait/sleep queue, won't be added to runqueue because status is zombie
 	if (g_curr_task == t)
 		kernel_panic("task wants to reap itself, wtf", NULL); // g_curr_task = t->next;
 	t_task *prev = t;
@@ -594,6 +594,7 @@ void task_reap_zombie(t_task *t)
 		prev->next = t->next; // else it means child was not in run queue
 	prev_all->next_all_task = t->next_all_task;
 
+	pmm_free_frame(t->pd);
 	vfree(t);
 }
 

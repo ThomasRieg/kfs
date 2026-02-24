@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   process_basics.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/22 00:45:28 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/24 14:43:10 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 		return (-EFAULT);
 	if ((int)req->tv_sec < 0)
 		return (-EINVAL);
-	if ((int)req->tv_nsec < 0 || (int)req->tv_nsec > 999'999'999)
+	if ((int)req->tv_nsec < 0 || (int)req->tv_nsec > 999999999)
 		return (-EINVAL);
 
 	uint32_t target_tick = g_tick;
@@ -44,14 +44,14 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 	{
 		if (time_after_eq_u32(g_tick, target_tick))
 		{
-			*rem = (struct timespec){0,0}; //todo not lie here if we get signaled or return early for some reason
+			*rem = (struct timespec){0, 0}; // todo not lie here if we get signaled or return early for some reason
 		}
 		else
 		{
 			uint32_t remaining_ticks = target_tick - g_tick;
 			rem->tv_sec = remaining_ticks / TIMER_TICK_PER_SECOND;
-			remaining_ticks = TIMER_TICK_PER_SECOND % remaining_ticks;
-			rem->tv_nsec = remaining_ticks * (1'000'000'000 / TIMER_TICK_PER_SECOND);
+			remaining_ticks = remaining_ticks % TIMER_TICK_PER_SECOND;
+			rem->tv_nsec = remaining_ticks * (1000000000 / TIMER_TICK_PER_SECOND);
 			return (-EINTR);
 		}
 	}
@@ -62,54 +62,54 @@ uint32_t syscall_getpgid(__attribute__((unused)) t_interrupt_data *regs)
 {
 	int pid = (int)regs->ebx;
 
-    t_task *t = NULL;
-    if (pid == 0)
-        t = g_curr_task;
-    else if (pid > 0)
-        t = find_task_by_pid(pid);
-    else
-        return (uint32_t)(-EINVAL);
+	t_task *t = NULL;
+	if (pid == 0)
+		t = g_curr_task;
+	else if (pid > 0)
+		t = find_task_by_pid(pid);
+	else
+		return (uint32_t)(-EINVAL);
 
-    if (!t)
-        return (uint32_t)(-ESRCH);
+	if (!t)
+		return (uint32_t)(-ESRCH);
 
-    return (uint32_t)t->pgid;
+	return (uint32_t)t->pgid;
 }
 
 uint32_t syscall_setpgid(__attribute__((unused)) t_interrupt_data *regs)
 {
-    int pid  = (int)regs->ebx;
-    int pgid = (int)regs->ecx;
+	int pid = (int)regs->ebx;
+	int pgid = (int)regs->ecx;
 	print_trace("setpgid %u %u\n", pid, pgid);
 
-    t_task *target = NULL;
-    if (pid == 0)
-        target = g_curr_task;
-    else if (pid > 0)
-        target = find_task_by_pid(pid);
-    else
-        return (uint32_t)(-EINVAL);
+	t_task *target = NULL;
+	if (pid == 0)
+		target = g_curr_task;
+	else if (pid > 0)
+		target = find_task_by_pid(pid);
+	else
+		return (uint32_t)(-EINVAL);
 
-    if (!target)
-        return (uint32_t)(-ESRCH);
+	if (!target)
+		return (uint32_t)(-ESRCH);
 
-    // permissions: minimal
-    if (target != g_curr_task && target->parent_task != g_curr_task)
-        return (uint32_t)(-EPERM);
+	// permissions: minimal
+	if (target != g_curr_task && target->parent_task != g_curr_task)
+		return (uint32_t)(-EPERM);
 
-    if (pgid == 0)
-        pgid = (int)target->task_id;
+	if (pgid == 0)
+		pgid = (int)target->task_id;
 
-    if (pgid < 0)
-        return (uint32_t)(-EINVAL);
+	if (pgid < 0)
+		return (uint32_t)(-EINVAL);
 
-    // Allow creating a new group if pgid == target pid.
-    // Otherwise require that group exists.
-    if ((unsigned)pgid != target->task_id && !pgid_exists((unsigned)pgid))
-        return (uint32_t)(-EINVAL);
+	// Allow creating a new group if pgid == target pid.
+	// Otherwise require that group exists.
+	if ((unsigned)pgid != target->task_id && !pgid_exists((unsigned)pgid))
+		return (uint32_t)(-EINVAL);
 
-    target->pgid = (uint32_t)pgid;
-    return 0;
+	target->pgid = (uint32_t)pgid;
+	return 0;
 }
 
 uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)
@@ -170,12 +170,13 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 	int nfds = regs->ecx;
 	if (!user_range_ok((virt_ptr)fds, sizeof(struct pollfd) * nfds, true, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	//void *tmo_p = (void *)regs->edx;
-	//void *sigmask = (void *)regs->esi;
-	//print_trace("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
-	for (unsigned short i = 0; i < nfds; i++) {
-		//print_debug("\tfd: %d", fds[i].fd);
-		//print_debug("\tevents: %d\n", fds[i].events);
+	// void *tmo_p = (void *)regs->edx;
+	// void *sigmask = (void *)regs->esi;
+	// print_trace("poll %p %u %p %p:\n", fds, nfds, tmo_p, sigmask);
+	for (unsigned short i = 0; i < nfds; i++)
+	{
+		// print_debug("\tfd: %d", fds[i].fd);
+		// print_debug("\tevents: %d\n", fds[i].events);
 		fds[i].revents = fds[i].events;
 	}
 	return (nfds);
@@ -193,7 +194,7 @@ uint32_t syscall_brk(t_interrupt_data *regs)
 	unsigned int size = (unsigned int)page_align_up((void *)(new_brk - old_brk));
 	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED)
 	{
-		print_debug("couldn't allocate brk\n"); //debug because program gets -enomem anyway, that's the error report
+		print_debug("couldn't allocate brk\n"); // debug because program gets -enomem anyway, that's the error report
 		return -ENOMEM;
 	}
 	g_curr_task->proc_memory.heap_current = (void *)new_brk;
@@ -230,7 +231,7 @@ uint32_t syscall_mmap2(t_interrupt_data *regs)
 	return (unsigned int)mmap((void *)regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp, &g_curr_task->proc_memory);
 }
 
-//91
+// 91
 uint32_t syscall_munmap(t_interrupt_data *regs)
 {
 	return munmap(&g_curr_task->proc_memory, (virt_ptr)regs->ebx, regs->ecx);
@@ -286,7 +287,7 @@ uint32_t syscall_writev(t_interrupt_data *regs)
 	{
 		written += iovecs[i].iov_len;
 		write(iovecs[i].iov_base, iovecs[i].iov_len);
-		//print_debug("writev: %u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
+		// print_debug("writev: %u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
 	}
 	return (written);
 }
@@ -617,7 +618,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	return (task->task_id);
 }
 
-//does not clear parent's list
+// does not clear parent's list
 void adopt_children_list(t_task *adopter, t_task *children)
 {
 	if (!children)
@@ -650,15 +651,15 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs)
 
 	if (!g_curr_task->parent_task)
 		kernel_panic("parentless process trying to exit, no process left?\n", regs);
-	
+
 	adopt_children_list(g_init_task, g_curr_task->children);
 	g_curr_task->children = NULL;
 	g_curr_task->exit_code = (regs->ebx & 0xFF) << 8;
 	g_curr_task->status = STATUS_ZOMBIE;
 	enqueue_sig(g_curr_task->parent_task, SIGCHLD);
 
-    // wake any wait4 sleepers
-    waitq_wake_all(&g_curr_task->parent_task->wait_child);
+	// wake any wait4 sleepers
+	waitq_wake_all(&g_curr_task->parent_task->wait_child);
 	cleanup_task(g_curr_task);
 	unlink_task_from_runq(g_curr_task);
 	yield_to(g_curr_task->parent_task);
@@ -703,11 +704,11 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		return (-EFAULT);
 	if (argv)
 		for (uint32_t i = 0; argv[i]; i++)
-			if (!user_str_ok(argv[i], false, 2000000,&g_curr_task->proc_memory))
+			if (!user_str_ok(argv[i], false, 2000000, &g_curr_task->proc_memory))
 				return (-EFAULT);
 	if (envp)
 		for (uint32_t i = 0; envp[i]; i++)
-			if (!user_str_ok(envp[i], false, 2000000,  &g_curr_task->proc_memory))
+			if (!user_str_ok(envp[i], false, 2000000, &g_curr_task->proc_memory))
 				return (-EFAULT);
 
 	extern struct VecU8 read_full_file(const char *path);
@@ -745,9 +746,9 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		pmm_free_frame(new_pd);
 		return (-ENOMEM);
 	}
-	//g_curr_task->pending_signals = 0;
-	//g_curr_task->blocked_signals = 0;
-	g_curr_task->in_signal =false; //should be false anyway but this is important
+	// g_curr_task->pending_signals = 0;
+	// g_curr_task->blocked_signals = 0;
+	g_curr_task->in_signal = false;			   // should be false anyway but this is important
 	g_curr_task->proc_memory.heap_current = 0; // temporary
 	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
 
@@ -758,7 +759,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	write_cr3(g_curr_task->pd);
 	if (!map_signal_trampoline())
 	{
-		enqueue_sig(g_curr_task, SIGKILL); //should never happen, but this is too late to come back
+		enqueue_sig(g_curr_task, SIGKILL); // should never happen, but this is too late to come back
 		return (-ENOMEM);
 	}
 
@@ -804,7 +805,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		: : "m"(gp));*/
 	// enable_interrupts();
 
-	//close CLOEXEC FDs
+	// close CLOEXEC FDs
 	for (uint32_t i = 0; i < sizeof(g_curr_task->open_files) / sizeof(g_curr_task->open_files[0]); i++)
 	{
 		if (g_curr_task->open_files[i] && (g_curr_task->open_files[i]->flags & O_CLOEXEC))
@@ -815,7 +816,7 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 		}
 	}
 
-	//reset userspace signal handlers
+	// reset userspace signal handlers
 	for (uint32_t i = 0; i < NSIG; i++)
 	{
 		if ((g_curr_task->sigact[i].handler != SIG_IGN) && (g_curr_task->sigact[i].handler != SIG_DFL))

@@ -38,6 +38,8 @@ enum vga_color {
     VGA_WHITE         = 15
 };
 
+typedef struct s_tty t_tty;
+
 extern unsigned int g_vga_text_location;
 
 extern unsigned char * const g_vga_text_buf;
@@ -52,9 +54,9 @@ void vga_set_color(uint8_t foreground, uint8_t background);
 
 void vga_get_color(uint8_t *foreground, uint8_t *background);
 
-void vga_writes(const char *str);
+void vga_writes(t_tty *tty, const char *str);
 
-void vga_write(const char *str, unsigned int n);
+void vga_write(t_tty *tty, const char *str, unsigned int n);
 
 void vga_clear_screen();
 

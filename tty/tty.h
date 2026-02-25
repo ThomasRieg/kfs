@@ -15,9 +15,9 @@
 
 #define TTY_MAX 10
 
-#include "../vga/vga.h"
 #include "../libk/ft_vector.h"
 #include "../waitq/waitq.h"
+#include "../vga/vga.h"
 
 // https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/termbits.h
 // https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/termbits-common.h

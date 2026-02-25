@@ -12,6 +12,7 @@
 
 #include "../io.h"
 #include "vga.h"
+#include "../tty/tty.h"
 #include "../libk/libk.h"
 
 unsigned int g_vga_text_location = 0;
@@ -57,12 +58,49 @@ void scroll_down()
 	g_vga_text_location = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
 }
 
+unsigned short ctrl_seq_i = 0;
+
 static inline void vga_add_char(char c)
 {
+	if (c == '\e' && ctrl_seq_i == 0) {
+		ctrl_seq_i++;
+		return;
+	} else if (ctrl_seq_i == 1) {
+		if (c == '[')
+			ctrl_seq_i++;
+		else
+			ctrl_seq_i = 0;
+		return;
+	}
+	else if (ctrl_seq_i == 2) {
+		if (c == 'J') {
+			for (int i = g_vga_text_location; i < VGA_SIZE; i += 2) {
+				g_vga_text_buf[i] = ' ';
+			}
+		} else if (c == 'H') {
+			g_vga_text_location = 0;
+		}
+		ctrl_seq_i = 0;
+		if (c != 'J' && c != 'H') {
+			//print_err("unknown ANSI char: %c\n", c);
+		}
+		return;
+	}
+
 	if (c == '\t')
 		c = ' ';
-	if (c == '\n')
-		g_vga_text_location += (VGA_WIDTH * 2) - (g_vga_text_location % (VGA_WIDTH * 2));
+
+	unsigned short col = g_vga_text_location % (VGA_WIDTH * 2);
+	if (c == '\b' && col != 0)
+		g_vga_text_location -= 2;
+	else if (c == 0x7f && col != 0) {
+		g_vga_text_location -= 2;
+		g_vga_text_buf[g_vga_text_location] = ' ';
+	}
+	else if (c == '\r')
+		g_vga_text_location -= g_vga_text_location % (VGA_WIDTH * 2);
+	else if (c == '\n')
+		g_vga_text_location += (VGA_WIDTH * 2);
 	else
 	{
 		g_vga_text_buf[g_vga_text_location] = c;
@@ -73,24 +111,32 @@ static inline void vga_add_char(char c)
 		scroll_down();
 }
 
-void vga_write(const char *str, unsigned int n)
+void vga_write(t_tty *tty, const char *str, unsigned int n)
 {
 	if (g_vga_text_location + 1 >= VGA_SIZE)
 		scroll_down();
 	for (unsigned int i = 0; i < n; i++)
 	{
-		vga_add_char(str[i]);
+		if (str[i] == '\n' && tty->termios.c_oflag & ONLCR) {
+			vga_add_char('\r');
+			vga_add_char('\n');
+		} else
+			vga_add_char(str[i]);
 	}
 	update_cursor(g_vga_text_location / 2);
 }
 
-void vga_writes(const char *str)
+void vga_writes(t_tty *tty, const char *str)
 {
 	if (g_vga_text_location + 1 >= VGA_SIZE)
 		scroll_down();
 	while (*str)
 	{
-		vga_add_char(*str);
+		if (*str == '\n' && tty->termios.c_oflag & ONLCR) {
+			vga_add_char('\r');
+			vga_add_char('\n');
+		} else
+			vga_add_char(*str);
 		str++;
 	}
 	update_cursor(g_vga_text_location / 2);

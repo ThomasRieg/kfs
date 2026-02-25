@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/24 17:04:01 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/25 20:09:47 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,8 +22,8 @@
 #include "../mmap/mmap.h"
 #include "../interrupts/interrupts.h"
 
-t_task *g_curr_task = 0;			   // valid only when executing syscalls
-static t_task *g_actual_curr_task = 0; // loaded kernel stack and cr3, never set to NULL even if task is not in runqueue, keep the last ran task
+t_task *g_curr_task = 0; // valid only when executing syscalls
+static t_task *g_runq_head = 0;
 t_task *g_init_task = 0;
 uint32_t g_next_pid = 1;
 
@@ -243,8 +243,8 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 		pmm_free_frame(task->pd);
 		return (false);
 	}
+	add_task_to_runq(task);
 	g_curr_task = task;
-	g_actual_curr_task = task;
 	g_init_task = task;
 	g_task_list = task;
 	task->next = task;
@@ -300,13 +300,16 @@ void add_child(t_task *parent, t_task *child)
 // called from interrupt handler
 void context_switch(t_task *next)
 {
-	print_trace("context_switch from pid %u, g_actual_task %u, next %u\n", g_curr_task->task_id, g_actual_curr_task->task_id, next->task_id);
-	t_task *prev = g_actual_curr_task;
-	if (prev == next)
+	print_trace("context_switch from pid %u, g_runq_head %u, next %u\n", g_curr_task ? g_curr_task->task_id : 0, g_runq_head->task_id, next->task_id);
+	t_task *prev;
+	if (g_curr_task)
+		prev = g_curr_task;
+	else
+		prev = g_runq_head;
+	if (g_curr_task == next)
 		return;
 
 	g_curr_task = next;
-	g_actual_curr_task = next;
 
 	write_cr3(next->pd);
 	tss_set_kernel_stack((uintptr_t)&next->k_stack[sizeof(next->k_stack)]);
@@ -323,8 +326,9 @@ static bool g_sleeping;
 void schedule_next_task()
 {
 	// have to loop because it's not safe to exit kernel space when !g_curr_task
-	while (!g_curr_task && !g_to_schedule)
+	while (!g_runq_head && !g_to_schedule)
 	{
+		// TODO, cleaner handling here, create an idle task and switch to it
 		g_sleeping = true; // prevent reentrency that would create a stack overflow of timer interrupt_data
 		enable_interrupts();
 		// print_trace("scheduler: no running program, sleeping\n");
@@ -345,7 +349,7 @@ void schedule_next_task()
 		g_to_schedule = NULL;
 		if (to_schedule->status == STATUS_RUNNABLE)
 		{
-			print_debug("scheduler: scheduling g_to_schedule %u\n", to_schedule->task_id);
+			// print_debug("scheduler: scheduling g_to_schedule %u\n", to_schedule->task_id);
 			if (g_curr_task)
 				print_trace("scheduler: curr_pid %u\n", g_curr_task->task_id);
 			context_switch(to_schedule);
@@ -353,7 +357,7 @@ void schedule_next_task()
 		}
 		else
 		{
-			print_err("unrunnable task in g_to_schedule pid %u\n", g_to_schedule->task_id);
+			print_err("unrunnable task in g_to_schedule pid %u\n", to_schedule->task_id);
 			if (to_schedule->status == STATUS_ZOMBIE)
 				kernel_panic("uncoherent kernel state, trying to execute a zombie child in g_to_schedule\n", NULL);
 		}
@@ -363,6 +367,8 @@ void schedule_next_task()
 	{
 		if (!next)
 			kernel_panic("uncoherent kernel state, unlinked task in runqueue\n", NULL);
+		if (next->status != STATUS_RUNNABLE)
+			kernel_panic("uncoherent kernel state, unrunnable task in runqueue\n", NULL);
 		if (next->status == STATUS_RUNNABLE)
 		{
 			print_debug("scheduler: found runnable task pid %u\n", next->task_id);
@@ -374,7 +380,7 @@ void schedule_next_task()
 		next = next->next;
 	}
 	if (was_sleeping)
-		context_switch(g_curr_task);
+		context_switch(g_runq_head);
 	return; // didn't find any other runnable task, don't context switch (continue current)
 }
 
@@ -603,7 +609,7 @@ void unlink_task_from_runq(t_task *task)
 	if (task->next == task)
 	{
 		print_debug("run queue empty, last task unlinked pid %u\n", task->task_id);
-		g_curr_task = NULL;
+		g_runq_head = NULL;
 	}
 	t_task *next = task->next;
 	t_task *prev = task->next;
@@ -612,20 +618,27 @@ void unlink_task_from_runq(t_task *task)
 	prev->next = next;
 	task->next = NULL; // make sure we explicitly mark this task as not in the queue
 	if (task == g_curr_task)
-		g_to_schedule = next;
+	{
+		if (next != task)
+			g_to_schedule = next; // make sure we don't try to loop from g_curr_task in scheduler
+		else
+			g_to_schedule = NULL;
+		if (task == g_runq_head)
+			g_runq_head = next;
+	}
 }
 
 void add_task_to_runq(t_task *task)
 {
-	if (g_curr_task)
+	if (g_runq_head)
 	{
-		task->next = g_curr_task->next;
-		g_curr_task->next = task;
+		task->next = g_runq_head->next;
+		g_runq_head->next = task;
 	}
 	else
 	{
 		task->next = task;
-		g_curr_task = task;
+		g_runq_head = task;
 	}
 }
 

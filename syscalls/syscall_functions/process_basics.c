@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/24 14:43:10 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/25 19:38:53 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -606,10 +606,9 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	memcpy(task->k_stack, g_curr_task->k_stack, sizeof(g_curr_task->k_stack)); // TODO copy only until k_esp to save instruction?
 	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
 	((t_interrupt_data *)task->k_esp)->eax = 0;
-	task->next = g_curr_task->next;
 	task->next_all_task = g_curr_task->next_all_task;
-	g_curr_task->next = task;
 	g_curr_task->next_all_task = task;
+	add_task_to_runq(task);
 	task_init_kernel_context(task);
 	task->status = STATUS_RUNNABLE;
 	// enable_interrupts();

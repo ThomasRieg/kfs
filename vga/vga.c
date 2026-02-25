@@ -82,7 +82,7 @@ static inline void vga_add_char(char c)
 		}
 		ctrl_seq_i = 0;
 		if (c != 'J' && c != 'H') {
-			print_err("unknown ANSI char: %c\n", c);
+			//print_err("unknown ANSI char: %c\n", c);
 		}
 		return;
 	}

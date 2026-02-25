@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/25 20:09:47 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/25 20:19:33 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -362,8 +362,9 @@ void schedule_next_task()
 				kernel_panic("uncoherent kernel state, trying to execute a zombie child in g_to_schedule\n", NULL);
 		}
 	}
-	t_task *next = g_curr_task->next;
-	while (next != g_curr_task)
+	t_task *next = g_curr_task->next ? g_curr_task->next : g_runq_head->next;
+	t_task *first = g_curr_task->next ? g_curr_task : g_runq_head;
+	while (next != first)
 	{
 		if (!next)
 			kernel_panic("uncoherent kernel state, unlinked task in runqueue\n", NULL);

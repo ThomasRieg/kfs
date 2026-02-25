@@ -77,8 +77,13 @@ static inline void vga_add_char(char c)
 			for (int i = g_vga_text_location; i < VGA_SIZE; i += 2) {
 				g_vga_text_buf[i] = ' ';
 			}
+		} else if (c == 'H') {
+			g_vga_text_location = 0;
 		}
 		ctrl_seq_i = 0;
+		if (c != 'J' && c != 'H') {
+			print_err("unknown ANSI char: %c\n", c);
+		}
 		return;
 	}
 

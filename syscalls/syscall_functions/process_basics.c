@@ -270,28 +270,6 @@ uint32_t syscall_mprotect(__attribute__((unused)) t_interrupt_data *regs)
 	return (0);
 }
 
-struct iovec
-{
-	void *iov_base;
-	unsigned int iov_len;
-};
-
-uint32_t syscall_writev(t_interrupt_data *regs)
-{
-	print_trace("writev %u %p %u\n", regs->ebx, regs->ecx, regs->edx);
-	struct iovec *iovecs = (struct iovec *)regs->ecx;
-	uint32_t written = 0;
-	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * regs->edx, true, &g_curr_task->proc_memory))
-		return (-EFAULT);
-	for (unsigned int i = 0; i < regs->edx; i++)
-	{
-		written += iovecs[i].iov_len;
-		write(iovecs[i].iov_base, iovecs[i].iov_len);
-		// print_debug("writev: %u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
-	}
-	return (written);
-}
-
 static t_task *find_zombie_child(t_task *parent, int pid)
 {
 	t_task *c = parent->children;

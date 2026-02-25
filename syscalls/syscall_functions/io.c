@@ -430,6 +430,34 @@ uint32_t syscall_write(t_interrupt_data *regs)
 	return (file->ops->write(file, buf, count));
 }
 
+struct iovec
+{
+	void *iov_base;
+	unsigned int iov_len;
+};
+
+uint32_t syscall_writev(t_interrupt_data *regs)
+{
+	int32_t fd = regs->ebx;
+	struct iovec *iovecs = (struct iovec *)regs->ecx;
+	unsigned int vec_count = regs->edx;
+	print_trace("writev %u %p %u\n", fd, iovecs, vec_count);
+	uint32_t written = 0;
+	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * vec_count, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	t_file *file = get_file_from_fd(fd);
+	if (!file)
+		return (-EBADF);
+	if (!file->ops->write)
+		return (-EINVAL);
+	for (unsigned int i = 0; i < vec_count; i++)
+	{
+		written += file->ops->write(file, iovecs[i].iov_base, iovecs[i].iov_len);
+		// print_debug("writev: %u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
+	}
+	return (written);
+}
+
 uint32_t do_pipe(int32_t *pipe_fd, uint32_t flags) {
 	if (!user_range_ok(pipe_fd, 2 * sizeof(int32_t), true, &g_curr_task->proc_memory))
 		return (-EFAULT);

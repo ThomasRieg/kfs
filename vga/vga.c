@@ -57,12 +57,44 @@ void scroll_down()
 	g_vga_text_location = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
 }
 
+unsigned short ctrl_seq_i = 0;
+
 static inline void vga_add_char(char c)
 {
+	if (c == '\e' && ctrl_seq_i == 0) {
+		ctrl_seq_i++;
+		return;
+	} else if (ctrl_seq_i == 1) {
+		if (c == '[')
+			ctrl_seq_i++;
+		else
+			ctrl_seq_i = 0;
+		return;
+	}
+	else if (ctrl_seq_i == 2) {
+		if (c == 'J') {
+			for (int i = g_vga_text_location; i < VGA_SIZE; i += 2) {
+				g_vga_text_buf[i] = ' ';
+			}
+		}
+		ctrl_seq_i = 0;
+		return;
+	}
+
 	if (c == '\t')
 		c = ' ';
-	if (c == '\n')
-		g_vga_text_location += (VGA_WIDTH * 2) - (g_vga_text_location % (VGA_WIDTH * 2));
+
+	unsigned short col = g_vga_text_location % (VGA_WIDTH * 2);
+	if (c == '\b' && col != 0)
+		g_vga_text_location -= 2;
+	else if (c == 0x7f && col != 0) {
+		g_vga_text_location -= 2;
+		g_vga_text_buf[g_vga_text_location] = ' ';
+	}
+	else if (c == '\r')
+		g_vga_text_location -= g_vga_text_location % (VGA_WIDTH * 2);
+	else if (c == '\n')
+		g_vga_text_location += (VGA_WIDTH * 2);
 	else
 	{
 		g_vga_text_buf[g_vga_text_location] = c;

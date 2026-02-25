@@ -80,13 +80,6 @@ void next_tty()
 
 void handle_command(unsigned char len, const unsigned char *cmd);
 
-static inline void serial_delete_char(void)
-{
-	outb(PORT_COM1, '\b');
-	outb(PORT_COM1, ' ');
-	outb(PORT_COM1, '\b');
-}
-
 void tty_add_input(char c)
 {
 	t_tty *curr = &g_ttys[g_current_tty];
@@ -132,21 +125,15 @@ void tty_add_input(char c)
 	if (curr->termios.c_lflag & ECHO) {
 		if (c == '\r')
 			write(&(char){'\n'}, 1);
-		else if (c == '\b' || c == 0x7F)
-		{
-			if (curr->cmd.index != 0)
-			{
-				curr->cmd.index--;
-				serial_delete_char();
-				g_vga_text_location -= 2;
-				g_vga_text_buf[g_vga_text_location] = 0;
-				update_cursor(g_vga_text_location / 2);
-			}
-			waitq_wake_one(&curr->wait_read);
-			return;
-		}
 		else
 			write(&c, 1);
+	}
+	if (curr->termios.c_lflag & ICANON && (c == '\b' || c == 0x7F))
+	{
+		if (curr->cmd.index != 0)
+			curr->cmd.index--;
+		waitq_wake_one(&curr->wait_read);
+		return;
 	}
 
 	if (!ft_vector_pushback(&(curr->cmd), c))

@@ -12,6 +12,7 @@
 
 #include "../io.h"
 #include "vga.h"
+#include "../tty/tty.h"
 #include "../libk/libk.h"
 
 unsigned int g_vga_text_location = 0;
@@ -105,24 +106,32 @@ static inline void vga_add_char(char c)
 		scroll_down();
 }
 
-void vga_write(const char *str, unsigned int n)
+void vga_write(t_tty *tty, const char *str, unsigned int n)
 {
 	if (g_vga_text_location + 1 >= VGA_SIZE)
 		scroll_down();
 	for (unsigned int i = 0; i < n; i++)
 	{
-		vga_add_char(str[i]);
+		if (str[i] == '\n' && tty->termios.c_oflag & ONLCR) {
+			vga_add_char('\r');
+			vga_add_char('\n');
+		} else
+			vga_add_char(str[i]);
 	}
 	update_cursor(g_vga_text_location / 2);
 }
 
-void vga_writes(const char *str)
+void vga_writes(t_tty *tty, const char *str)
 {
 	if (g_vga_text_location + 1 >= VGA_SIZE)
 		scroll_down();
 	while (*str)
 	{
-		vga_add_char(*str);
+		if (*str == '\n' && tty->termios.c_oflag & ONLCR) {
+			vga_add_char('\r');
+			vga_add_char('\n');
+		} else
+			vga_add_char(*str);
 		str++;
 	}
 	update_cursor(g_vga_text_location / 2);

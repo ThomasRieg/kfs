@@ -41,9 +41,9 @@ void init_active_tty(void)
 	if (tty->cmd.buffer)
 		return; // already init
 	tty->cmd.index = 0;
-	tty->cmd.size = 1024;
+	tty->cmd.size = 0;
 	tty->cmd.finished = 0;
-	tty->cmd.buffer = vmalloc(g_ttys[g_current_tty].cmd.size);
+	tty->cmd.buffer = 0;
 	tty->read_eof = false;
 	tty->termios.c_iflag = ICRNL | IXON;
 	tty->termios.c_oflag = OPOST | ONLCR;
@@ -54,8 +54,6 @@ void init_active_tty(void)
 	tty->termios.c_cc[VERASE] = 0x7F;
 	tty->termios.c_cc[VSUSP] = 0x1A;
 	tty->termios.c_cc[VQUIT] = 0x1C;
-	if (!tty->cmd.buffer)
-		kernel_panic("couldn't allocate memory for the new tty", NULL);
 }
 
 // silently does nothing if you can't add a tty, just stay on the last one
@@ -154,14 +152,14 @@ void prev_tty()
 
 void write(const char *str, unsigned int n)
 {
-	vga_write(str, n);
+	vga_write(&g_ttys[g_current_tty], str, n);
 	for (unsigned int i = 0; i < n; i++)
 		outb(PORT_COM1, str[i]);
 }
 
 void writes(const char *str)
 {
-	vga_writes(str);
+	vga_writes(&g_ttys[g_current_tty], str);
 	for (; *str; str++)
 		outb(PORT_COM1, *str);
 }

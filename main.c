@@ -234,6 +234,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(4, syscall_write);
 	add_syscall(5, syscall_open);
 	add_syscall(6, syscall_close);
+	add_syscall(10, syscall_unlink);
 	add_syscall(11, syscall_execve);
 	add_syscall(12, syscall_chdir);
 	add_syscall(20, syscall_getpid);
@@ -276,6 +277,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(252, syscall_exit);
 	add_syscall(258, syscall_set_tid_address);
 	add_syscall(265, syscall_clock_gettime);
+	add_syscall(268, syscall_statfs64);
 	add_syscall(295, syscall_openat);
 	add_syscall(300, syscall_fstatat);
 	// add_syscall(305, syscall_set_tid_address); // TODO: implement

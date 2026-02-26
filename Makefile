@@ -46,9 +46,9 @@ debug: $(ISO) $(DISK_FILE)
 $(DISK_FILE):
 	$(MAKE) -C userspace
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
-	cp userspace/init root/bin
+	cp userspace/{init,socketpair} root/bin
 	i=1; \
-	BUSY_BOX_PROGRAMS="ash cat chmod cp date dd df echo hostname kill ln ls mkdir mv ps pwd rm rmdir sleep login hexdump sed sort su tail head tar time whoami vi w wall wc xxd xargs xz users uniq uname less stty find cryptpw loadkmap dumpkmap clear grep tr";\
+	BUSY_BOX_PROGRAMS="ash cat chmod cp date dd df echo hostname kill ln ls mkdir mv ps pwd rm rmdir sleep login hexdump sed sort su tail head tar time whoami vi w wall wc xxd xargs xz users uniq uname less stty find cryptpw loadkmap dumpkmap clear grep tr stat";\
 	for bin in $$BUSY_BOX_PROGRAMS; do \
 		if [[ ! -x root/bin/$$bin ]]; then\
 			echo $$bin \($$i/$$(echo $$BUSY_BOX_PROGRAMS | wc -w)\);\

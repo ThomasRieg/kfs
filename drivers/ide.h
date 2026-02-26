@@ -16,4 +16,5 @@ struct ide_partition {
 };
 
 void ide_read_sector(struct ide_drive *drive, unsigned int lba48, unsigned char buffer[512]);
+void ide_write_sector(struct ide_drive *drive, unsigned int lba48, const unsigned char buffer[512]);
 #endif

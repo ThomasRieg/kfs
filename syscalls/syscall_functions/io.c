@@ -106,6 +106,7 @@ static void fill_statx_from_stat(struct statx *statx, struct stat *stat)
 	statx->stx_uid = stat->st_uid;
 	statx->stx_gid = stat->st_gid;
 	statx->stx_blocks = stat->st_blocks;
+	statx->stx_blksize = stat->st_blksize;
 	statx->stx_size = stat->st_size;
 	statx->stx_mode = stat->st_mode;
 	statx->stx_atime = (struct statx_timestamp){.tv_sec=stat->st_atim.tv_sec};
@@ -218,6 +219,15 @@ uint32_t syscall_readlink(t_interrupt_data *regs)
 		return (-EFAULT);
 	print_trace("readlink: %s %p %u\n", path, buf, buf_size);
 	return (-ENOSYS);
+}
+
+uint32_t syscall_unlink(t_interrupt_data *regs)
+{
+	const char *path = (char *)regs->ebx;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	print_trace("unlink: %s\n", path);
+	return unlink(path, g_curr_task->cwd_inode_nr);
 }
 
 uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribute__((unused)) unsigned int mode)
@@ -597,4 +607,40 @@ uint32_t syscall_getcwd(t_interrupt_data *regs) {
 	if (!user_range_ok(buf, size, true, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	return getdirname(g_curr_task->cwd_inode_nr, buf, size);
+}
+
+#define EXT2_SUPER_MAGIC 0xef53
+
+struct statfs64 {
+   unsigned int f_type;    /* Type of filesystem (see below) */
+   unsigned int f_bsize;   /* Optimal transfer block size */
+   uint64_t f_blocks;  /* Total data blocks in filesystem */
+   uint64_t f_bfree;   /* Free blocks in filesystem */
+   uint64_t f_bavail;  /* Free blocks available to
+							unprivileged user */
+   uint64_t f_files;   /* Total inodes in filesystem */
+   uint64_t f_ffree;   /* Free inodes in filesystem */
+   uint64_t     f_fsid;    /* Filesystem ID */
+   unsigned int f_namelen; /* Maximum length of filenames */
+   unsigned int f_frsize;  /* Fragment size (since Linux 2.6) */
+   unsigned int f_flags;   /* Mount flags of filesystem
+							(since Linux 2.6.36) */
+   unsigned int f_spare[4];
+};
+
+uint32_t syscall_statfs64(t_interrupt_data *regs) {
+	const char *path = (const char *)regs->ebx;
+	unsigned int size = regs->ecx;
+	struct statfs64 *out = (struct statfs64 *)regs->edx;
+	if (size != sizeof(*out))
+		return -EINVAL;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	if (!user_range_ok(out, sizeof(struct statfs64), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	*out = (struct statfs64){
+		.f_type = EXT2_SUPER_MAGIC
+	};
+
+	return 0;
 }

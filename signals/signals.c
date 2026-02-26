@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   signals.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/24 16:12:42 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/26 04:23:14 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,19 +65,20 @@ void task_terminate_by_signal(t_task *t, int sig)
 	print_debug("pid %u killed by signal: %d\n", t->task_id, sig);
 	disable_interrupts(); // doesn't need to reenable because parent's task will override cpu flags
 
-	if (!g_curr_task->parent_task)
+	if (!t->parent_task)
 		kernel_panic("parentless process got killed, no process left?\n", NULL);
 
 	void adopt_children_list(t_task * adopter, t_task * children);
-	adopt_children_list(g_init_task, g_curr_task->children);
-	g_curr_task->children = NULL;
-	g_curr_task->exit_code = sig;
-	g_curr_task->status = STATUS_ZOMBIE;
-	enqueue_sig(g_curr_task->parent_task, SIGCHLD);
+	adopt_children_list(g_init_task, t->children);
+	t->children = NULL;
+	t->exit_code = sig;
+	t->status = STATUS_ZOMBIE;
+	enqueue_sig(t->parent_task, SIGCHLD);
 
 	// wake any wait4 sleepers
-	waitq_wake_all(&g_curr_task->parent_task->wait_child);
+	waitq_wake_all(&t->parent_task->wait_child);
 	cleanup_task(t);
+	unlink_task_from_runq(t);
 	yield_to(t->parent_task);
 	__builtin_unreachable();
 }
@@ -154,6 +155,7 @@ bool enqueue_sig(t_task *task, int sig)
 	// if (task->blocked_signals &= SIGBIT(sig))
 	// return (false);
 	print_trace("enqueuing signal %d for task %u\n", sig, task->task_id);
+	if (task->status == STATUS_ZOMBIE) return (false);
 	task->pending_signals |= SIGBIT(sig);
 	waitq_wake(task); // remove sleep status if task sleeping
 	return (true);

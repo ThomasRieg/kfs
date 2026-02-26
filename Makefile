@@ -11,10 +11,10 @@ OBJS := main.o ext2.o net.o shell.o entry.o boot_init.o \
 		pmm/pmm.o\
 		vmalloc/init_state.o vmalloc/vcalloc.o vmalloc/vfree.o vmalloc/vmalloc.o vmalloc/vrealloc.o vmalloc/kmalloc.o\
 		interrupts/dispatcher.o interrupts/int_entrypoint.o interrupts/isr_stubs.o interrupts/setup_interrupts.o interrupts/handlers/handlers.o\
-		syscalls/syscalls.o syscalls/syscall_functions/process_basics.o syscalls/syscall_functions/io.o syscalls/syscall_functions/sys_signals.o\
+		syscalls/syscalls.o syscalls/syscall_functions/process_basics.o syscalls/syscall_functions/io.o syscalls/syscall_functions/sys_signals.o syscalls/syscall_functions/unix_socket.o\
 		tasks/task.o\
 		mmap/mmap.o mmap/munmap.o\
-		fd/pipe.o fd/inode.o fd/fd_tty.o\
+		fd/pipe.o fd/inode.o fd/fd_tty.o fd/fd_sockets.o\
 		waitq/waitq.o waitq/sleep.o\
 		signals/signals.o signals/signals_asm.o
 ISO := kfs.iso

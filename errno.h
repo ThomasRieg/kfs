@@ -1,38 +1,49 @@
 // From https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/errno-base.h#L13
 // https://elixir.bootlin.com/linux/v6.18.6/source/include/uapi/asm-generic/errno.h#L18
 
-#define	EPERM		 1	/* Operation not permitted */
-#define	ENOENT		 2	/* No such file or directory */
-#define	ESRCH		 3	/* No such process */
-#define	EINTR		 4	/* Interrupted system call */
-#define	EIO		 5	/* I/O error */
-#define	ENXIO		 6	/* No such device or address */
-#define	E2BIG		 7	/* Argument list too long */
-#define	ENOEXEC		 8	/* Exec format error */
-#define	EBADF		 9	/* Bad file number */
-#define	ECHILD		10	/* No child processes */
-#define	EAGAIN		11	/* Try again */
-#define	ENOMEM		12	/* Out of memory */
-#define	EACCES		13	/* Permission denied */
-#define	EFAULT		14	/* Bad address */
-#define	ENOTBLK		15	/* Block device required */
-#define	EBUSY		16	/* Device or resource busy */
-#define	EEXIST		17	/* File exists */
-#define	EXDEV		18	/* Cross-device link */
-#define	ENODEV		19	/* No such device */
-#define	ENOTDIR		20	/* Not a directory */
-#define	EISDIR		21	/* Is a directory */
-#define	EINVAL		22	/* Invalid argument */
-#define	ENFILE		23	/* File table overflow */
-#define	EMFILE		24	/* Too many open files */
-#define	ENOTTY		25	/* Not a typewriter */
-#define	ETXTBSY		26	/* Text file busy */
-#define	EFBIG		27	/* File too large */
-#define	ENOSPC		28	/* No space left on device */
-#define	ESPIPE		29	/* Illegal seek */
-#define	EROFS		30	/* Read-only file system */
-#define	EMLINK		31	/* Too many links */
-#define	EPIPE		32	/* Broken pipe */
-#define	EDOM		33	/* Math argument out of domain of func */
-#define	ERANGE		34	/* Math result not representable */
-#define	ENOSYS		38	/* Invalid system call number */
+#define EPERM 1	   /* Operation not permitted */
+#define ENOENT 2   /* No such file or directory */
+#define ESRCH 3	   /* No such process */
+#define EINTR 4	   /* Interrupted system call */
+#define EIO 5	   /* I/O error */
+#define ENXIO 6	   /* No such device or address */
+#define E2BIG 7	   /* Argument list too long */
+#define ENOEXEC 8  /* Exec format error */
+#define EBADF 9	   /* Bad file number */
+#define ECHILD 10  /* No child processes */
+#define EAGAIN 11  /* Try again */
+#define ENOMEM 12  /* Out of memory */
+#define EACCES 13  /* Permission denied */
+#define EFAULT 14  /* Bad address */
+#define ENOTBLK 15 /* Block device required */
+#define EBUSY 16   /* Device or resource busy */
+#define EEXIST 17  /* File exists */
+#define EXDEV 18   /* Cross-device link */
+#define ENODEV 19  /* No such device */
+#define ENOTDIR 20 /* Not a directory */
+#define EISDIR 21  /* Is a directory */
+#define EINVAL 22  /* Invalid argument */
+#define ENFILE 23  /* File table overflow */
+#define EMFILE 24  /* Too many open files */
+#define ENOTTY 25  /* Not a typewriter */
+#define ETXTBSY 26 /* Text file busy */
+#define EFBIG 27   /* File too large */
+#define ENOSPC 28  /* No space left on device */
+#define ESPIPE 29  /* Illegal seek */
+#define EROFS 30   /* Read-only file system */
+#define EMLINK 31  /* Too many links */
+#define EPIPE 32   /* Broken pipe */
+#define EDOM 33	   /* Math argument out of domain of func */
+#define ERANGE 34  /* Math result not representable */
+#define ENOSYS 38  /* Invalid system call number */
+
+#define ENOTSOCK 88		 /*Socket operation on non-socket*/
+#define EOPNOTSUPP 95	 /*Operation not supported*/
+#define EAFNOSUPPORT 97	 /*Address family not supported by protocol*/
+#define EADDRINUSE 98	 /*Address already in use*/
+#define ECONNABORTED 103 /*Software caused connection abort*/
+#define ECONNRESET 104	 /*Connection reset by peer*/
+#define ENOTCONN 107	 /*Transport endpoint is not connected*/
+#define ETIMEDOUT 110	 /*Connection timed out*/
+#define ECONNREFUSED 111 /*Connection refused*/
+#define EINPROGRESS 115	 /*Operation now in progress*/

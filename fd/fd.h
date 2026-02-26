@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   fd.h                                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:39:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 02:27:14 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/26 18:36:37 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@ enum e_flags
 {
 	O_RDONLY = 0,
 	O_WRONLY = 1,
+	O_RDWR = 2,
 	O_NONBLOCK = 2048,
 	O_CLOEXEC = 524288,
 };
@@ -42,7 +43,7 @@ typedef struct s_file_ops
 {
 	read_fn read;
 	write_fn write;
-	close_fn close; //only called when fd refcnt becomes 0 in syscall_close
+	close_fn close; // only called when fd refcnt becomes 0 in syscall_close
 	ioctl_fn ioctl;
 	// later: poll, mmap, seek, readdir, fstat...
 } t_file_ops;

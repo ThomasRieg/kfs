@@ -281,6 +281,11 @@ void kernel_main(struct s_mb2_info *multi)
 	// add_syscall(305, syscall_set_tid_address); // TODO: implement
 	// add_syscall(311, syscall_set_tid_address); // TODO: implement
 	add_syscall(331, syscall_pipe2);
+	add_syscall(359, syscall_socket);
+	add_syscall(361, syscall_bind);
+	add_syscall(362, syscall_connect);
+	add_syscall(363, syscall_listen);
+	add_syscall(364, syscall_accept4);
 	// add_syscall(355, syscall_set_tid_address); // TODO: implement
 	add_syscall(369, syscall_sendto);
 	add_syscall(383, syscall_statx);

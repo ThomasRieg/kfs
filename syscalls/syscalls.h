@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   syscalls.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 04:12:11 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/26 19:26:18 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,5 +76,11 @@ uint32_t syscall_write(t_interrupt_data *regs);
 uint32_t syscall_chdir(t_interrupt_data *regs);
 uint32_t syscall_getdents64(t_interrupt_data *regs);
 uint32_t syscall_getcwd(t_interrupt_data *regs);
+
+uint32_t syscall_socket(t_interrupt_data *regs);
+uint32_t syscall_bind(t_interrupt_data *regs);
+uint32_t syscall_listen(t_interrupt_data *regs);
+uint32_t syscall_connect(t_interrupt_data *regs);
+uint32_t syscall_accept4(t_interrupt_data *regs);
 
 #endif

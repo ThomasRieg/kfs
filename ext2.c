@@ -229,28 +229,30 @@ static bool ext2_get_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_i
 	unsigned int inode_table_block_index = index_in_group % (fs->sb.block_size / fs->sb.inode_size);
 	//printk("inode %u's structure is in entry #%u of table block #%u in block group #%u\n", inode, table_block_index, containing_block, group);
 
-	unsigned char group_desc_block[4096];
+	// reused for all three reads
+	unsigned char block[4096];
 
 	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
 	// otherwise, padding and SB are in one block and group desc table starts at block 1
-	ext2_read_block(fs, group_desc_block, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
-	// TODO: read descriptor of the proper group
-	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)group_desc_block;
+	ext2_read_block(fs, block, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
+	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
 	//print_block_group_descriptor(descriptor);
 
-	unsigned char block_inode_bitmap[4096];
+	// read these now because we're overwriting the same block array
+	unsigned int ba_start_inode_table = descriptor->ba_start_inode_table;
+	unsigned int ba_inode_usage_bitmap = descriptor->ba_inode_usage_bitmap;
+
 	if (fs->sb.inodes_in_group > 32768) {
 		kernel_panic("inodes_in_group > 32768", 0);
 	}
-	ext2_read_block(fs, block_inode_bitmap, descriptor->ba_inode_usage_bitmap);
-	if ((block_inode_bitmap[index_in_group / 8] & (1 << ((inode - 1) % 8))) == 0) {
+	ext2_read_block(fs, block, ba_inode_usage_bitmap);
+	if ((block[index_in_group / 8] & (1 << ((inode - 1) % 8))) == 0) {
 		print_err("tried to read non-allocated inode %u\n", inode);
 		return false;
 	}
 
-	unsigned char block_inode_table[4096];
-	ext2_read_block(fs, block_inode_table, descriptor->ba_start_inode_table + containing_inode_table_block);
-	*out = ((struct ext2_inode_extended *)block_inode_table)[inode_table_block_index];
+	ext2_read_block(fs, block, ba_start_inode_table + containing_inode_table_block);
+	*out = ((struct ext2_inode_extended *)block)[inode_table_block_index];
 	return true;
 }
 

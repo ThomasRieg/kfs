@@ -77,5 +77,6 @@ uint32_t syscall_chdir(t_interrupt_data *regs);
 uint32_t syscall_getdents64(t_interrupt_data *regs);
 uint32_t syscall_getcwd(t_interrupt_data *regs);
 uint32_t syscall_unlink(t_interrupt_data *regs);
+uint32_t syscall_statfs64(t_interrupt_data *regs);
 
 #endif

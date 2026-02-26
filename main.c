@@ -277,6 +277,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(252, syscall_exit);
 	add_syscall(258, syscall_set_tid_address);
 	add_syscall(265, syscall_clock_gettime);
+	add_syscall(268, syscall_statfs64);
 	add_syscall(295, syscall_openat);
 	add_syscall(300, syscall_fstatat);
 	// add_syscall(305, syscall_set_tid_address); // TODO: implement

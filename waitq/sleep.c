@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   sleep.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
+/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/21 02:11:11 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/24 17:00:58 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/02/26 05:09:22 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,12 +23,12 @@ static inline uint32_t ticks_left(uint32_t sleep_until)
 
 void insert_in_sleep_queue(t_task *task)
 {
-	if (task->in_sleep_queue)
+	if (task->in_sleep_queue || task->next_sleep_task)
 		kernel_panic("double sleep insert", NULL);
 	uint32_t target_ticks_left = ticks_left(task->sleep_until); // overflow_safe
 	if (g_sleeping_queue)
 	{
-		if (target_ticks_left >= ticks_left(g_sleeping_queue->sleep_until))
+		if (target_ticks_left > ticks_left(g_sleeping_queue->sleep_until))
 		{
 			t_task *curr = g_sleeping_queue;
 			t_task *prev = g_sleeping_queue;
@@ -38,6 +38,7 @@ void insert_in_sleep_queue(t_task *task)
 				curr = curr->next_sleep_task;
 			}
 			prev->next_sleep_task = task;
+			if (curr == task) kernel_panic("double sleep insert", NULL);
 			task->next_sleep_task = curr;
 		}
 		else
@@ -55,6 +56,7 @@ void insert_in_sleep_queue(t_task *task)
 
 void remove_from_sleep_queue(t_task *task)
 {
+	print_trace("removing %p pid %u from sleep queue, next_sleep_task %p\n", task, task->task_id, task->next_sleep_task);
 	if (!task)
 		kernel_panic("remove from sleep queue called with task null\n", NULL);
 	if (g_sleeping_queue)
@@ -76,6 +78,7 @@ void remove_from_sleep_queue(t_task *task)
 		}
 		task->next_sleep_task = NULL;
 	}
+	print_trace("g_sleeping_queue became %p\n", g_sleeping_queue);
 }
 
 void sleep_until(t_task *task, uint32_t tick)

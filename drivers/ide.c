@@ -139,7 +139,7 @@ void ide_read_sector(struct ide_drive *drive, unsigned int lba48, unsigned char 
 	}
 }
 
-void ide_write_sector(struct ide_drive *drive, unsigned int lba48, unsigned char buffer[512]) {
+void ide_write_sector(struct ide_drive *drive, unsigned int lba48, const unsigned char buffer[512]) {
 	unsigned int base = drive->base;
 	ide_select_lba(drive, lba48);
 	outb(base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO_EXT);
@@ -156,6 +156,10 @@ void ide_write_sector(struct ide_drive *drive, unsigned int lba48, unsigned char
 	for (unsigned short i = 0; i < 512; i += 2) {
 		outw(base + ATA_REG_DATA, (buffer[i + 1] << 8) | buffer[i]);
 	}
+	unsigned char status;
+	do {
+		status = inb(base + ATA_REG_STATUS);
+	} while (status & ATA_SR_BSY);
 }
 
 struct mbr_partition {

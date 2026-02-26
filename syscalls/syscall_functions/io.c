@@ -106,6 +106,7 @@ static void fill_statx_from_stat(struct statx *statx, struct stat *stat)
 	statx->stx_uid = stat->st_uid;
 	statx->stx_gid = stat->st_gid;
 	statx->stx_blocks = stat->st_blocks;
+	statx->stx_blksize = stat->st_blksize;
 	statx->stx_size = stat->st_size;
 	statx->stx_mode = stat->st_mode;
 	statx->stx_atime = (struct statx_timestamp){.tv_sec=stat->st_atim.tv_sec};
@@ -218,6 +219,15 @@ uint32_t syscall_readlink(t_interrupt_data *regs)
 		return (-EFAULT);
 	print_trace("readlink: %s %p %u\n", path, buf, buf_size);
 	return (-ENOSYS);
+}
+
+uint32_t syscall_unlink(t_interrupt_data *regs)
+{
+	const char *path = (char *)regs->ebx;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	print_trace("unlink: %s\n", path);
+	return unlink(path, g_curr_task->cwd_inode_nr);
 }
 
 uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribute__((unused)) unsigned int mode)

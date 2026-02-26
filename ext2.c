@@ -117,11 +117,12 @@ static unsigned int block_to_lba(unsigned int block, unsigned int block_size) {
 }
 
 static void ext2_print_sb(union ext2_super_block *sb) {
-	printk("ext2 header: version %u.%u, SB block %u, total inodes %u, total blocks %u, blocks reserved for SU %u, last mount time %u, block size %u bytes, blocks in group %u, required features %u, ro features %u, optional features %u, inode size %u\n",
+	printk("ext2 header: version %u.%u, SB block %u, total inodes %u, total blocks %u, blocks reserved for SU %u, last mount time %u, block size %u bytes, blocks in group %u, required features %u, ro features %u, optional features %u, inode size %u, inodes in group %u\n",
 			sb->major_ver, sb->minor_ver,
 			sb->starting_block, sb->total_inodes,
 			sb->total_blocks, sb->reserved_blocks, sb->last_mount, sb->block_size, sb->blocks_in_group,
-			sb->required_features, sb->ro_features, sb->optional_features, sb->inode_size);
+			sb->required_features, sb->ro_features, sb->optional_features, sb->inode_size,
+			sb->inodes_in_group);
 }
 
 static void ext2_read_block(struct ext2_fs *fs, unsigned char *buffer, unsigned int block) {
@@ -223,27 +224,33 @@ static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extend
 
 static bool ext2_get_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_inode_extended *out) {
 	unsigned int group = (inode - 1) / fs->sb.inodes_in_group;
-	unsigned int group_index = (inode - 1) % fs->sb.inodes_in_group;
-	unsigned int containing_block = (group_index * fs->sb.inode_size) / fs->sb.block_size;
-	unsigned int table_block_index = group_index % (fs->sb.block_size / fs->sb.inode_size);
+	unsigned int index_in_group = (inode - 1) % fs->sb.inodes_in_group;
+	unsigned int containing_inode_table_block = (index_in_group * fs->sb.inode_size) / fs->sb.block_size;
+	unsigned int inode_table_block_index = index_in_group % (fs->sb.block_size / fs->sb.inode_size);
 	//printk("inode %u's structure is in entry #%u of table block #%u in block group #%u\n", inode, table_block_index, containing_block, group);
 
 	unsigned char group_desc_block[4096];
 
 	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
 	// otherwise, padding and SB are in one block and group desc table starts at block 1
-	ext2_read_block(fs, group_desc_block, group * fs->sb.blocks_in_group + fs->sb.block_size == 1024 ? 2 : 1);
+	ext2_read_block(fs, group_desc_block, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
 	// TODO: read descriptor of the proper group
 	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)group_desc_block;
 	//print_block_group_descriptor(descriptor);
 
-	/*unsigned char block_inode_bitmap[4096];
-	ext2_read_block(sb, partition, block_inode_bitmap, descriptor->ba_inode_usage_bitmap);*/
-	// TODO: check if inode is present in bitmap before reading struct or is it useless?
+	unsigned char block_inode_bitmap[4096];
+	if (fs->sb.inodes_in_group > 32768) {
+		kernel_panic("inodes_in_group > 32768", 0);
+	}
+	ext2_read_block(fs, block_inode_bitmap, descriptor->ba_inode_usage_bitmap);
+	if ((block_inode_bitmap[index_in_group / 8] & (1 << ((inode - 1) % 8))) == 0) {
+		print_err("tried to read non-allocated inode %u\n", inode);
+		return false;
+	}
 
 	unsigned char block_inode_table[4096];
-	ext2_read_block(fs, block_inode_table, descriptor->ba_start_inode_table + containing_block);
-	*out = ((struct ext2_inode_extended *)block_inode_table)[table_block_index];
+	ext2_read_block(fs, block_inode_table, descriptor->ba_start_inode_table + containing_inode_table_block);
+	*out = ((struct ext2_inode_extended *)block_inode_table)[inode_table_block_index];
 	return true;
 }
 
@@ -313,6 +320,16 @@ unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr)
 	return inode_nr;
 }
 
+int unlink(const char *path, unsigned int relative_dir_inode_nr) {
+	if (!ext2_mounted.mounted) return 0;
+	unsigned int inode_nr = ext2_path_to_inode(&ext2_mounted, path, relative_dir_inode_nr);
+	struct ext2_inode_extended inode;
+	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode))
+		return -EBADF;
+	printk("links: %u\n", inode.base.hard_link_count);
+	return 0;
+}
+
 bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	struct ext2_inode_extended inode;
 
@@ -324,6 +341,8 @@ bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	out->st_uid = inode.base.uid;
 	out->st_gid = inode.base.gid;
 	out->st_size = inode.base.size;
+	out->st_blksize = ext2_mounted.sb.block_size;
+	out->st_blocks = ((inode.base.size + ext2_mounted.sb.block_size - 1) & ~(ext2_mounted.sb.block_size - 1)) / 512;
 	out->st_mtim = (struct timespec){.tv_sec = inode.base.modification_time};
 	out->st_atim = (struct timespec){.tv_sec = inode.base.access_time};
 	out->st_ctim = (struct timespec){.tv_sec = inode.base.creation_time};

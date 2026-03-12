@@ -256,7 +256,7 @@ void ide_init(struct pci_installed *installed) {
 							};
 							print_info("partition %u: type %u %s, total sectors %u\n", i, type, partition_type_str(type), partition_entry[i].total_sectors);
 							if (type == PART_LINUX) {
-								ext2_test(&partition);
+								ext2_mount(&partition);
 							}
 						}
 					}

@@ -27,10 +27,18 @@ int32_t inode_read(t_file *f, void *buf, size_t n)
 
 int32_t inode_write(t_file *f, const void *buf, size_t n)
 {
-	return n;
-	if (f && buf && n)
-		return (-ENOSYS);
-	return (-ENOSYS);
+	t_inode *inode = (t_inode *)f->priv;
+	if (f->flags & O_APPEND) {
+		struct stat stat;
+		int status = stat_inode(inode->inode_nr, &stat);
+		if (status < 0)
+			return status;
+		inode->file_offset = stat.st_size;
+	}
+	int written = write_inode(inode->inode_nr, inode->file_offset, buf, n);
+	if (written > 0)
+		inode->file_offset += written;
+	return written;
 }
 
 // vfree inode if no refcount left

@@ -23,11 +23,6 @@ static t_unix_conn *conn_alloc(void)
 	if (!c)
 		return (NULL);
 	c->refcnt = 1;
-	if (!c->a_to_b.buf || !c->b_to_a.buf)
-	{
-		vfree(c);
-		return (NULL);
-	}
 	return c;
 }
 

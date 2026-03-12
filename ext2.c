@@ -4,6 +4,8 @@
 #include "tty/tty.h"
 #include "errno.h"
 
+#define EXT2_DIRECT_BLOCK_COUNT 12
+
 union ext2_super_block {
 	struct {
 		unsigned int total_inodes;
@@ -85,7 +87,7 @@ struct ext2_inode {
 	unsigned int disk_sector_count;
 	unsigned int flags;
 	unsigned int operating_system_specific_1;
-	unsigned int block_pointers[12];
+	unsigned int block_pointers[EXT2_DIRECT_BLOCK_COUNT];
 	unsigned int singly_indirect_bp;
 	unsigned int doubly_indirect_bp;
 	unsigned int triply_indirect_bp;
@@ -130,6 +132,14 @@ static void ext2_read_block(struct ext2_fs *fs, unsigned char *buffer, unsigned 
 		unsigned int sector = fs->partition.first_sector + block_to_lba(block, fs->sb.block_size) + j;
 		//printk("reading sector %u to %p\n", sector, buffer + i);
 		ide_read_sector(&fs->partition.drive, sector, buffer + i);
+	}
+}
+
+static void ext2_write_block(struct ext2_fs *fs, unsigned char *buffer, unsigned int block) {
+	for (unsigned int i = 0, j = 0; i < fs->sb.block_size; i+= 512, j += 1) {
+		unsigned int sector = fs->partition.first_sector + block_to_lba(block, fs->sb.block_size) + j;
+		//printk("writing sector %u from %p\n", sector, buffer + i);
+		ide_write_sector(&fs->partition.drive, sector, buffer + i);
 	}
 }
 
@@ -196,7 +206,7 @@ static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extend
 	VecU8_reserve(&out, inode->base.size);
 	//printk("reading inode contents of size %u\n", inode->base.size);
 
-	for (unsigned short i = 0; i < sizeof(inode->base.block_pointers)/sizeof(inode->base.block_pointers[0]) && out.length < inode->base.size; i++) {
+	for (unsigned short i = 0; i < EXT2_DIRECT_BLOCK_COUNT && out.length < inode->base.size; i++) {
 		if (!VecU8_reserve(&out, fs->sb.block_size)) {
 			VecU8_destruct(&out);
 			out.length = 0;
@@ -242,9 +252,6 @@ static bool ext2_get_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_i
 	unsigned int ba_start_inode_table = descriptor->ba_start_inode_table;
 	unsigned int ba_inode_usage_bitmap = descriptor->ba_inode_usage_bitmap;
 
-	if (fs->sb.inodes_in_group > 32768) {
-		kernel_panic("inodes_in_group > 32768", 0);
-	}
 	ext2_read_block(fs, block, ba_inode_usage_bitmap);
 	if ((block[index_in_group / 8] & (1 << ((inode - 1) % 8))) == 0) {
 		print_err("tried to read non-allocated inode %u\n", inode);
@@ -253,6 +260,38 @@ static bool ext2_get_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_i
 
 	ext2_read_block(fs, block, ba_start_inode_table + containing_inode_table_block);
 	*out = ((struct ext2_inode_extended *)block)[inode_table_block_index];
+	return true;
+}
+
+static bool ext2_write_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_inode_extended *in) {
+	unsigned int group = (inode - 1) / fs->sb.inodes_in_group;
+	unsigned int index_in_group = (inode - 1) % fs->sb.inodes_in_group;
+	unsigned int containing_inode_table_block = (index_in_group * fs->sb.inode_size) / fs->sb.block_size;
+	unsigned int inode_table_block_index = index_in_group % (fs->sb.block_size / fs->sb.inode_size);
+	//printk("inode %u's structure is in entry #%u of table block #%u in block group #%u\n", inode, table_block_index, containing_block, group);
+
+	// reused for all three reads
+	unsigned char block[4096];
+
+	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
+	// otherwise, padding and SB are in one block and group desc table starts at block 1
+	ext2_read_block(fs, block, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
+	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
+	//print_block_group_descriptor(descriptor);
+
+	// read these now because we're overwriting the same block array
+	unsigned int ba_start_inode_table = descriptor->ba_start_inode_table;
+	unsigned int ba_inode_usage_bitmap = descriptor->ba_inode_usage_bitmap;
+
+	ext2_read_block(fs, block, ba_inode_usage_bitmap);
+	if ((block[index_in_group / 8] & (1 << ((inode - 1) % 8))) == 0) {
+		print_err("tried to write non-allocated inode %u\n", inode);
+		return false;
+	}
+
+	ext2_read_block(fs, block, ba_start_inode_table + containing_inode_table_block);
+	((struct ext2_inode_extended *)block)[inode_table_block_index] = *in;
+	ext2_write_block(fs, block, ba_start_inode_table + containing_inode_table_block);
 	return true;
 }
 
@@ -323,7 +362,7 @@ unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr)
 }
 
 int unlink(const char *path, unsigned int relative_dir_inode_nr) {
-	if (!ext2_mounted.mounted) return 0;
+	if (!ext2_mounted.mounted) return -EBADF;
 	unsigned int inode_nr = ext2_path_to_inode(&ext2_mounted, path, relative_dir_inode_nr);
 	struct ext2_inode_extended inode;
 	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode))
@@ -349,6 +388,44 @@ bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	out->st_atim = (struct timespec){.tv_sec = inode.base.access_time};
 	out->st_ctim = (struct timespec){.tv_sec = inode.base.creation_time};
 	return 0;
+}
+
+int write_inode(unsigned int inode_nr, unsigned int offset, const char *buf, unsigned int buf_size) {
+	struct ext2_fs *fs = &ext2_mounted;
+	if (!fs->mounted) return -EBADF;
+
+	struct ext2_inode_extended inode;
+
+	if (!ext2_get_inode(fs, inode_nr, &inode)) return -EBADF;
+
+	unsigned char block[4096];
+	unsigned int written_count = 0;
+	unsigned int bytes_inside_inode = 0;
+	for (unsigned short i = 0; i < EXT2_DIRECT_BLOCK_COUNT && written_count < buf_size; i++, bytes_inside_inode += fs->sb.block_size) {
+		// skip block if we have not reached block with byte at `offset`.
+		if (bytes_inside_inode + fs->sb.block_size - 1 < offset)
+			continue;
+		if (!inode.base.block_pointers[i]) {
+			//TODO: inode->base.block_pointers[i] = ext2_allocate_block();
+		}
+		unsigned short start_write = offset + written_count - bytes_inside_inode;
+		unsigned int left_to_write = buf_size - written_count;
+		unsigned short to_write = fs->sb.block_size - start_write;
+		if (to_write > left_to_write)
+			to_write = left_to_write;
+		ext2_read_block(fs, block, inode.base.block_pointers[i]);
+		memcpy(block + start_write, buf + written_count, to_write);
+		ext2_write_block(fs, block, inode.base.block_pointers[i]);
+		written_count += to_write;
+	}
+	// TODO: also write indirect blocks
+
+	if (written_count && offset + written_count > inode.base.size) {
+		inode.base.size = offset + written_count;
+		ext2_write_inode(fs, inode_nr, &inode);
+	}
+
+	return written_count;
 }
 
 int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned int buf_size) {
@@ -501,7 +578,7 @@ struct VecU8 read_full_file(const char *path) {
 }
 
 /* Called during PCI IDE initialization */
-void ext2_test(struct ide_partition *partition) {
+void ext2_mount(struct ide_partition *partition) {
 	if (partition->sector_count < 3)
 		return;
 	// First 1024 bytes (two sectors) in partition are ignored
@@ -514,7 +591,7 @@ void ext2_test(struct ide_partition *partition) {
 	sb.block_size = 1024 << sb.block_size;
 
 	ext2_print_sb(&sb);
-	if (sb.major_ver != 1 || sb.block_size > 4096)
+	if (sb.major_ver != 1 || sb.block_size > 4096 || sb.inodes_in_group > 32768)
 		return;
 
 	// Only the last discovered ext2 partition will be available.

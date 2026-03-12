@@ -254,6 +254,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(122, syscall_uname);
 	add_syscall(125, syscall_mprotect);
 	add_syscall(132, syscall_getpgid);
+	add_syscall(145, syscall_readv);
 	add_syscall(146, syscall_writev);
 	add_syscall(162, syscall_nanosleep);
 	add_syscall(168, syscall_poll);

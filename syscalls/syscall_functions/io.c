@@ -446,6 +446,28 @@ struct iovec
 	unsigned int iov_len;
 };
 
+uint32_t syscall_readv(t_interrupt_data *regs)
+{
+	int32_t fd = regs->ebx;
+	struct iovec *iovecs = (struct iovec *)regs->ecx;
+	unsigned int vec_count = regs->edx;
+	print_trace("readv %u %p %u\n", fd, iovecs, vec_count);
+	uint32_t read = 0;
+	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * vec_count, true, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	t_file *file = get_file_from_fd(fd);
+	if (!file)
+		return (-EBADF);
+	if (!file->ops->read)
+		return (-EINVAL);
+	for (unsigned int i = 0; i < vec_count; i++)
+	{
+		read += file->ops->read(file, iovecs[i].iov_base, iovecs[i].iov_len);
+		// print_debug("readv: %u bytes at %p\n", iovecs[i].iov_len, iovecs[i].iov_base);
+	}
+	return (read);
+}
+
 uint32_t syscall_writev(t_interrupt_data *regs)
 {
 	int32_t fd = regs->ebx;

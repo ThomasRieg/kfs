@@ -53,7 +53,7 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 		t_tty *tty = f->priv;
 		if (g_curr_task->pgid != tty->fg_pgid)
 		{
-			print_debug("attemting to read on unowned terminal by pid %u\n", g_curr_task->task_id);
+			print_debug("attempting to read on unowned terminal by pid %u\n", g_curr_task->task_id);
 			int target_pgid = g_curr_task->pgid;
 			t_task *curr = g_task_list;
 			while (curr)
@@ -111,10 +111,10 @@ int32_t tty_write(t_file *f, const void *buf, size_t n)
 	t_tty *tty = f->priv;
 	if (!tty)
 		return (-EBADF);
-	if (g_curr_task->pgid != tty->fg_pgid)
+	if (tty->termios.c_lflag & TOSTOP && g_curr_task->pgid != tty->fg_pgid)
 	{
-		print_trace("attemting to write on unowned terminal by pid %u\n", g_curr_task->task_id);
-		int target_pgid = tty->fg_pgid;
+		print_trace("attempting to write on unowned terminal by pid %u\n", g_curr_task->task_id);
+		int target_pgid = g_curr_task->pgid;
 		t_task *curr = g_task_list;
 		while (curr)
 		{

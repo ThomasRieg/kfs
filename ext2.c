@@ -200,7 +200,7 @@ static bool ext2_read_from_indirect_block(struct VecU8 *out, struct ext2_fs *fs,
 	return true;
 }
 
-static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extended *inode) {
+static struct VecU8 ext2_read_inode_contents(struct ext2_fs *fs, struct ext2_inode_extended *inode) {
 	struct VecU8 out;
 	VecU8_init(&out);
 	VecU8_reserve(&out, inode->base.size);
@@ -232,7 +232,7 @@ static struct VecU8 ext2_read_inode(struct ext2_fs *fs, struct ext2_inode_extend
 	return out;
 }
 
-static bool ext2_get_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_inode_extended *out) {
+static bool ext2_read_inode_struct(struct ext2_fs *fs, unsigned int inode, struct ext2_inode_extended *out) {
 	unsigned int group = (inode - 1) / fs->sb.inodes_in_group;
 	unsigned int index_in_group = (inode - 1) % fs->sb.inodes_in_group;
 	unsigned int containing_inode_table_block = (index_in_group * fs->sb.inode_size) / fs->sb.block_size;
@@ -263,7 +263,7 @@ static bool ext2_get_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_i
 	return true;
 }
 
-static bool ext2_write_inode(struct ext2_fs *fs, unsigned int inode, struct ext2_inode_extended *in) {
+static bool ext2_write_inode_struct(struct ext2_fs *fs, unsigned int inode, struct ext2_inode_extended *in) {
 	unsigned int group = (inode - 1) / fs->sb.inodes_in_group;
 	unsigned int index_in_group = (inode - 1) % fs->sb.inodes_in_group;
 	unsigned int containing_inode_table_block = (index_in_group * fs->sb.inode_size) / fs->sb.block_size;
@@ -311,7 +311,7 @@ static unsigned int ext2_path_to_inode(struct ext2_fs *fs, const char *path, uns
 	struct ext2_inode_extended current_inode;
 
 	do {
-		if (!ext2_get_inode(fs, inode_nr, &current_inode))
+		if (!ext2_read_inode_struct(fs, inode_nr, &current_inode))
 			return 0;
 		//print_inode(&current_inode);
 		while (*component_start == '/') {
@@ -327,15 +327,15 @@ static unsigned int ext2_path_to_inode(struct ext2_fs *fs, const char *path, uns
 				return 0;
 			else {
 				// lookup directory entry
-				struct VecU8 file_contents = ext2_read_inode(fs, &current_inode);
+				struct VecU8 file_contents = ext2_read_inode_contents(fs, &current_inode);
 
 				unsigned int found_inode_nr = 0;
 				struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;
-				while ((unsigned char *)direntry < file_contents.data + file_contents.length && direntry->inode) {
+				while ((unsigned char *)direntry < file_contents.data + file_contents.length && direntry->entry_size) {
 					//printk("%u %u - ", direntry->type_indicator, direntry->inode);
 					//write((const char *)direntry->name,  direntry->name_length);
 					//writes("\n");
-					if (direntry->name_length == component_length && memcmp(direntry->name, component_start, component_length) == 0) {
+					if (direntry->inode && direntry->name_length == component_length && memcmp(direntry->name, component_start, component_length) == 0) {
 						found_inode_nr = direntry->inode;
 						break;
 					}
@@ -364,17 +364,50 @@ unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr)
 int unlink(const char *path, unsigned int relative_dir_inode_nr) {
 	if (!ext2_mounted.mounted) return -EBADF;
 	unsigned int inode_nr = ext2_path_to_inode(&ext2_mounted, path, relative_dir_inode_nr);
+
+	// used first for unlink target then reused for parent directory
 	struct ext2_inode_extended inode;
-	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode))
+	if (!ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode))
 		return -EBADF;
-	printk("links: %u\n", inode.base.hard_link_count);
+	printk("links before unlink: %u\n", inode.base.hard_link_count);
+	if (inode.base.hard_link_count <= 1) {
+		// TODO: deallocate blocks, deallocate inode struct
+	} else {
+		inode.base.hard_link_count--;
+		ext2_write_inode_struct(&ext2_mounted, inode_nr, &inode);
+	}
+	const char *slash = strchr(path, '/');
+	unsigned int parent_inode_nr;
+	if (slash) {
+		char *parent_path = strndup(path, slash - path);
+		parent_inode_nr = ext2_path_to_inode(&ext2_mounted, parent_path, relative_dir_inode_nr);
+		path = slash + 1;
+		vfree(parent_path);
+	} else
+		parent_inode_nr = relative_dir_inode_nr;
+
+	unsigned int name_length = strlen(path);
+	if (!ext2_read_inode_struct(&ext2_mounted, parent_inode_nr, &inode))
+		return -EBADF;
+	struct VecU8 directory_contents = ext2_read_inode_contents(&ext2_mounted, &inode);
+	struct ext2_direntry *direntry = (struct ext2_direntry *)(directory_contents.data);
+	while ((unsigned char *)direntry < directory_contents.data + directory_contents.length && direntry->entry_size) {
+		if (direntry->inode && direntry->name_length == name_length && memcmp(direntry->name, path, name_length) == 0) {
+			direntry->inode = 0;
+			break;
+		}
+
+		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
+	}
+	write_inode(parent_inode_nr, 0, directory_contents.data, directory_contents.length);
+	VecU8_destruct(&directory_contents);
 	return 0;
 }
 
 bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	struct ext2_inode_extended inode;
 
-	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
+	if (!ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode)) return -EBADF;
 	out->st_dev = 0;
 	out->st_ino = inode_nr;
 	out->st_mode = inode.base.mode;
@@ -390,13 +423,13 @@ bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	return 0;
 }
 
-int write_inode(unsigned int inode_nr, unsigned int offset, const char *buf, unsigned int buf_size) {
+int write_inode(unsigned int inode_nr, unsigned int offset, const unsigned char *buf, unsigned int buf_size) {
 	struct ext2_fs *fs = &ext2_mounted;
 	if (!fs->mounted) return -EBADF;
 
 	struct ext2_inode_extended inode;
 
-	if (!ext2_get_inode(fs, inode_nr, &inode)) return -EBADF;
+	if (!ext2_read_inode_struct(fs, inode_nr, &inode)) return -EBADF;
 
 	unsigned char block[4096];
 	unsigned int written_count = 0;
@@ -422,7 +455,7 @@ int write_inode(unsigned int inode_nr, unsigned int offset, const char *buf, uns
 
 	if (written_count && offset + written_count > inode.base.size) {
 		inode.base.size = offset + written_count;
-		ext2_write_inode(fs, inode_nr, &inode);
+		ext2_write_inode_struct(fs, inode_nr, &inode);
 	}
 
 	return written_count;
@@ -433,10 +466,10 @@ int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned i
 
 	struct ext2_inode_extended inode;
 
-	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
+	if (!ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode)) return -EBADF;
 
 	// someone won't be happy about this (hi thrieg)
-	struct VecU8 contents = ext2_read_inode(&ext2_mounted, &inode);
+	struct VecU8 contents = ext2_read_inode_contents(&ext2_mounted, &inode);
 	unsigned written_count = 0;
 	for (unsigned int i = offset; i < contents.length && written_count < buf_size; i++)
 		buf[written_count++] = contents.data[i];
@@ -487,29 +520,31 @@ int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int cou
 
 	struct ext2_inode_extended inode;
 
-	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
+	if (!ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode)) return -EBADF;
 
 	// someone won't be happy about this (hi thrieg)
-	struct VecU8 contents = ext2_read_inode(&ext2_mounted, &inode);
+	struct VecU8 contents = ext2_read_inode_contents(&ext2_mounted, &inode);
 	unsigned written_count = 0;
 
 	struct ext2_direntry *direntry = (struct ext2_direntry *)(contents.data + offset);
-	while ((unsigned char *)direntry < contents.data + contents.length && direntry->inode) {
-		unsigned int reclen = sizeof(struct linux_dirent64) + direntry->name_length + 1;
-		//printk("%u", (unsigned int)sizeof(struct linux_dirent64));
-		reclen = (reclen + 7) & (~7);
-		if (written_count + reclen > count)
-			break;
-		ent->d_ino = direntry->inode;
-		ent->d_off = 0;
-		ent->d_type = ext2_direnttype_to_norm(direntry->type_indicator);
-		ent->d_reclen = reclen;
-		memcpy(ent->d_name, direntry->name, direntry->name_length);
-		ent->d_name[direntry->name_length] = '\0';
-		written_count += reclen;
+	while ((unsigned char *)direntry < contents.data + contents.length && direntry->entry_size) {
+		if (direntry->inode) {
+			unsigned int reclen = sizeof(struct linux_dirent64) + direntry->name_length + 1;
+			//printk("%u", (unsigned int)sizeof(struct linux_dirent64));
+			reclen = (reclen + 7) & (~7);
+			if (written_count + reclen > count)
+				break;
+			ent->d_ino = direntry->inode;
+			ent->d_off = 0;
+			ent->d_type = ext2_direnttype_to_norm(direntry->type_indicator);
+			ent->d_reclen = reclen;
+			memcpy(ent->d_name, direntry->name, direntry->name_length);
+			ent->d_name[direntry->name_length] = '\0';
+			written_count += reclen;
+			ent = (struct linux_dirent64 *)((unsigned char *)ent + reclen);
+		}
 
 		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
-		ent = (struct linux_dirent64 *)((unsigned char *)ent + reclen);
 	}
 
 	VecU8_destruct(&contents);
@@ -525,7 +560,7 @@ int getdirname(unsigned int inode_nr, char *buf, unsigned int size) {
 
 	struct ext2_inode_extended inode;
 
-	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return -EBADF;
+	if (!ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode)) return -EBADF;
 	*buf = '/';
 
 	unsigned written_count = 1;
@@ -542,12 +577,12 @@ int getdirname(unsigned int inode_nr, char *buf, unsigned int size) {
 			return written_count; // root reached
 		}
 
-		if (!ext2_get_inode(&ext2_mounted, parent_inode_nr, &inode)) return -EBADF;
+		if (!ext2_read_inode_struct(&ext2_mounted, parent_inode_nr, &inode)) return -EBADF;
 
-		struct VecU8 contents = ext2_read_inode(&ext2_mounted, &inode);
+		struct VecU8 contents = ext2_read_inode_contents(&ext2_mounted, &inode);
 
 		struct ext2_direntry *direntry = (struct ext2_direntry *)(contents.data);
-		while ((unsigned char *)direntry < contents.data + contents.length && direntry->inode) {
+		while ((unsigned char *)direntry < contents.data + contents.length && direntry->entry_size) {
 			if (direntry->inode == inode_nr) {
 				if (written_count + direntry->name_length > size) {
 					VecU8_destruct(&contents);
@@ -572,9 +607,9 @@ struct VecU8 read_full_file(const char *path) {
 	if (!inode_nr) return empty;
 
 	struct ext2_inode_extended inode;
-	if (!ext2_get_inode(&ext2_mounted, inode_nr, &inode)) return empty;
+	if (!ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode)) return empty;
 
-	return ext2_read_inode(&ext2_mounted, &inode);
+	return ext2_read_inode_contents(&ext2_mounted, &inode);
 }
 
 /* Called during PCI IDE initialization */
@@ -609,16 +644,18 @@ void ext2_mount(struct ide_partition *partition) {
 
 	struct ext2_inode_extended root_dir;
 
-	if (!ext2_get_inode(&ext2_mounted, EXT2_ROOT_INODE, &root_dir)) {
+	if (!ext2_read_inode_struct(&ext2_mounted, EXT2_ROOT_INODE, &root_dir)) {
 		kernel_panic("couldn't retrieve root inode from ext2 fs", 0);
 	}
-	struct VecU8 file_contents = ext2_read_inode(&ext2_mounted, &root_dir);
+	struct VecU8 file_contents = ext2_read_inode_contents(&ext2_mounted, &root_dir);
 
 	struct ext2_direntry *direntry = (struct ext2_direntry *)file_contents.data;
-	while ((unsigned char *)direntry < file_contents.data + file_contents.length && direntry->inode) {
-		printk("%u %u - ", direntry->type_indicator, direntry->inode);
-		write((const char *)direntry->name,  direntry->name_length);
-		writes("\n");
+	while ((unsigned char *)direntry < file_contents.data + file_contents.length && direntry->entry_size) {
+		if (direntry->inode) {
+			printk("%u %u - ", direntry->type_indicator, direntry->inode);
+			write((const char *)direntry->name,  direntry->name_length);
+			writes("\n");
+		}
 		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
 	}
 	printk("'/bin/init' is inode %u\n", ext2_path_to_inode(&ext2_mounted, "/bin/init", EXT2_ROOT_INODE));

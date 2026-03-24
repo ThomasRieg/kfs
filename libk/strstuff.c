@@ -63,6 +63,16 @@ int strcmp(const char *a, const char *b)
 	return ((unsigned char)a[i] - (unsigned char)b[i]);
 }
 
+char *strndup(const char *str, unsigned int n) {
+	unsigned int i = 0;
+	while (i < n && str[i])
+		i++;
+	char *new = vmalloc(i + 1);
+	memcpy(new, str, i);
+	new[i] = 0;
+	return new;
+}
+
 char invert_caps(char c) {
 	if (c >= 'a' && c <= 'z')
 		c -= ('a' - 'A');

@@ -14,7 +14,7 @@ void ext2_mount(struct ide_partition *partition);
 
 /* For integration in VFS later */
 int read_inode(unsigned int inode_nr, unsigned int offset, char *buf, unsigned int buf_size);
-int write_inode(unsigned int inode_nr, unsigned int offset, const char *buf, unsigned int buf_size);
+int write_inode(unsigned int inode_nr, unsigned int offset, const unsigned char *buf, unsigned int buf_size);
 struct VecU8 read_full_file(const char *path);
 unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr);
 bool stat_inode(unsigned int inode_nr, struct stat *out);

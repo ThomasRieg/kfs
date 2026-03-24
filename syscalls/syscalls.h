@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/14 16:44:55 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/26 19:26:18 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/24 14:16:28 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,5 +85,7 @@ uint32_t syscall_bind(t_interrupt_data *regs);
 uint32_t syscall_listen(t_interrupt_data *regs);
 uint32_t syscall_connect(t_interrupt_data *regs);
 uint32_t syscall_accept4(t_interrupt_data *regs);
+uint32_t syscall_socketpair(t_interrupt_data *regs);
+uint32_t syscall_socketcall(t_interrupt_data *regs);
 
 #endif

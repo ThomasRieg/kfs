@@ -249,6 +249,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(64, syscall_getppid);
 	add_syscall(85, syscall_readlink);
 	add_syscall(91, syscall_munmap);
+	add_syscall(102, syscall_socketcall);
 	add_syscall(114, syscall_wait4);
 	add_syscall(119, syscall_sigreturn);
 	add_syscall(122, syscall_uname);
@@ -285,6 +286,7 @@ void kernel_main(struct s_mb2_info *multi)
 	// add_syscall(311, syscall_set_tid_address); // TODO: implement
 	add_syscall(331, syscall_pipe2);
 	add_syscall(359, syscall_socket);
+	add_syscall(360, syscall_socketpair);
 	add_syscall(361, syscall_bind);
 	add_syscall(362, syscall_connect);
 	add_syscall(363, syscall_listen);

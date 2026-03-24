@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 15:16:13 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/26 19:08:14 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/24 13:58:25 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,7 @@
 
 t_file_ops g_socket_ops = {.read = unixsock_read, .write = unixsock_write, .close = unixsock_close};
 
-static t_unix_conn *conn_alloc(void)
+t_unix_conn *conn_alloc(void)
 {
 	t_unix_conn *c = (t_unix_conn *)vcalloc(1, sizeof(*c));
 	if (!c)
@@ -31,13 +31,13 @@ static void conn_free(t_unix_conn *c)
 	vfree(c);
 }
 
-static void conn_get(t_unix_conn *c)
+void conn_get(t_unix_conn *c)
 {
 	if (c)
 		c->refcnt++;
 }
 
-static void conn_put(t_unix_conn *c)
+void conn_put(t_unix_conn *c)
 {
 	if (!c)
 		return;

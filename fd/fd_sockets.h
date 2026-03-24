@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 15:16:24 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/26 19:08:07 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/24 14:12:42 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,27 @@ enum us_state
 #define SOCK_DGRAM 2
 
 #define UNIX_PATH_MAX 108
+
+#define SYS_SOCKET 1	  /* sys_socket(2)		*/
+#define SYS_BIND 2		  /* sys_bind(2)			*/
+#define SYS_CONNECT 3	  /* sys_connect(2)		*/
+#define SYS_LISTEN 4	  /* sys_listen(2)		*/
+#define SYS_ACCEPT 5	  /* sys_accept(2)		*/
+#define SYS_GETSOCKNAME 6 /* sys_getsockname(2)		*/
+#define SYS_GETPEERNAME 7 /* sys_getpeername(2)		*/
+#define SYS_SOCKETPAIR 8  /* sys_socketpair(2)		*/
+#define SYS_SEND 9		  /* sys_send(2)			*/
+#define SYS_RECV 10		  /* sys_recv(2)			*/
+#define SYS_SENDTO 11	  /* sys_sendto(2)		*/
+#define SYS_RECVFROM 12	  /* sys_recvfrom(2)		*/
+#define SYS_SHUTDOWN 13	  /* sys_shutdown(2)		*/
+#define SYS_SETSOCKOPT 14 /* sys_setsockopt(2)		*/
+#define SYS_GETSOCKOPT 15 /* sys_getsockopt(2)		*/
+#define SYS_SENDMSG 16	  /* sys_sendmsg(2)		*/
+#define SYS_RECVMSG 17	  /* sys_recvmsg(2)		*/
+#define SYS_ACCEPT4 18	  /* sys_accept4(2)		*/
+#define SYS_RECVMMSG 19	  /* sys_recvmmsg(2)		*/
+#define SYS_SENDMMSG 20	  /* sys_sendmmsg(2)		*/
 
 typedef struct sock_buf
 {
@@ -102,6 +123,10 @@ int unixsock_accept(struct unix_socket *srv, struct unix_socket **out, int flags
 int32_t unixsock_read(t_file *f, void *buf, size_t n);
 int32_t unixsock_write(t_file *f, const void *buf, size_t n);
 int unixsock_close(t_file *f);
+
+t_unix_conn *conn_alloc(void);
+void conn_put(t_unix_conn *c);
+void conn_get(t_unix_conn *c);
 
 extern t_file_ops g_socket_ops;
 

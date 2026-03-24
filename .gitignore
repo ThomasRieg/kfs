@@ -6,3 +6,5 @@ iso
 netdump.pcap
 disk.raw
 root/bin
+kernel_serial
+main_serial

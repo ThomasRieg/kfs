@@ -122,9 +122,9 @@ void tty_add_input(char c)
 	// echo mode
 	if (curr->termios.c_lflag & ECHO) {
 		if (c == '\r')
-			write(&(char){'\n'}, 1);
+			write_main(&(char){'\n'}, 1);
 		else
-			write(&c, 1);
+			write_main(&c, 1);
 	}
 	if (curr->termios.c_lflag & ICANON && (c == '\b' || c == 0x7F))
 	{
@@ -150,16 +150,31 @@ void prev_tty()
 	load_tty();
 }
 
-void write(const char *str, unsigned int n)
+void write_main(const char *str, unsigned int n)
 {
 	vga_write(&g_ttys[g_current_tty], str, n);
 	for (unsigned int i = 0; i < n; i++)
 		outb(PORT_COM1, str[i]);
 }
 
-void writes(const char *str)
+void writes_main(const char *str)
 {
 	vga_writes(&g_ttys[g_current_tty], str);
 	for (; *str; str++)
 		outb(PORT_COM1, *str);
+}
+
+// For usage in kernel logs
+void write(const char *str, unsigned int n)
+{
+	vga_write(&g_ttys[g_current_tty], str, n);
+	for (unsigned int i = 0; i < n; i++)
+		outb(PORT_COM2, str[i]);
+}
+
+void writes(const char *str)
+{
+	vga_writes(&g_ttys[g_current_tty], str);
+	for (; *str; str++)
+		outb(PORT_COM2, *str);
 }

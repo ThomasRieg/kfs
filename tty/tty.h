@@ -168,7 +168,9 @@ void prev_tty();
 void tty_add_input(char c);
 
 void write(const char *str, unsigned int n);
-
 void writes(const char *str);
+
+void write_main(const char *str, unsigned int n);
+void writes_main(const char *str);
 
 #endif

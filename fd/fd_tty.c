@@ -127,7 +127,7 @@ int32_t tty_write(t_file *f, const void *buf, size_t n)
 		}
 		return (-EINTR);
 	}
-	write(buf, n);
+	write_main(buf, n);
 	return (n);
 }
 

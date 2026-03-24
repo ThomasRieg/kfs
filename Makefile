@@ -30,10 +30,12 @@ ifeq (, $(shell which $(GRUB_MKRESCUE) 2>/dev/null))
 	GRUB_MKRESCUE := grub2-mkrescue
 endif
 
-#SERIAL_BACKEND := -chardev socket,path=./serial,server=on,id=char0
-SERIAL_BACKEND := -chardev stdio,id=char0
+#MAIN_SERIAL_BACKEND := -chardev socket,path=./main_serial,server=on,id=char0
+MAIN_SERIAL_BACKEND := -chardev stdio,id=char0
 
-QEMU := qemu-system-i386 $(SERIAL_BACKEND) -serial chardev:char0 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 4096M
+KERNEL_SERIAL_BACKEND := -chardev file,path=./kernel_serial,id=char1
+
+QEMU := qemu-system-i386 $(MAIN_SERIAL_BACKEND) $(KERNEL_SERIAL_BACKEND) -serial chardev:char0 -serial chardev:char1 -nic none -netdev user,id=net,net=192.168.76.0/24,dhcpstart=192.168.76.9 -device rtl8139,netdev=net -object filter-dump,id=f1,netdev=net,file=netdump.pcap -drive id=iso,file=$(ISO),format=raw -drive id=disk,file=$(DISK_FILE),format=raw -m 4096M
 
 qemu: $(ISO) $(DISK_FILE)
 	$(QEMU)

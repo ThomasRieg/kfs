@@ -81,6 +81,7 @@ uint32_t syscall_chmod(t_interrupt_data *regs);
 uint32_t syscall_getdents64(t_interrupt_data *regs);
 uint32_t syscall_getcwd(t_interrupt_data *regs);
 uint32_t syscall_unlink(t_interrupt_data *regs);
+uint32_t syscall_rmdir(t_interrupt_data *regs);
 uint32_t syscall_statfs64(t_interrupt_data *regs);
 
 uint32_t syscall_socket(t_interrupt_data *regs);

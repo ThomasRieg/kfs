@@ -239,6 +239,16 @@ uint32_t syscall_unlink(t_interrupt_data *regs)
 	return unlink(path, g_curr_task->cwd_inode_nr);
 }
 
+uint32_t syscall_rmdir(t_interrupt_data *regs)
+{
+	const char *path = (char *)regs->ebx;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	print_trace("rmdir: %s\n", path);
+	// TODO: check that it's a directory and that it's empty
+	return unlink(path, g_curr_task->cwd_inode_nr);
+}
+
 uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribute__((unused)) unsigned int mode)
 {
 	unsigned short i;

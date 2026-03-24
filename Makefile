@@ -49,16 +49,16 @@ $(DISK_FILE):
 	$(MAKE) -C userspace
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
 	cp userspace/{init,socketpair} root/bin
-	i=1; \
-	BUSY_BOX_PROGRAMS="ash cat chmod cp date dd df echo hostname kill ln ls mkdir mv ps pwd rm rmdir sleep login hexdump sed sort su tail head tar time whoami vi w wall wc xxd xargs xz users uniq uname less stty find cryptpw loadkmap dumpkmap clear grep tr stat passwd env";\
-	for bin in $$BUSY_BOX_PROGRAMS; do \
+	if [[ ! -x root/bin/busybox ]]; then\
+		curl -o root/bin/busybox https://www.lier.link/busybox;\
+	fi
+	BUSYBOX_PROGRAMS="ash cat chmod cp date dd df echo hostname kill ln ls mkdir mv ps pwd rm rmdir sleep login hexdump sed sort su tail head tar time whoami vi w wall wc xxd xargs xz users uniq uname less stty find cryptpw loadkmap dumpkmap clear grep tr stat passwd env yes du bc id man";\
+	for bin in $$BUSYBOX_PROGRAMS; do \
 		if [[ ! -x root/bin/$$bin ]]; then\
-			echo $$bin \($$i/$$(echo $$BUSY_BOX_PROGRAMS | wc -w)\);\
-			curl -o root/bin/$$bin https://www.busybox.net/downloads/binaries/1.35.0-i686-linux-musl/busybox_$$(echo $$bin | tr [:lower:] [:upper:]) ; \
+			ln root/bin/busybox root/bin/$$bin ; \
 		fi; \
-		: $$((i++));\
 	done
-	cp root/bin/{ash,sh}
+	ln -f root/bin/{ash,sh}
 	chmod +x root/bin/*
 	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\

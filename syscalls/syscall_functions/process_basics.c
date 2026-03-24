@@ -151,6 +151,18 @@ uint32_t syscall_getegid32(__attribute__((unused)) t_interrupt_data *regs)
 	return (g_curr_task->egid);
 }
 
+uint32_t syscall_setuid32(t_interrupt_data *regs)
+{
+	g_curr_task->uid = regs->ebx;
+	return (0);
+}
+
+uint32_t syscall_setgid32(t_interrupt_data *regs)
+{
+	g_curr_task->gid = regs->ebx;
+	return (0);
+}
+
 uint32_t syscall_archprctl(t_interrupt_data *regs)
 {
 	print_trace("arch prctl %x %x\n", regs->ebx, regs->ecx);

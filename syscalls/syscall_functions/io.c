@@ -218,6 +218,15 @@ uint32_t syscall_readlink(t_interrupt_data *regs)
 	if (!user_range_ok(buf, buf_size, true, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("readlink: %s %p %u\n", path, buf, buf_size);
+	int inode_nr = path_to_inode(path, g_curr_task->cwd_inode_nr);
+	if (!inode_nr)
+		return -ENOENT;
+	struct stat stat;
+	int status = stat_inode(inode_nr, &stat);
+	if (status)
+		return status;
+	if ((stat.st_mode & (MODE_SYMLINK << 12)) != (MODE_SYMLINK << 12))
+		return -EINVAL;
 	return (-ENOSYS);
 }
 
@@ -558,6 +567,16 @@ uint32_t syscall_pipe2(t_interrupt_data *regs)
 	int32_t *pipe_fd = (int32_t *)regs->ebx; //validity of pointer verified in do_pipe
 	int flags = (int)regs->ecx;
 	return do_pipe(pipe_fd, flags);
+}
+
+uint32_t syscall_chmod(t_interrupt_data *regs)
+{
+	const char *path = (char *)regs->ebx;
+	unsigned int mode = regs->ecx;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	print_trace("chmod: %s %u\n", path, mode);
+	return 0;
 }
 
 uint32_t syscall_chdir(t_interrupt_data *regs)

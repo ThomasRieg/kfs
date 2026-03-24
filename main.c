@@ -237,6 +237,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(10, syscall_unlink);
 	add_syscall(11, syscall_execve);
 	add_syscall(12, syscall_chdir);
+	add_syscall(15, syscall_chmod);
 	add_syscall(20, syscall_getpid);
 	add_syscall(37, syscall_kill);
 	add_syscall(41, syscall_dup);
@@ -270,6 +271,8 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(200, syscall_getgid);
 	add_syscall(201, syscall_geteuid32);
 	add_syscall(202, syscall_getegid32);
+	add_syscall(213, syscall_setuid32);
+	add_syscall(214, syscall_setgid32);
 	add_syscall(220, syscall_getdents64);
 	add_syscall(221, syscall_fcntl64);
 	add_syscall(224, syscall_gettid);

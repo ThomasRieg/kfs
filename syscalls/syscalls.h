@@ -25,6 +25,8 @@ uint32_t syscall_getuid(t_interrupt_data *regs);
 uint32_t syscall_getgid(__attribute__((unused)) t_interrupt_data *regs);
 uint32_t syscall_geteuid32(__attribute__((unused)) t_interrupt_data *regs);
 uint32_t syscall_getegid32(__attribute__((unused)) t_interrupt_data *regs);
+uint32_t syscall_setuid32(t_interrupt_data *regs);
+uint32_t syscall_setgid32(t_interrupt_data *regs);
 
 uint32_t syscall_getpid(t_interrupt_data *regs);
 uint32_t syscall_gettid(t_interrupt_data *regs);
@@ -75,6 +77,7 @@ uint32_t syscall_readv(t_interrupt_data *regs);
 uint32_t syscall_write(t_interrupt_data *regs);
 uint32_t syscall_writev(t_interrupt_data *regs);
 uint32_t syscall_chdir(t_interrupt_data *regs);
+uint32_t syscall_chmod(t_interrupt_data *regs);
 uint32_t syscall_getdents64(t_interrupt_data *regs);
 uint32_t syscall_getcwd(t_interrupt_data *regs);
 uint32_t syscall_unlink(t_interrupt_data *regs);

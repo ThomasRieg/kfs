@@ -16,6 +16,7 @@ enum port {
 	PORT_PCI_CONFIG_ADDR = 0xCF8,
 	PORT_PCI_CONFIG_DATA = 0xCFC,
 	PORT_COM1 = 0x3F8,
+	PORT_COM2 = 0x2F8,
 };
 
 static inline void outb(unsigned short port, unsigned char value) {

@@ -334,7 +334,9 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 	int pid = (int)regs->ebx;
 	uint32_t stat_uaddr = regs->ecx;
 	uint32_t options = regs->edx;
+	uint32_t rusage = regs->esi;
 
+	print_debug("wait4: %d, %p %u %p\n", pid, stat_uaddr, options, rusage);
 	const uint32_t WNOHANG = 1;
 
 	// Reject unsupported pid modes for now
@@ -350,6 +352,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 		if (!g_curr_task->children)
 		{
 			// enable_interrupts();
+			print_debug("wait4 returns -ECHILD\n");
 			return (uint32_t)(-ECHILD);
 		}
 
@@ -367,10 +370,12 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 			{
 				if (!user_range_ok((virt_ptr)stat_uaddr, sizeof(uint32_t), true, &g_curr_task->proc_memory))
 					return (uint32_t)(-EFAULT);
+				print_debug("wait4 writes %u at %p\n", z->exit_code, stat_uaddr);
 				*(uint32_t *)(uintptr_t)stat_uaddr = z->exit_code;
 			}
 
 			task_reap_zombie(z);
+			print_debug("wait4 returns %u\n", child_pid);
 			return child_pid;
 		}
 
@@ -378,6 +383,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 		if (options & WNOHANG)
 		{
 			// enable_interrupts();
+			print_debug("wait4 returns 0\n");
 			return 0;
 		}
 

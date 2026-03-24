@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 14:39:32 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/26 18:36:37 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/24 16:39:58 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,13 @@
 #define FD_H
 
 #include "../common.h"
+
+struct pollfd
+{
+	int fd;		   /* file descriptor */
+	short events;  /* requested events */
+	short revents; /* returned events */
+};
 
 enum e_flags
 {
@@ -39,6 +46,7 @@ typedef int32_t (*read_fn)(t_file *f, void *buf, uint32_t n);
 typedef int32_t (*write_fn)(t_file *f, const void *buf, uint32_t n);
 typedef int32_t (*close_fn)(t_file *f);
 typedef int32_t (*ioctl_fn)(t_file *f, unsigned int op, unsigned int val);
+typedef int32_t (*poll_fn)(t_file *file, struct pollfd *fd, int timeout);
 
 typedef struct s_file_ops
 {
@@ -46,7 +54,8 @@ typedef struct s_file_ops
 	write_fn write;
 	close_fn close; // only called when fd refcnt becomes 0 in syscall_close
 	ioctl_fn ioctl;
-	// later: poll, mmap, seek, readdir, fstat...
+	poll_fn poll;
+	// later: mmap, seek, readdir, fstat...
 } t_file_ops;
 
 typedef struct s_file

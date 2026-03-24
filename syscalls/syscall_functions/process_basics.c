@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/25 19:38:53 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/24 16:37:51 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -168,13 +168,6 @@ uint32_t syscall_archprctl(t_interrupt_data *regs)
 	print_trace("arch prctl %x %x\n", regs->ebx, regs->ecx);
 	return (-EINVAL);
 }
-
-struct pollfd
-{
-	int fd;		   /* file descriptor */
-	short events;  /* requested events */
-	short revents; /* returned events */
-};
 
 uint32_t syscall_poll(t_interrupt_data *regs)
 {

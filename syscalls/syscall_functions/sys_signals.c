@@ -94,7 +94,10 @@ uint32_t syscall_sigreturn(t_interrupt_data *f)
     // restore full user context into interrupt frame
     memcpy(f, &uf->saved_context, sizeof(*f));
 
-    return (0); // interrupt will pop back the modified frame
+    // syscall dispatcher sets eax to the return value
+    // make it a no-op by returning the eax in the pre-signal saved
+    // kernel frame
+    return (f->eax); // interrupt epilogue will pop back the modified frame
 }
 
 // 173

@@ -21,8 +21,8 @@
 
 #define TASK_STACK_SIZE (100u * PAGE_SIZE)
 #define TASK_VA_ENTRYPOINT 0x200000u
-#define TASK_STACK_TOP KERNEL_VIRT_BASE - (PAGE_SIZE * 2) //just below signal trampoline
-#define NB_TICKS_PER_TASK 1u // nb of timer irq before we context switch to next task
+#define TASK_STACK_TOP KERNEL_VIRT_BASE - (PAGE_SIZE * 2) // just below signal trampoline
+#define NB_TICKS_PER_TASK 1u							  // nb of timer irq before we context switch to next task
 #define MAX_OPEN_FILES 256u
 #define TASK_KERNEL_SIZE 16384
 
@@ -31,6 +31,7 @@ enum task_status
 	STATUS_RUNNABLE,
 	STATUS_SLEEP,
 	STATUS_ZOMBIE,
+	STATUS_STOPPED,
 };
 
 /*struct open_file
@@ -102,36 +103,36 @@ typedef struct task
 	enum task_status status;
 	enum wait_reason wait_reason;
 	unsigned int task_id;
-	struct task *parent_task;  // should NEVER be null, put init if parent dies (except for init)
-	struct task *children;	   // head of linked list
-	struct task *next_sibling; // link in parent list
-	struct task *next_all_task; // link of g_task_list, circular linked list
+	struct task *parent_task;	  // should NEVER be null, put init if parent dies (except for init)
+	struct task *children;		  // head of linked list
+	struct task *next_sibling;	  // link in parent list
+	struct task *next_all_task;	  // link of g_task_list, circular linked list
 	struct task *next_sleep_task; // link of g_sleeping_queue, null if not sleeping
-	uint32_t sleep_until; //g_tick where we need to wake this task
+	uint32_t sleep_until;		  // g_tick where we need to wake this task
 	bool in_sleep_queue;
 	unsigned int uid;
 	unsigned int euid;
 	unsigned int suid;
 	unsigned int gid;
 	unsigned int egid;
-	unsigned int pgid; //process group id
-	unsigned int exit_code; //status returned by wait, signal on last byte, exit number on second to last byte
+	unsigned int pgid;		// process group id
+	unsigned int exit_code; // status returned by wait, signal on last byte, exit number on second to last byte
 	uint32_t pending_signals;
-	uint32_t blocked_signals; //mask of blocked signals (can't add them to pending if is this mask)
-	bool in_signal; //temporary mostly for debug
+	uint32_t blocked_signals; // mask of blocked signals (can't add them to pending if is this mask)
+	bool in_signal;			  // temporary mostly for debug
 	t_file *open_files[MAX_OPEN_FILES];
 	unsigned int cwd_inode_nr;
 	phys_ptr pd;
 	struct user_desc user_gdt_segment;
 	uint32_t k_esp;
-	uint32_t k_context_esp;   // saved kernel context stack pointer (for yield)
+	uint32_t k_context_esp;			   // saved kernel context stack pointer (for yield)
 	uint8_t k_stack[TASK_KERNEL_SIZE]; // stack tss will returns to on interrupt
-	t_sigaction_k sigact[NSIG]; // index by sig (0 unused), memset to 0 creates correct behavior (handler SIG_DFL, mask and flag 0)
-	struct task *next; // circular linked list, NULL means task not in run queue
+	t_sigaction_k sigact[NSIG];		   // index by sig (0 unused), memset to 0 creates correct behavior (handler SIG_DFL, mask and flag 0)
+	struct task *next;				   // circular linked list, NULL means task not in run queue
 	t_mm proc_memory;
-	t_waitq_node wq_node;  // used when sleeping
-    t_waitq *sleep_q;      // which queue we’re in (for removal)
-	t_waitq wait_child;  // waitq owned by this struct, 
+	t_waitq_node wq_node; // used when sleeping
+	t_waitq *sleep_q;	  // which queue we’re in (for removal)
+	t_waitq wait_child;	  // waitq owned by this struct,
 } t_task;
 
 struct process_strings
@@ -141,11 +142,11 @@ struct process_strings
 };
 
 extern t_task *g_curr_task;
-extern t_task *g_init_task; //pid 1
+extern t_task *g_init_task; // pid 1
 extern uint32_t g_next_pid;
 extern uint32_t g_tick;
 extern t_task *g_to_schedule;
-extern t_task *g_task_list; //head of linked list of every task, no matter their state
+extern t_task *g_task_list; // head of linked list of every task, no matter their state
 
 void schedule_next_task();
 void context_switch(t_task *next);

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   signals.h                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 03:19:49 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 18:17:27 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ typedef void (*t_sig_handler)(int);
 #define SIGSEGV 11u
 #define SIGPIPE 13u
 #define SIGCHLD 17u
+#define SIGCONT 18u
 #define SIGSTOP 19u
 #define SIGTSTP 20u
 #define SIGTTIN 21u
@@ -41,26 +42,29 @@ typedef void (*t_sig_handler)(int);
 
 #define SA_RESTART 0x10000000
 
-typedef struct s_sigaction_k {
-    t_sig_handler handler;
-    uint32_t mask;      // signals blocked during handler
-    uint32_t flags;     // SA_*
-    void *restorer;     // user trampoline (optional, can ignore at first)
+typedef struct s_sigaction_k
+{
+	t_sig_handler handler;
+	uint32_t mask;	// signals blocked during handler
+	uint32_t flags; // SA_*
+	void *restorer; // user trampoline (optional, can ignore at first)
 } t_sigaction_k;
 
-//struct used by user in syscalls
-typedef struct __attribute__((packed)) s_sigaction_u {
-    uint32_t handler;     // sa_handler
-    uint32_t flags;       // sa_flags
-    uint32_t restorer;    // sa_restorer (may be 0)
-    uint32_t mask;        // for first pass: 32-bit mask is enough
+// struct used by user in syscalls
+typedef struct __attribute__((packed)) s_sigaction_u
+{
+	uint32_t handler;  // sa_handler
+	uint32_t flags;	   // sa_flags
+	uint32_t restorer; // sa_restorer (may be 0)
+	uint32_t mask;	   // for first pass: 32-bit mask is enough
 } t_sigaction_u;
 
-typedef struct __attribute__((packed)) s_sigframe32 {
-    uint32_t retaddr;         // trampoline address
-    uint32_t signum;
-    t_interrupt_data saved_context;        // saved user context
-    uint32_t oldmask;         // previous blocked mask
+typedef struct __attribute__((packed)) s_sigframe32
+{
+	uint32_t retaddr; // trampoline address
+	uint32_t signum;
+	t_interrupt_data saved_context; // saved user context
+	uint32_t oldmask;				// previous blocked mask
 } t_sigframe32;
 
 bool map_signal_trampoline(void);

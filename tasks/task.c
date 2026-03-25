@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/25 20:19:33 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 18:46:28 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -360,6 +360,10 @@ void schedule_next_task()
 			print_err("unrunnable task in g_to_schedule pid %u\n", to_schedule->task_id);
 			if (to_schedule->status == STATUS_ZOMBIE)
 				kernel_panic("uncoherent kernel state, trying to execute a zombie child in g_to_schedule\n", NULL);
+			if (g_curr_task)
+				print_trace("scheduler: curr_pid %u\n", g_curr_task->task_id);
+			context_switch(to_schedule);
+			return;
 		}
 	}
 	t_task *next = g_curr_task->next ? g_curr_task->next : g_runq_head->next;

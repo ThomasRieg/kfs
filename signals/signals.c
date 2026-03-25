@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   signals.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/26 04:23:14 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 18:49:48 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,6 +83,51 @@ void task_terminate_by_signal(t_task *t, int sig)
 	__builtin_unreachable();
 }
 
+void task_cont_by_signal(t_task *t, int sig)
+{
+	print_debug("pid %u continued by signal: %d\n", t->task_id, sig);
+
+	t->status = STATUS_RUNNABLE;
+	if (!t->next)
+		add_task_to_runq(t);
+}
+
+void task_stop_by_signal(t_task *t, int sig)
+{
+	print_debug("pid %u stopped by signal: %d\n", t->task_id, sig);
+
+	if (!t->parent_task)
+		kernel_panic("parentless process got stopped, no process left?\n", NULL);
+
+	enqueue_sig(t->parent_task, SIGCHLD);
+	// wake any wait4 sleepers
+	waitq_wake_all(&t->parent_task->wait_child);
+	unlink_task_from_runq(t);
+	t->status = STATUS_STOPPED;
+	t->exit_code = sig; // store signal that stopped, for wait4
+	yield();
+	// if we come back here, we've been awoken
+	if (t->pending_signals & SIGBIT(SIGCONT))
+	{
+		task_cont_by_signal(t, SIGCONT);
+		t->pending_signals &= ~SIGBIT(SIGCONT);
+	}
+	else
+	{
+		task_terminate_by_signal(t, SIGKILL);
+	}
+}
+
+void *get_default_action(int sig)
+{
+	if (sig == SIGTTIN || sig == SIGTTOU || sig == SIGSTOP || sig == SIGTSTP)
+		return (task_stop_by_signal);
+	else if (sig == SIGCONT)
+		return (task_cont_by_signal);
+	else
+		return (task_terminate_by_signal);
+}
+
 void signal_deliver_if_needed(t_interrupt_data *f)
 {
 	t_task *t = g_curr_task;
@@ -113,8 +158,10 @@ void signal_deliver_if_needed(t_interrupt_data *f)
 	}
 	if (h == SIG_DFL /*SIG_DFL*/)
 	{
-		task_terminate_by_signal(t, sig);
-		__builtin_unreachable();
+		void (*default_action)(t_task *, int) = get_default_action(sig);
+		default_action(t, sig);
+		t->pending_signals &= ~SIGBIT(sig);
+		return; // can be accessed if process gets stopped instead of killed, in which case waking it will return it
 	}
 
 	// build user sigframe
@@ -155,9 +202,18 @@ bool enqueue_sig(t_task *task, int sig)
 	// if (task->blocked_signals &= SIGBIT(sig))
 	// return (false);
 	print_trace("enqueuing signal %d for task %u\n", sig, task->task_id);
-	if (task->status == STATUS_ZOMBIE) return (false);
+	if (task->status == STATUS_ZOMBIE)
+		return (false);
 	task->pending_signals |= SIGBIT(sig);
-	waitq_wake(task); // remove sleep status if task sleeping
+	if (task->status == STATUS_STOPPED)
+	{
+		if (sig == SIGKILL || sig == SIGCONT)
+		{
+			yield_to(task);
+		}
+	}
+	else
+		waitq_wake(task); // remove sleep status if task sleeping
 	return (true);
 }
 

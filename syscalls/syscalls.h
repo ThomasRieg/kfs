@@ -92,4 +92,7 @@ uint32_t syscall_accept4(t_interrupt_data *regs);
 uint32_t syscall_socketpair(t_interrupt_data *regs);
 uint32_t syscall_socketcall(t_interrupt_data *regs);
 
+uint32_t syscall_reboot(t_interrupt_data *regs);
+uint32_t syscall_init_module(t_interrupt_data *regs);
+
 #endif

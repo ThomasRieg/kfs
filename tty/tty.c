@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   tty.c                                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 01:56:38 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/17 01:50:22 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 16:18:06 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,11 +82,6 @@ void tty_add_input(char c)
 {
 	t_tty *curr = &g_ttys[g_current_tty];
 
-	if (c == curr->termios.c_cc[VEOF]) {
-		curr->read_eof = true;
-		waitq_wake_one(&curr->wait_read);
-		return;
-	}
 	if (curr->termios.c_lflag & ISIG) {
 		const struct {
 			cc_t cc;

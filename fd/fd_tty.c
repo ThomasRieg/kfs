@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   fd_tty.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: thrieg <thrieg@student.42mulhouse.fr>      +#+  +:+       +#+        */
+/*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/04 16:17:51 by thrieg            #+#    #+#             */
-/*   Updated: 2026/02/20 04:19:53 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 17:06:06 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,15 +41,17 @@ struct winsize
 #define TIOCGWINSZ 0x5413
 #define TIOCGWINSZ 0x5413
 
-struct kbentry {
-	unsigned char  kb_table;
-	unsigned char  kb_index;
+struct kbentry
+{
+	unsigned char kb_table;
+	unsigned char kb_index;
 	unsigned short kb_value;
 };
 
 int32_t tty_read(t_file *f, void *buf, size_t n)
 {
-	if (f && buf && n) {
+	if (f && buf && n)
+	{
 		t_tty *tty = f->priv;
 		if (g_curr_task->pgid != tty->fg_pgid)
 		{
@@ -63,42 +65,50 @@ int32_t tty_read(t_file *f, void *buf, size_t n)
 					enqueue_sig(curr, SIGTTIN);
 				}
 				curr = curr->next_all_task;
-				if (curr == g_task_list) break;
+				if (curr == g_task_list)
+					break;
 			}
 			return (-EINTR);
 		}
-		//if (!(f->flags & O_NONBLOCK))
+		// if (!(f->flags & O_NONBLOCK))
 		//{
-			while (!tty->cmd.index && !tty->read_eof)
+		while (!tty->cmd.index)
+		{
+			print_trace("tty_read: pid %u sleeping because no tty ready\n", g_curr_task->task_id);
+			sleep_on(&tty->wait_read, WAIT_TTY_READ);
+			print_trace("tty_read: pid %u woke up\n", g_curr_task->task_id);
+			if (has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
 			{
-				print_trace("tty_read: pid %u sleeping because no tty ready\n", g_curr_task->task_id);
-				sleep_on(&tty->wait_read, WAIT_TTY_READ);
-				print_trace("tty_read: pid %u woke up\n", g_curr_task->task_id);
-				if (has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
-				{
-					print_trace("tty_read: woken up by signal without SA_RESTART\n");
-					if (tty->cmd.index || tty->read_eof) break;
-					print_trace("tty_read: tty buffer empty, return -EINTR\n");
-					return (-EINTR);
-				}
+				print_trace("tty_read: woken up by signal without SA_RESTART\n");
+				if (tty->cmd.index || tty->read_eof)
+					break;
+				print_trace("tty_read: tty buffer empty, return -EINTR\n");
+				return (-EINTR);
 			}
+		}
 		//}
-		if (tty->read_eof)
+		if (tty->cmd.buffer[0] == tty->termios.c_cc[VEOF] && ((tty->cmd.index <= 1) || (tty->cmd.buffer[1] != tty->termios.c_cc[VEOF])))
 		{
 			print_trace("read eof acknowledged in tty_read\n");
-			tty->read_eof = false;
-			if (!tty->cmd.index)
-			 	return 0; //posix says that EOF is treated as newline if there's already a command
+			// tty->read_eof = false;
+			memmove(tty->cmd.buffer, tty->cmd.buffer + 1, tty->cmd.index - 1);
+			tty->cmd.index--;
+			return 0;
 		}
-
 		uint32_t to_copy = n < tty->cmd.index ? n : tty->cmd.index;
+		char *eof = strchr(tty->cmd.buffer, tty->termios.c_cc[VEOF]);
+		if (eof)
+		{
+			to_copy = (uint32_t)(uintptr_t)eof - (uint32_t)(uintptr_t)(&tty->cmd.buffer[0]);
+		}
 		memcpy(buf, tty->cmd.buffer, to_copy);
 		memmove(tty->cmd.buffer, tty->cmd.buffer + to_copy, tty->cmd.index - to_copy);
 		tty->cmd.index -= to_copy;
 		print_trace("tty_read: about to return tocopy; %u\n", to_copy);
 		if (tty->cmd.index)
-			waitq_wake_one(&tty->wait_read); //wake another reader to finish the cmd
-		if (!to_copy) return (-EAGAIN);
+			waitq_wake_one(&tty->wait_read); // wake another reader to finish the cmd
+		if (!to_copy)
+			return (-EAGAIN);
 		return to_copy;
 	}
 	return (-EINVAL);
@@ -123,7 +133,8 @@ int32_t tty_write(t_file *f, const void *buf, size_t n)
 				enqueue_sig(curr, SIGTTOU);
 			}
 			curr = curr->next_all_task;
-			if (curr == g_task_list) break;
+			if (curr == g_task_list)
+				break;
 		}
 		return (-EINTR);
 	}
@@ -147,8 +158,9 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 {
 	t_tty *tty = f->priv;
 	print_trace("tty_ioctl(op=0x%x, val=0x%x) pid=%u pgid=%u fg_pgid=%u\n",
-        op, val, g_curr_task->task_id, g_curr_task->pgid, tty->fg_pgid);
-	switch (op) {
+				op, val, g_curr_task->task_id, g_curr_task->pgid, tty->fg_pgid);
+	switch (op)
+	{
 	case KDGKBTYPE:
 		*(int *)val = KB_101;
 		return 0;
@@ -170,13 +182,13 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 		return 0;
 	case TIOCGPGRP:
 		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), true, &g_curr_task->proc_memory))
-        return -EFAULT;
+			return -EFAULT;
 		*(unsigned int *)val = tty->fg_pgid;
 		print_trace("TIOCGPGRP -> %u\n", tty->fg_pgid);
 		return 0;
 	case TIOCSPGRP:
 		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), false, &g_curr_task->proc_memory))
-        return -EFAULT;
+			return -EFAULT;
 		uint32_t new = *(uint32_t *)val;
 		print_trace("TIOCSPGRP <- %u\n", new);
 		if (!pgid_exists(new))

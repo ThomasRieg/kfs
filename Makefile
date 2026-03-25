@@ -48,7 +48,7 @@ debug: $(ISO) $(DISK_FILE)
 $(DISK_FILE):
 	$(MAKE) -C userspace
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
-	cp userspace/{init,socketpair} root/bin
+	cp userspace/{init,socketpair,sigchld} root/bin
 	if [[ ! -x root/bin/busybox ]]; then\
 		curl -o root/bin/busybox https://www.lier.link/busybox;\
 	fi

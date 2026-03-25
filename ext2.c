@@ -84,7 +84,7 @@ struct ext2_inode {
 	unsigned int deletion_time;
 	unsigned short gid;
 	unsigned short hard_link_count;
-	unsigned int disk_sector_count;
+	unsigned int disk_sector_count; // always in 512-byte blocks
 	unsigned int flags;
 	unsigned int operating_system_specific_1;
 	unsigned int block_pointers[EXT2_DIRECT_BLOCK_COUNT];
@@ -133,6 +133,12 @@ static void ext2_read_block(struct ext2_fs *fs, unsigned char *buffer, unsigned 
 		//printk("reading sector %u to %p\n", sector, buffer + i);
 		ide_read_sector(&fs->partition.drive, sector, buffer + i);
 	}
+}
+
+static void ext2_read_group_descriptor_block(struct ext2_fs *fs, unsigned char *buffer, unsigned int group) {
+	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
+	// otherwise, padding and SB are in one block and group desc table starts at block 1
+	ext2_read_block(fs, buffer, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
 }
 
 static void ext2_write_block(struct ext2_fs *fs, unsigned char *buffer, unsigned int block) {
@@ -242,9 +248,7 @@ static bool ext2_read_inode_struct(struct ext2_fs *fs, unsigned int inode, struc
 	// reused for all three reads
 	unsigned char block[4096];
 
-	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
-	// otherwise, padding and SB are in one block and group desc table starts at block 1
-	ext2_read_block(fs, block, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
+	ext2_read_group_descriptor_block(fs, block, group);
 	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
 	//print_block_group_descriptor(descriptor);
 
@@ -273,9 +277,7 @@ static bool ext2_write_inode_struct(struct ext2_fs *fs, unsigned int inode, stru
 	// reused for all three reads
 	unsigned char block[4096];
 
-	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
-	// otherwise, padding and SB are in one block and group desc table starts at block 1
-	ext2_read_block(fs, block, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
+	ext2_read_group_descriptor_block(fs, block, group);
 	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
 	//print_block_group_descriptor(descriptor);
 
@@ -416,10 +418,33 @@ bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	out->st_gid = inode.base.gid;
 	out->st_size = inode.base.size;
 	out->st_blksize = ext2_mounted.sb.block_size;
-	out->st_blocks = ((inode.base.size + ext2_mounted.sb.block_size - 1) & ~(ext2_mounted.sb.block_size - 1)) / 512;
+	out->st_blocks = inode.base.disk_sector_count;
 	out->st_mtim = (struct timespec){.tv_sec = inode.base.modification_time};
 	out->st_atim = (struct timespec){.tv_sec = inode.base.access_time};
 	out->st_ctim = (struct timespec){.tv_sec = inode.base.creation_time};
+	return 0;
+}
+
+unsigned ext2_allocate_block(struct ext2_fs *fs, unsigned int inode_nr) {
+	if (!fs->sb.free_blocks)
+		return 0;
+
+	// First we look into the same block group as the inode for any free blocks
+	unsigned int group = (inode_nr - 1) / fs->sb.inodes_in_group;
+	unsigned char block[4096];
+
+	ext2_read_group_descriptor_block(fs, block, group);
+	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
+	//print_block_group_descriptor(descriptor);
+
+	ext2_read_block(fs, block, descriptor->ba_block_usage_bitmap);
+	for (unsigned int i = 0; i < fs->sb.blocks_in_group; i++) {
+		if ((block[i / 8] & (1 << (i % 8))) == 0) {
+			block[i / 8] |= (1 << (i % 8));
+			ext2_write_block(fs, block, descriptor->ba_block_usage_bitmap);
+			return group * fs->sb.blocks_in_group + i;
+		}
+	}
 	return 0;
 }
 
@@ -439,7 +464,12 @@ int write_inode(unsigned int inode_nr, unsigned int offset, const unsigned char 
 		if (bytes_inside_inode + fs->sb.block_size - 1 < offset)
 			continue;
 		if (!inode.base.block_pointers[i]) {
-			//TODO: inode->base.block_pointers[i] = ext2_allocate_block();
+			inode.base.block_pointers[i] = ext2_allocate_block(fs, inode_nr);
+			if (!inode.base.block_pointers[i]) {
+				break;
+			}
+			inode.base.disk_sector_count += fs->sb.block_size / 512;
+			ext2_write_inode_struct(fs, inode_nr, &inode);
 		}
 		unsigned short start_write = offset + written_count - bytes_inside_inode;
 		unsigned int left_to_write = buf_size - written_count;

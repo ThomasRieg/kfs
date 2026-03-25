@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/03/25 18:46:28 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 19:40:12 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -675,8 +675,11 @@ t_task *find_task_by_pid(int pid)
 
 bool pgid_exists(unsigned int pgid)
 {
-	for (t_task *t = g_task_list; t; t = t->next_all_task)
+	t_task *t;
+	for (t = g_task_list; t->next_all_task != g_task_list; t = t->next_all_task)
 		if (t->pgid == pgid)
 			return true;
+	if (t->pgid == pgid)
+		return true;
 	return false;
 }

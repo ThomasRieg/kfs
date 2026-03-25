@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 23:13:08 by thrieg            #+#    #+#             */
-/*   Updated: 2026/03/24 16:37:51 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 19:34:20 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -301,6 +301,38 @@ static t_task *find_zombie_child(t_task *parent, int pid)
 	return NULL; // pid==0 or pid<-1: not supported yet
 }
 
+static t_task *find_stopped_child(t_task *parent, int pid)
+{
+	t_task *c = parent->children;
+	if (pid == -1)
+	{
+		while (c)
+		{
+			if (c->status == STATUS_STOPPED && c->stopped_by)
+			{
+				c->stopped_by = 0;
+				return c;
+			}
+			c = c->next_sibling;
+		}
+		return NULL;
+	}
+	if (pid > 0)
+	{
+		while (c)
+		{
+			if ((int)c->task_id == pid && c->status == STATUS_STOPPED && c->stopped_by)
+			{
+				c->stopped_by = 0;
+				return c;
+			}
+			c = c->next_sibling;
+		}
+		return NULL;
+	}
+	return NULL; // pid==0 or pid<-1: not supported yet
+}
+
 static void unlink_child(t_task *parent, t_task *child)
 {
 	// TODO link prev task to next task in scheduler linked list
@@ -338,6 +370,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 	print_debug("wait4: %d, %p %u %p\n", pid, stat_uaddr, options, rusage);
 	const uint32_t WNOHANG = 1;
+	const uint32_t WUNTRACED = 2;
 
 	// Reject unsupported pid modes for now
 	if (pid == 0 || pid < -1)
@@ -357,11 +390,16 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 		}
 
 		t_task *z = find_zombie_child(g_curr_task, pid);
+		if (!z && (options & WUNTRACED))
+		{
+			z = find_stopped_child(g_curr_task, pid);
+		}
 		if (z)
 		{
 			uint32_t child_pid = z->task_id;
 
-			unlink_child(g_curr_task, z);
+			if (z->status == STATUS_ZOMBIE)
+				unlink_child(g_curr_task, z);
 
 			// enable_interrupts();
 
@@ -374,7 +412,8 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 				*(uint32_t *)(uintptr_t)stat_uaddr = z->exit_code;
 			}
 
-			task_reap_zombie(z);
+			if (z->status == STATUS_ZOMBIE)
+				task_reap_zombie(z);
 			print_debug("wait4 returns %u\n", child_pid);
 			return child_pid;
 		}
@@ -391,6 +430,11 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 
 		print_debug("wait4 sleeps in pid %u\n", g_curr_task->task_id);
 		sleep_on(&g_curr_task->wait_child, WAIT_CHILD);
+		if (has_pending_signals(g_curr_task) && !(flags_first_pending_signal(g_curr_task) & SA_RESTART))
+		{
+			print_trace("wait4: woken up by signal without SA_RESTART\n");
+			return (-EINTR);
+		}
 		print_debug("wait4 wakes up in pid %u\n", g_curr_task->task_id);
 	}
 }

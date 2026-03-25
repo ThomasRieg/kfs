@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/03/25 18:49:48 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/25 19:38:34 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,7 +104,8 @@ void task_stop_by_signal(t_task *t, int sig)
 	waitq_wake_all(&t->parent_task->wait_child);
 	unlink_task_from_runq(t);
 	t->status = STATUS_STOPPED;
-	t->exit_code = sig; // store signal that stopped, for wait4
+	t->exit_code = (sig << 8) | 0x7f; // store signal that stopped, for wait4
+	t->stopped_by = sig;
 	yield();
 	// if we come back here, we've been awoken
 	if (t->pending_signals & SIGBIT(SIGCONT))

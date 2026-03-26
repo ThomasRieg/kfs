@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/03/26 16:02:09 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/26 17:07:42 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -325,6 +325,7 @@ static bool g_sleeping;
 
 void schedule_next_task()
 {
+	print_trace("scheduling\n");
 	// have to loop because it's not safe to exit kernel space when !g_curr_task
 	while (!g_runq_head && !g_to_schedule)
 	{
@@ -554,6 +555,7 @@ void free_vmas(t_mm *mm)
 void cleanup_task(t_task *task)
 {
 	// disable_interrupts();
+	print_trace("started cleanup for task id %u\n", task->task_id);
 	if (task != g_curr_task)
 		free_vmas(&task->proc_memory);
 	else
@@ -573,6 +575,7 @@ void cleanup_task(t_task *task)
 			syscall_close(&dummy);
 		}
 	}
+	print_trace("finished cleanup for task id %u\n", task->task_id);
 	// enable_interrupts();
 	//  TODO implement (clean up memory, fd and everything
 }
@@ -611,6 +614,8 @@ void task_reap_zombie(t_task *t)
 
 void unlink_task_from_runq(t_task *task)
 {
+	if (!task->next)
+		kernel_panic("trying to unlink a task from runqueue, but it wasn't in the runqueue to begin with %u\n", NULL);
 	if (task->next == task)
 	{
 		print_debug("run queue empty, last task unlinked pid %u\n", task->task_id);

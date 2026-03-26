@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:31 by thrieg            #+#    #+#             */
-/*   Updated: 2026/03/25 19:38:34 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/26 17:10:27 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,7 +78,8 @@ void task_terminate_by_signal(t_task *t, int sig)
 	// wake any wait4 sleepers
 	waitq_wake_all(&t->parent_task->wait_child);
 	cleanup_task(t);
-	unlink_task_from_runq(t);
+	if (t->next)
+		unlink_task_from_runq(t);
 	yield_to(t->parent_task);
 	__builtin_unreachable();
 }
@@ -108,14 +109,25 @@ void task_stop_by_signal(t_task *t, int sig)
 	t->stopped_by = sig;
 	yield();
 	// if we come back here, we've been awoken
-	if (t->pending_signals & SIGBIT(SIGCONT))
+	if (t->pending_signals & SIGBIT(SIGCONT) || ((t->pending_signals & SIGBIT(SIGTERM)) && t->sigact[SIGTERM].handler != SIG_DFL))
 	{
-		task_cont_by_signal(t, SIGCONT);
-		t->pending_signals &= ~SIGBIT(SIGCONT);
+		if (t->pending_signals & SIGBIT(SIGCONT))
+		{
+			task_cont_by_signal(t, SIGCONT);
+			t->pending_signals &= ~SIGBIT(SIGCONT);
+		}
+		else if (t->pending_signals & SIGBIT(SIGTERM))
+		{
+			task_cont_by_signal(t, SIGTERM);
+			t->pending_signals &= ~SIGBIT(SIGTERM);
+		}
 	}
 	else
 	{
-		task_terminate_by_signal(t, SIGKILL);
+		if (t->pending_signals & SIGBIT(SIGTERM))
+			task_terminate_by_signal(t, SIGTERM);
+		else
+			task_terminate_by_signal(t, SIGKILL); // TODO maybe handlne other signals killing process
 	}
 }
 
@@ -198,6 +210,13 @@ void signal_deliver_if_needed(t_interrupt_data *f)
 	iret_from_frame(f);
 }
 
+static bool would_unstop_process(t_task *task, int sig)
+{
+	if (sig == SIGKILL || sig == SIGCONT || (sig == SIGTERM && task->sigact[sig].handler == SIG_DFL))
+		return (true);
+	return (false);
+}
+
 bool enqueue_sig(t_task *task, int sig)
 {
 	// if (task->blocked_signals &= SIGBIT(sig))
@@ -208,7 +227,7 @@ bool enqueue_sig(t_task *task, int sig)
 	task->pending_signals |= SIGBIT(sig);
 	if (task->status == STATUS_STOPPED)
 	{
-		if (sig == SIGKILL || sig == SIGCONT)
+		if (would_unstop_process(task, sig))
 		{
 			yield_to(task);
 		}

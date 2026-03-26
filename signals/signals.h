@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 12:46:15 by thrieg            #+#    #+#             */
-/*   Updated: 2026/03/25 18:17:27 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/26 16:12:31 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ typedef void (*t_sig_handler)(int);
 #define SIGKILL 9u
 #define SIGSEGV 11u
 #define SIGPIPE 13u
+#define SIGTERM 15u
 #define SIGCHLD 17u
 #define SIGCONT 18u
 #define SIGSTOP 19u

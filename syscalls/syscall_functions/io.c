@@ -239,6 +239,15 @@ uint32_t syscall_unlink(t_interrupt_data *regs)
 	return unlink(path, g_curr_task->cwd_inode_nr);
 }
 
+uint32_t syscall_mkdir(t_interrupt_data *regs)
+{
+	const char *path = (char *)regs->ebx;
+	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	print_trace("mkdir: %s\n", path);
+	return mkdir(path, g_curr_task->cwd_inode_nr);
+}
+
 uint32_t syscall_rmdir(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;

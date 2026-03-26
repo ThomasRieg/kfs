@@ -24,3 +24,4 @@ bool stat_inode(unsigned int inode_nr, struct stat *out);
 int getdirname(unsigned int inode_nr, char *buf, unsigned int size);
 int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset);
 int unlink(const char *path, unsigned int relative_dir_inode_nr);
+int mkdir(const char *path, unsigned int relative_dir_inode_nr);

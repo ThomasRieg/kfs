@@ -26,6 +26,7 @@ bool user_range_ok(const virt_ptr uaddr, uint32_t size, bool write, t_mm *mm);
 bool user_str_ok(const char *str, bool write, uint32_t max_size, t_mm *mm);
 
 char *strchr(const char *s, int c);
+char *strrchr(const char *s, int c);
 unsigned int strlen(const char *s);
 unsigned int strnonchr(char *str, char c);
 char invert_caps(char c);

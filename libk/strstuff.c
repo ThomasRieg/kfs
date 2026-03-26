@@ -28,6 +28,20 @@ char	*strchr(const char *s, int c)
 	return (0);
 }
 
+char	*strrchr(const char *s, int c)
+{
+	if ((char)c == '\0')
+		return ((char *)(s + strlen(s)));
+	char *p = 0;
+	while (*s)
+	{
+		if (*s == (char)c)
+			p = (char *)s;
+		s++;
+	}
+	return (p);
+}
+
 //returns the index of the first character that ISN'T c
 // /!\SEGFAULT if str is NULL
 //returns 0 if c is \0

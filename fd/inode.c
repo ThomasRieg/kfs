@@ -35,7 +35,7 @@ int32_t inode_write(t_file *f, const void *buf, size_t n)
 			return status;
 		inode->file_offset = stat.st_size;
 	}
-	int written = write_inode(inode->inode_nr, inode->file_offset, buf, n);
+	int written = ext2_write_inode_contents(inode->inode_nr, inode->file_offset, buf, n);
 	if (written > 0)
 		inode->file_offset += written;
 	return written;

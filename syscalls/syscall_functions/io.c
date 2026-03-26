@@ -249,7 +249,7 @@ uint32_t syscall_rmdir(t_interrupt_data *regs)
 	return unlink(path, g_curr_task->cwd_inode_nr);
 }
 
-uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribute__((unused)) unsigned int mode)
+uint32_t do_open(const char *path, unsigned int dir_inode, int flags, unsigned int mode)
 {
 	unsigned short i;
 	for (i = 0; i < MAX_OPEN_FILES; i++)
@@ -274,26 +274,10 @@ uint32_t do_open(const char *path, unsigned int dir_inode, int flags, __attribut
 		g_curr_task->open_files[i] = file;
 		return i;
 	}
-	unsigned int inode_nr = path_to_inode(path, dir_inode);
-	print_debug("open inode_nr: %u\n", inode_nr);
-	if (!inode_nr)
-		return -ENOENT;
-
-	t_file *file = vmalloc(sizeof(*file));
-	if (!file)
-		return (-ENOMEM);
-	file->refcnt = 1;
-	file->type = FILE_REGULAR;
-	file->flags = flags;
-	t_inode *inode = vmalloc(sizeof(t_inode));
-	if (!inode)
-		return (vfree(file), -ENOMEM);
-	inode->file_offset = 0;
-	inode->inode_nr = inode_nr;
-	file->priv = inode;
-	file->ops = &g_inode_ops;
-	file->pos = 0;
-
+	t_file *file;
+	int n = ext2_open(path, dir_inode, flags, mode, &file);
+	if (n < 0)
+		return n;
 	g_curr_task->open_files[i] = file;
 	return i;
 }

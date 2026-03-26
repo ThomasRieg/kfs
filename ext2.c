@@ -2,6 +2,7 @@
 #include "drivers/ide.h"
 #include "libk/libk.h"
 #include "tty/tty.h"
+#include "fd/inode.h"
 #include "errno.h"
 
 #define EXT2_DIRECT_BLOCK_COUNT 12
@@ -378,7 +379,7 @@ int unlink(const char *path, unsigned int relative_dir_inode_nr) {
 		inode.base.hard_link_count--;
 		ext2_write_inode_struct(&ext2_mounted, inode_nr, &inode);
 	}
-	const char *slash = strchr(path, '/');
+	const char *slash = strrchr(path, '/');
 	unsigned int parent_inode_nr;
 	if (slash) {
 		char *parent_path = strndup(path, slash - path);
@@ -401,7 +402,7 @@ int unlink(const char *path, unsigned int relative_dir_inode_nr) {
 
 		direntry = (struct ext2_direntry *)((unsigned char *)direntry + direntry->entry_size);
 	}
-	write_inode(parent_inode_nr, 0, directory_contents.data, directory_contents.length);
+	ext2_write_inode_contents(parent_inode_nr, 0, directory_contents.data, directory_contents.length);
 	VecU8_destruct(&directory_contents);
 	return 0;
 }
@@ -425,7 +426,7 @@ bool stat_inode(unsigned int inode_nr, struct stat *out) {
 	return 0;
 }
 
-unsigned ext2_allocate_block(struct ext2_fs *fs, unsigned int inode_nr) {
+static unsigned ext2_allocate_block(struct ext2_fs *fs, unsigned int inode_nr) {
 	if (!fs->sb.free_blocks)
 		return 0;
 
@@ -437,18 +438,45 @@ unsigned ext2_allocate_block(struct ext2_fs *fs, unsigned int inode_nr) {
 	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
 	//print_block_group_descriptor(descriptor);
 
-	ext2_read_block(fs, block, descriptor->ba_block_usage_bitmap);
+	unsigned int ba_block_usage_bitmap = descriptor->ba_block_usage_bitmap;
+	ext2_read_block(fs, block, ba_block_usage_bitmap);
 	for (unsigned int i = 0; i < fs->sb.blocks_in_group; i++) {
 		if ((block[i / 8] & (1 << (i % 8))) == 0) {
 			block[i / 8] |= (1 << (i % 8));
-			ext2_write_block(fs, block, descriptor->ba_block_usage_bitmap);
+			ext2_write_block(fs, block, ba_block_usage_bitmap);
+			fs->sb.free_blocks--;
 			return group * fs->sb.blocks_in_group + i;
 		}
 	}
 	return 0;
 }
 
-int write_inode(unsigned int inode_nr, unsigned int offset, const unsigned char *buf, unsigned int buf_size) {
+static unsigned ext2_allocate_inode(struct ext2_fs *fs) {
+	if (!fs->sb.free_inodes)
+		return 0;
+
+	// For now only in the first group
+	unsigned int group = 0;
+	unsigned char block[4096];
+
+	ext2_read_group_descriptor_block(fs, block, group);
+	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
+	//print_block_group_descriptor(descriptor);
+
+	unsigned int ba_inode_usage_bitmap = descriptor->ba_inode_usage_bitmap;
+	ext2_read_block(fs, block, ba_inode_usage_bitmap);
+	for (unsigned int i = 0; i < fs->sb.inodes_in_group; i++) {
+		if ((block[i / 8] & (1 << (i % 8))) == 0) {
+			block[i / 8] |= (1 << (i % 8));
+			ext2_write_block(fs, block, ba_inode_usage_bitmap);
+			fs->sb.free_inodes--;
+			return group * fs->sb.inodes_in_group + i;
+		}
+	}
+	return 0;
+}
+
+int ext2_write_inode_contents(unsigned int inode_nr, unsigned int offset, const unsigned char *buf, unsigned int buf_size) {
 	struct ext2_fs *fs = &ext2_mounted;
 	if (!fs->mounted) return -EBADF;
 
@@ -640,6 +668,68 @@ struct VecU8 read_full_file(const char *path) {
 	if (!ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode)) return empty;
 
 	return ext2_read_inode_contents(&ext2_mounted, &inode);
+}
+
+int ext2_open(const char *path, unsigned int dir_inode, unsigned int flags, unsigned int mode, t_file **fp) {
+	unsigned int inode_nr = path_to_inode(path, dir_inode);
+	print_debug("open inode_nr: %u\n", inode_nr);
+	if (!inode_nr) {
+		if (flags & O_CREAT) {
+			const char *slash = strrchr(path, '/');
+			unsigned int parent_inode_nr;
+			if (slash) {
+				char *parent_path = strndup(path, slash - path);
+				parent_inode_nr = ext2_path_to_inode(&ext2_mounted, parent_path, dir_inode);
+				path = slash + 1;
+				vfree(parent_path);
+			} else
+				parent_inode_nr = dir_inode;
+			if (!parent_inode_nr)
+				return -ENOENT;
+			struct ext2_inode_extended dir_inode;
+			struct timespec ts = rtc_get_time();
+			struct ext2_inode_extended new_inode = {.base = {
+				.hard_link_count = 1,
+				.mode = (MODE_REGULAR << 12) | mode,
+				.creation_time = ts.tv_sec,
+				.access_time = ts.tv_sec,
+				.modification_time = ts.tv_sec,
+			}};
+			char entry_buf[300] = {0};
+			struct ext2_direntry *new_entry = (struct ext2_direntry *)&entry_buf[0];
+			new_entry->name_length = strlen(path);
+			memcpy(new_entry->name, path, new_entry->name_length);
+			new_entry->inode = ext2_allocate_inode(&ext2_mounted);
+			new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
+			new_entry->type_indicator = EXT2_REGULAR;
+
+			// TODO: directory size does not reflect how much is actually used, don't waste space
+			// and check for empty records.
+			ext2_read_inode_struct(&ext2_mounted, parent_inode_nr, &dir_inode);
+			if (ext2_write_inode_contents(parent_inode_nr, dir_inode.base.size, (const unsigned char *) new_entry, new_entry->entry_size) != new_entry->entry_size)
+				kernel_panic("couldn't write new directory entry", 0);
+			ext2_write_inode_struct(&ext2_mounted, new_entry->inode, &new_inode);
+			inode_nr = new_entry->inode;
+		} else
+			return -ENOENT;
+	}
+
+	t_file *file = vmalloc(sizeof(*file));
+	if (!file)
+		return (-ENOMEM);
+	file->refcnt = 1;
+	file->type = FILE_REGULAR;
+	file->flags = flags;
+	t_inode *inode = vmalloc(sizeof(t_inode));
+	if (!inode)
+		return (vfree(file), -ENOMEM);
+	inode->file_offset = 0;
+	inode->inode_nr = inode_nr;
+	file->priv = inode;
+	file->ops = &g_inode_ops;
+	file->pos = 0;
+	*fp = file;
+	return 0;
 }
 
 /* Called during PCI IDE initialization */

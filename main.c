@@ -92,16 +92,27 @@ unsigned char from_cmos(enum cmos_register reg)
 
 struct timespec rtc_get_time(void)
 {
-	unsigned int century = from_cmos(RTC_USUAL_CENTURY);
-	unsigned int year = century * 100 + from_cmos(RTC_YEAR);
-	unsigned int month = from_cmos(RTC_MONTH);
-	unsigned int day = from_cmos(RTC_DAY);
-	unsigned int hour = from_cmos(RTC_HOUR);
-	unsigned int minute = from_cmos(RTC_MINUTE);
-	unsigned int second = from_cmos(RTC_SECOND);
-	// TODO: gregorian calendar calculator
-	unsigned int seconds_since_epoch = (year - 1970) * 31536000 + ((month - 1) * 30 + day) * 86400 + hour * 3600 + minute * 60 + second;
-	// leap years
+	// TODO: verify if this gregorian calendar calculator is correct
+	unsigned int century = from_cmos(RTC_USUAL_CENTURY); // 19-20
+	unsigned int year = century * 100 + from_cmos(RTC_YEAR); // CMOS holds 0-99
+	unsigned int month = from_cmos(RTC_MONTH); // 1-12
+	unsigned int day = from_cmos(RTC_DAY); // 1-31
+	unsigned int hour = from_cmos(RTC_HOUR); // 0-23
+	unsigned int minute = from_cmos(RTC_MINUTE); // 0-59
+	unsigned int second = from_cmos(RTC_SECOND); // 0-59
+
+	// leap year day in February is added below
+	unsigned char month_days[] = {
+		31, 28, 31, 30, 31, 30,
+		31, 31, 30, 31, 30, 31
+	};
+	unsigned int full_days_since_year = day - 1;
+	for (unsigned int i = 0; i < month - 1; i++) {
+		full_days_since_year += month_days[i];
+	}
+
+	unsigned int seconds_since_epoch = (year - 1970) * 31536000 + full_days_since_year * 86400 + hour * 3600 + minute * 60 + second;
+	// for each leap year (every 4 years), add 1 day in seconds
 	seconds_since_epoch += (year - 1970) * 86400 / 4;
 	return (struct timespec){seconds_since_epoch, 0};
 }

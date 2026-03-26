@@ -6,7 +6,7 @@
 /*   By: thrieg < thrieg@student.42mulhouse.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 17:52:50 by thrieg            #+#    #+#             */
-/*   Updated: 2026/03/25 19:40:12 by thrieg           ###   ########.fr       */
+/*   Updated: 2026/03/26 16:02:09 by thrieg           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -667,9 +667,12 @@ void yield_handler(__attribute__((unused)) t_interrupt_data *regs)
 
 t_task *find_task_by_pid(int pid)
 {
-	for (t_task *t = g_task_list; t; t = t->next_all_task)
+	t_task *t;
+	for (t = g_task_list; t->next_all_task != g_task_list; t = t->next_all_task)
 		if ((int)t->task_id == pid)
 			return t;
+	if ((int)t->task_id == pid)
+		return t;
 	return NULL;
 }
 

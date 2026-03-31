@@ -272,12 +272,19 @@ void page_fault_handler(t_interrupt_data *regs)
 			enqueue_sig(g_curr_task, SIGKILL); // TODO instead of kill liberate memory of a process (when oom killer implemented)
 			return;
 		}
-		map_page(frame, pte, get_vma_flags(vma));
 		//print_trace("pte: %u\n", *get_pte((void *)virtual_address));
 		//print_trace("vma: 0x%x -> 0x%x, flags: %u\n", vma->start, vma->end, get_vma_flags(vma));
+
+		// Always map the new page as writable first so that we can clear its contents,
+		// then remap without write bit if necessary.
+		map_page(frame, pte, get_vma_flags(vma) | PTE_RW);
 		virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
 		invalidate_cache(virtual_address_page_start);
 		memset(virtual_address_page_start, 0, PAGE_SIZE);
+		if (!(vma->prots & PROT_WRITE)) {
+			map_page(frame, pte, get_vma_flags(vma));
+			invalidate_cache(virtual_address_page_start);
+		}
 		g_curr_task->proc_memory.physical_pages++;
 	}
 	else if (vma && (pte && (*pte & PTE_P) && (*pte & PTE_COW)) && (regs->err_code & 2) && (vma->prots & PROT_WRITE))

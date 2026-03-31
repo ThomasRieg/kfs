@@ -900,6 +900,12 @@ int ext2_open(const char *path, unsigned int dir_inode, unsigned int flags, unsi
 		else
 			return -ENOENT;
 	}
+	if (flags & O_TRUNC) {
+		struct ext2_inode_extended inode;
+		ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode);
+		inode.base.size = 0;
+		ext2_write_inode_struct(&ext2_mounted, inode_nr, &inode);
+	}
 
 	t_file *file = vmalloc(sizeof(*file));
 	if (!file)

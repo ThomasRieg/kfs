@@ -28,6 +28,7 @@ enum e_flags
 	O_WRONLY = 1,
 	O_RDWR = 2,
 	O_CREAT = 0100,
+	O_TRUNC = 01000,
 	O_NONBLOCK = 2048,
 	O_APPEND = 02000,
 	O_CLOEXEC = 524288,

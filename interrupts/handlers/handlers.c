@@ -273,6 +273,8 @@ void page_fault_handler(t_interrupt_data *regs)
 			return;
 		}
 		map_page(frame, pte, get_vma_flags(vma));
+		//print_trace("pte: %u\n", *get_pte((void *)virtual_address));
+		//print_trace("vma: 0x%x -> 0x%x, flags: %u\n", vma->start, vma->end, get_vma_flags(vma));
 		virt_ptr virtual_address_page_start = page_align_down((virt_ptr)virtual_address);
 		invalidate_cache(virtual_address_page_start);
 		memset(virtual_address_page_start, 0, PAGE_SIZE);

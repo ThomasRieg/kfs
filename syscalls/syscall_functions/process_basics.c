@@ -233,13 +233,23 @@ uint32_t syscall_uname(t_interrupt_data *regs)
 
 uint32_t syscall_mmap2(t_interrupt_data *regs)
 {
-	return (unsigned int)mmap((void *)regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp, &g_curr_task->proc_memory);
+	void *addr = (void *)regs->ebx;
+	unsigned int length = regs->ecx;
+	unsigned int prot = regs->edx;
+	unsigned int flags = regs->esi;
+	unsigned int fd = regs->edi;
+	unsigned int offset = regs->ebp;
+	print_trace("mmap2: %x length=%u prot=%u flags=%u fd=%d offset=%u\n", addr, length, prot, flags, fd, offset);
+	return (unsigned int)mmap(addr, length, prot, flags, fd, offset, &g_curr_task->proc_memory);
 }
 
 // 91
 uint32_t syscall_munmap(t_interrupt_data *regs)
 {
-	return munmap(&g_curr_task->proc_memory, (virt_ptr)regs->ebx, regs->ecx);
+	virt_ptr addr = (virt_ptr)regs->ebx;
+	unsigned int length = regs->ecx;
+	print_trace("munmap: %x length=%u\n", addr, length);
+	return munmap(&g_curr_task->proc_memory, addr, length);
 }
 
 uint32_t syscall_get_thread_area(t_interrupt_data *regs)

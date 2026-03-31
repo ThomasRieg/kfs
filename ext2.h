@@ -24,4 +24,5 @@ bool stat_inode(unsigned int inode_nr, struct stat *out);
 int ext2_getdirname(unsigned int inode_nr, char *buf, unsigned int size);
 int ext2_getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset);
 int ext2_unlink(const char *path, unsigned int relative_dir_inode_nr);
-int ext2_mkdir(const char *path, unsigned int relative_dir_inode_nr);
+int ext2_mkdir(const char *path, unsigned int mode, unsigned int relative_dir_inode_nr);
+int ext2_rename(unsigned int old_dir_inode, const char *oldpath, unsigned int new_dir_inode, const char *newpath);

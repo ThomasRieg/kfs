@@ -14,7 +14,28 @@
 #include "../errno.h"
 #include "../ext2.h"
 
-t_file_ops g_inode_ops = {.read = inode_read, .write = inode_write, .close = inode_close};
+static int32_t inode_llseek(t_file *file, unsigned long long int offset, unsigned long long int *result, unsigned int whence) {
+	t_inode *inode = (t_inode *)file->priv;
+	switch (whence) {
+	case SEEK_SET:
+		inode->file_offset = offset;
+		break;
+	case SEEK_CUR:
+		inode->file_offset += offset;
+		break;
+	case SEEK_END:
+		;struct stat stat;
+		int status = stat_inode(inode->inode_nr, &stat);
+		if (status < 0)
+			return status;
+		inode->file_offset = stat.st_size + offset;
+		break;
+	}
+	*result = inode->file_offset;
+	return 0;
+}
+
+t_file_ops g_inode_ops = {.read = inode_read, .write = inode_write, .close = inode_close, .llseek = inode_llseek};
 
 int32_t inode_read(t_file *f, void *buf, size_t n)
 {

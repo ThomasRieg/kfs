@@ -228,7 +228,6 @@ uint32_t syscall_tkill(t_interrupt_data *regs)
 
 uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
 {
-	
     int how = (int)regs->ebx;
     uint32_t *set_u   = (uint32_t *)(uintptr_t)regs->ecx;  // can be NULL
     uint32_t *old_u   = (uint32_t *)(uintptr_t)regs->edx;  // can be NULL

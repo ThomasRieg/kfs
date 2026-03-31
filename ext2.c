@@ -666,7 +666,7 @@ static enum norm_direnttype ext2_direnttype_to_norm(enum ext2_direnttype type)
 	}
 }
 
-int ext2_mkdir(const char *path, unsigned int relative_dir_inode_nr) {
+int ext2_mkdir(const char *path, unsigned int mode, unsigned int relative_dir_inode_nr) {
 	char *dup_path = strndup(path, strlen(path));
 	char *slash = strrchr(dup_path, '/');
 	if (slash && !slash[1]) {
@@ -690,8 +690,8 @@ int ext2_mkdir(const char *path, unsigned int relative_dir_inode_nr) {
 	struct ext2_inode_extended dir_inode;
 	struct timespec ts = rtc_get_time();
 	struct ext2_inode_extended new_inode = {.base = {
-		.hard_link_count = 1,
-		.mode = (MODE_DIRECTORY << 12) | 0777,
+		.hard_link_count = 2,
+		.mode = (MODE_DIRECTORY << 12) | mode,
 		.creation_time = ts.tv_sec,
 		.access_time = ts.tv_sec,
 		.modification_time = ts.tv_sec,
@@ -854,7 +854,6 @@ struct VecU8 read_full_file(const char *path)
 int ext2_open(const char *path, unsigned int dir_inode, unsigned int flags, unsigned int mode, t_file **fp)
 {
 	unsigned int inode_nr = path_to_inode(path, dir_inode);
-	print_debug("open inode_nr: %u\n", inode_nr);
 	if (!inode_nr)
 	{
 		if (flags & O_CREAT)
@@ -870,8 +869,10 @@ int ext2_open(const char *path, unsigned int dir_inode, unsigned int flags, unsi
 			}
 			else
 				parent_inode_nr = dir_inode;
-			if (!parent_inode_nr)
+			if (!parent_inode_nr) {
+				print_debug("open couldn't locate parent directory\n");
 				return -ENOENT;
+			}
 			struct ext2_inode_extended dir_inode;
 			struct timespec ts = rtc_get_time();
 			struct ext2_inode_extended new_inode = {.base = {
@@ -897,9 +898,12 @@ int ext2_open(const char *path, unsigned int dir_inode, unsigned int flags, unsi
 			ext2_write_inode_struct(&ext2_mounted, new_entry->inode, &new_inode);
 			inode_nr = new_entry->inode;
 		}
-		else
+		else {
+			print_debug("open couldn't locate/create file\n");
 			return -ENOENT;
+		}
 	}
+	print_debug("open inode_nr: %u\n", inode_nr);
 	if (flags & O_TRUNC) {
 		struct ext2_inode_extended inode;
 		ext2_read_inode_struct(&ext2_mounted, inode_nr, &inode);
@@ -922,6 +926,39 @@ int ext2_open(const char *path, unsigned int dir_inode, unsigned int flags, unsi
 	file->ops = &g_inode_ops;
 	file->pos = 0;
 	*fp = file;
+	return 0;
+}
+
+int ext2_rename(unsigned int old_dir_inode, const char *oldpath, unsigned int new_dir_inode, const char *newpath) {
+	// First we find the directory referred to by new_dir_inode + newpath...
+	const char *slash = strrchr(newpath, '/');
+	if (slash)
+	{
+		char *parent_path = strndup(newpath, slash - newpath);
+		new_dir_inode = ext2_path_to_inode(&ext2_mounted, newpath, new_dir_inode);
+		newpath = slash + 1;
+		vfree(parent_path);
+	}
+
+	// Then we insert the target direntry...
+	unsigned int target_inode = ext2_path_to_inode(&ext2_mounted, oldpath, old_dir_inode);
+	char entry_buf[300] = {0};
+	struct ext2_direntry *new_entry = (struct ext2_direntry *)&entry_buf[0];
+	new_entry->name_length = strlen(newpath);
+	memcpy(new_entry->name, newpath, new_entry->name_length);
+	new_entry->inode = target_inode;
+	new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
+	new_entry->type_indicator = EXT2_REGULAR;
+
+	struct ext2_inode_extended dir_inode;
+	// TODO: directory size does not reflect how much is actually used, don't waste space
+	// and check for empty records.
+	ext2_read_inode_struct(&ext2_mounted, new_dir_inode, &dir_inode);
+	if (ext2_write_inode_contents(new_dir_inode, dir_inode.base.size, (const unsigned char *)new_entry, new_entry->entry_size) != new_entry->entry_size)
+		kernel_panic("couldn't write new directory entry", 0);
+
+	// Once that succeeded, we can finally remove the old link!
+	ext2_unlink(oldpath, old_dir_inode);
 	return 0;
 }
 

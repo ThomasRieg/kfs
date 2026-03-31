@@ -19,7 +19,7 @@
 typedef struct inode
 {
 	unsigned int inode_nr;
-	unsigned int file_offset;
+	unsigned long long int file_offset;
 } t_inode;
 
 int32_t inode_read(t_file *f, void *buf, size_t n);

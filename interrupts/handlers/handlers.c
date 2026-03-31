@@ -320,7 +320,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			print_debug("while in userspace\n");
 		print_debug("while %s %s page at virtual address: %p\n", regs->err_code & 2 ? "writing" : "reading", regs->err_code & 1 ? "present" : "non-present", virtual_address);
 		print_debug("by pid %u\n", g_curr_task->task_id);
-		//print_interrupt_frame(regs);
+		print_interrupt_frame(regs);
 		//stack_trace_ebp(32, regs->ebp);
 		enqueue_sig(g_curr_task, SIGSEGV);
 		return;

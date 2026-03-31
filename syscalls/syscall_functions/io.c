@@ -15,6 +15,7 @@
 #define AT_SYMLINK_NOFOLLOW 0x100
 #define AT_EMPTY_PATH 0x1000
 #define AT_FDCWD -100
+#define AT_REMOVEDIR 0x200
 
 struct statx_timestamp
 {
@@ -242,10 +243,11 @@ uint32_t syscall_unlink(t_interrupt_data *regs)
 uint32_t syscall_mkdir(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;
+	const unsigned int mode = regs->ecx;
 	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	print_trace("mkdir: %s\n", path);
-	return ext2_mkdir(path, g_curr_task->cwd_inode_nr);
+	print_trace("mkdir: %s %u\n", path, mode);
+	return ext2_mkdir(path, mode, g_curr_task->cwd_inode_nr);
 }
 
 uint32_t syscall_rmdir(t_interrupt_data *regs)
@@ -309,7 +311,7 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 	int dirfd = regs->ebx;
 	const char *path = (char *)regs->ecx;
 	int open_flag = regs->edx;
-	unsigned int mode = regs->edi;
+	unsigned int mode = regs->esi;
 	print_trace("openat: %u %s %u %u\n", dirfd, path, open_flag, mode);
 	if (!path)
 		return -EFAULT;
@@ -326,6 +328,47 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 		dir_inode = ((t_inode *)file->priv)->inode_nr;
 	}
 	return do_open(path, dir_inode, open_flag, mode);
+}
+
+uint32_t syscall_unlinkat(t_interrupt_data *regs)
+{
+	int dirfd = regs->ebx;
+	const char *path = (char *)regs->ecx;
+	int flags = regs->edx;
+	print_trace("unlinkat: %u %s %u\n", dirfd, path, flags);
+	if (!path || !user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	unsigned int dir_inode;
+	if (dirfd == AT_FDCWD)
+		dir_inode = g_curr_task->cwd_inode_nr;
+	else
+	{
+		t_file *file = get_file_from_fd(dirfd);
+		if (!file || file->type != FILE_REGULAR)
+			return -EBADF;
+		dir_inode = ((t_inode *)file->priv)->inode_nr;
+	}
+	return ext2_unlink(path, dir_inode);
+}
+
+uint32_t syscall_renameat(t_interrupt_data *regs)
+{
+	int olddirfd = regs->ebx;
+	const char *oldpath = (char *)regs->ecx;
+	int newdirfd = regs->edx;
+	const char *newpath = (char *)regs->esi;
+	print_trace("renameat: %u %s %u %s\n", olddirfd, oldpath, newdirfd, newpath);
+	if (!oldpath || !user_str_ok(oldpath, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	if (!newpath || !user_str_ok(oldpath, false, 20000, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	t_file *olddirf = get_file_from_fd(olddirfd);
+	t_file *newdirf = get_file_from_fd(olddirfd);
+	if (!olddirf || !newdirf || olddirf->type != FILE_REGULAR || newdirf->type != FILE_REGULAR)
+		return -EBADF;
+	unsigned int old_dir_inode = ((t_inode *)olddirf->priv)->inode_nr;
+	unsigned int new_dir_inode = ((t_inode *)newdirf->priv)->inode_nr;
+	return ext2_rename(old_dir_inode, oldpath, new_dir_inode, newpath);
 }
 
 uint32_t syscall_dup2(t_interrupt_data *regs)
@@ -393,6 +436,9 @@ uint32_t syscall_close(t_interrupt_data *regs)
 }
 
 #define F_DUPFD 0
+#define F_SETFD 2
+#define F_GETFL 3
+#define F_SETFL 4
 #define F_DUPFD_CLOEXEC 1030
 uint32_t syscall_fcntl64(t_interrupt_data *regs)
 {
@@ -416,6 +462,14 @@ uint32_t syscall_fcntl64(t_interrupt_data *regs)
 		g_curr_task->open_files[ge_fd] = file;
 		file->refcnt += 1;
 		return ge_fd;
+	} else if (cmd == F_GETFL) {
+		return file->flags;
+	} else if (cmd == F_SETFL) {
+		file->flags = regs->edx;
+		return 0;
+	} else if (cmd == F_SETFD) {
+		// TODO: handle CLOEXEC
+		return 0;
 	}
 	return -EINVAL;
 }
@@ -687,4 +741,26 @@ uint32_t syscall_statfs64(t_interrupt_data *regs) {
 	};
 
 	return 0;
+}
+
+uint32_t syscall_fsync(__attribute__((unused)) t_interrupt_data *regs) {
+	// current implementation always writes to disk
+	return 0;
+}
+
+uint32_t syscall_llseek(t_interrupt_data *regs) {
+	unsigned int fd = regs->ebx;
+	unsigned long long offset = ((unsigned long long)regs->ecx << 32) | regs->edx;
+	unsigned long long *result = (unsigned long long *)regs->esi;
+	unsigned int whence = regs->edi;
+	print_trace("llseek: %u %llu %p %u", fd, offset, result, whence);
+
+	if (result && !user_range_ok(result, sizeof(*result), true, &g_curr_task->proc_memory))
+		return (-EFAULT);
+	t_file *file = get_file_from_fd(fd);
+	if (!file)
+		return (-EBADF);
+	if (!file->ops->llseek)
+		return (-EINVAL);
+	return file->ops->llseek(file, offset, result, whence);
 }

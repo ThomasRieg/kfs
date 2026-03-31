@@ -34,6 +34,10 @@ enum e_flags
 	O_CLOEXEC = 524288,
 };
 
+# define SEEK_SET       0       /* Seek from beginning of file.  */
+# define SEEK_CUR       1       /* Seek from current position.  */
+# define SEEK_END       2       /* Seek from end of file.  */
+
 enum open_file_type
 {
 	FILE_REGULAR,
@@ -49,6 +53,7 @@ typedef int32_t (*write_fn)(t_file *f, const void *buf, uint32_t n);
 typedef int32_t (*close_fn)(t_file *f);
 typedef int32_t (*ioctl_fn)(t_file *f, unsigned int op, unsigned int val);
 typedef int32_t (*poll_fn)(t_file *file, struct pollfd *fd, int timeout);
+typedef int32_t (*llseek_fn)(t_file *file, unsigned long long int offset, unsigned long long int *result, unsigned int whence);
 
 typedef struct s_file_ops
 {
@@ -57,6 +62,7 @@ typedef struct s_file_ops
 	close_fn close; // only called when fd refcnt becomes 0 in syscall_close
 	ioctl_fn ioctl;
 	poll_fn poll;
+	llseek_fn llseek;
 	// later: mmap, seek, readdir, fstat...
 } t_file_ops;
 

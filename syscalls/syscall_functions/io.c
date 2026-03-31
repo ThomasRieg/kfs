@@ -753,7 +753,7 @@ uint32_t syscall_llseek(t_interrupt_data *regs) {
 	unsigned long long offset = ((unsigned long long)regs->ecx << 32) | regs->edx;
 	unsigned long long *result = (unsigned long long *)regs->esi;
 	unsigned int whence = regs->edi;
-	print_trace("llseek: %u %llu %p %u", fd, offset, result, whence);
+	print_trace("llseek: %u %u %p %u\n", fd, (unsigned int)offset, result, whence);
 
 	if (result && !user_range_ok(result, sizeof(*result), true, &g_curr_task->proc_memory))
 		return (-EFAULT);

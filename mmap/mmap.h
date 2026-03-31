@@ -76,4 +76,5 @@ SIGSEGV
 SIGBUS
 	Attempted access to a portion of the buffer that does not correspond to the file (for example, beyond the end of the file, including the case where another process has truncated the file).*/
 
+t_vma *vma_for_address(t_mm *proc_memory, uintptr_t va);
 #endif

@@ -279,9 +279,19 @@ uint32_t syscall_set_tid_address(t_interrupt_data *regs)
 	return (g_curr_task->task_id);
 }
 
-uint32_t syscall_mprotect(__attribute__((unused)) t_interrupt_data *regs)
+uint32_t syscall_mprotect(t_interrupt_data *regs)
 {
-	// lie otherwise glibc won't proceed :)
+	uintptr_t addr = (uintptr_t)regs->ebx;
+	unsigned int len = regs->ecx;
+	int prot = regs->edx;
+	print_trace("mprotect: %p %u %d\n", addr, len, prot);
+	t_vma *vma = vma_for_address(&g_curr_task->proc_memory, addr);
+	if (!vma)
+		return -ENOMEM;
+	// TODO: split the VMAs and update protection of current page table entries
+	if ((uintptr_t)vma->end == addr + len) {
+		vma->prots = prot;
+	}
 	return (0);
 }
 

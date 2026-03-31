@@ -79,7 +79,7 @@ void *mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t of
 	if (!!(flags & MAP_PRIVATE) == !!(flags & MAP_SHARED))
 		return ((void *)-EINVAL); // both 0 or both 1
 	if (!length)
-		return ((void *)-EINVAL); // 0 lenght mapping not allowed
+		return ((void *)-EINVAL); // 0 length mapping not allowed
 	if ((uintptr_t)addr >= KERNEL_VIRT_BASE)
 		return ((void *)-EFAULT);
 	if (length >= (KERNEL_VIRT_BASE - USERLAND_HEAP_START_VA))

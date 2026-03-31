@@ -236,7 +236,7 @@ uint32_t syscall_unlink(t_interrupt_data *regs)
 	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("unlink: %s\n", path);
-	return unlink(path, g_curr_task->cwd_inode_nr);
+	return ext2_unlink(path, g_curr_task->cwd_inode_nr);
 }
 
 uint32_t syscall_mkdir(t_interrupt_data *regs)
@@ -245,7 +245,7 @@ uint32_t syscall_mkdir(t_interrupt_data *regs)
 	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("mkdir: %s\n", path);
-	return mkdir(path, g_curr_task->cwd_inode_nr);
+	return ext2_mkdir(path, g_curr_task->cwd_inode_nr);
 }
 
 uint32_t syscall_rmdir(t_interrupt_data *regs)
@@ -255,7 +255,7 @@ uint32_t syscall_rmdir(t_interrupt_data *regs)
 		return (-EFAULT);
 	print_trace("rmdir: %s\n", path);
 	// TODO: check that it's a directory and that it's empty
-	return unlink(path, g_curr_task->cwd_inode_nr);
+	return ext2_unlink(path, g_curr_task->cwd_inode_nr);
 }
 
 uint32_t do_open(const char *path, unsigned int dir_inode, int flags, unsigned int mode)
@@ -638,7 +638,7 @@ uint32_t syscall_getdents64(t_interrupt_data *regs)
 	if (!file)
 		return -EBADF;
 
-	int written = getdents(((t_inode *)file->priv)->inode_nr, ent, count, ((t_inode *)file->priv)->file_offset);
+	int written = ext2_getdents(((t_inode *)file->priv)->inode_nr, ent, count, ((t_inode *)file->priv)->file_offset);
 	if (written > 0)
 		((t_inode *)file->priv)->file_offset += written;
 	return written;
@@ -650,7 +650,7 @@ uint32_t syscall_getcwd(t_interrupt_data *regs) {
 	print_trace("getcwd: %p %u\n", buf, size);
 	if (!user_range_ok(buf, size, true, &g_curr_task->proc_memory))
 		return (-EFAULT);
-	return getdirname(g_curr_task->cwd_inode_nr, buf, size);
+	return ext2_getdirname(g_curr_task->cwd_inode_nr, buf, size);
 }
 
 #define EXT2_SUPER_MAGIC 0xef53

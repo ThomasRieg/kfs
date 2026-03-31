@@ -418,7 +418,7 @@ unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr)
 	return inode_nr;
 }
 
-int unlink(const char *path, unsigned int relative_dir_inode_nr)
+int ext2_unlink(const char *path, unsigned int relative_dir_inode_nr)
 {
 	if (!ext2_mounted.mounted)
 		return -EBADF;
@@ -666,18 +666,27 @@ static enum norm_direnttype ext2_direnttype_to_norm(enum ext2_direnttype type)
 	}
 }
 
-int mkdir(const char *path, unsigned int relative_dir_inode_nr) {
-	const char *slash = strrchr(path, '/');
+int ext2_mkdir(const char *path, unsigned int relative_dir_inode_nr) {
+	char *dup_path = strndup(path, strlen(path));
+	char *slash = strrchr(dup_path, '/');
+	if (slash && !slash[1]) {
+		*slash = 0;
+		slash = strrchr(dup_path, '/');
+	}
 	unsigned int parent_inode_nr;
+	char *name;
 	if (slash) {
-		char *parent_path = strndup(path, slash - path);
-		parent_inode_nr = ext2_path_to_inode(&ext2_mounted, parent_path, relative_dir_inode_nr);
-		path = slash + 1;
-		vfree(parent_path);
-	} else
+		*slash = 0;
+		parent_inode_nr = ext2_path_to_inode(&ext2_mounted, dup_path, relative_dir_inode_nr);
+		name = slash + 1;
+	} else {
 		parent_inode_nr = relative_dir_inode_nr;
-	if (!parent_inode_nr)
+		name = dup_path;
+	}
+	if (!parent_inode_nr) {
+		vfree(dup_path);
 		return -ENOENT;
+	}
 	struct ext2_inode_extended dir_inode;
 	struct timespec ts = rtc_get_time();
 	struct ext2_inode_extended new_inode = {.base = {
@@ -689,23 +698,40 @@ int mkdir(const char *path, unsigned int relative_dir_inode_nr) {
 	}};
 	char entry_buf[300] = {0};
 	struct ext2_direntry *new_entry = (struct ext2_direntry *)&entry_buf[0];
-	new_entry->name_length = strlen(path);
-	memcpy(new_entry->name, path, new_entry->name_length);
-	new_entry->inode = ext2_allocate_inode(&ext2_mounted);
+	new_entry->name_length = strlen(name);
+	memcpy(new_entry->name, name, new_entry->name_length);
+	vfree((char *)dup_path);
+	unsigned int new_dir_inode = ext2_allocate_inode(&ext2_mounted);
+	new_entry->inode = new_dir_inode;
 	new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
 	new_entry->type_indicator = EXT2_DIR;
+
+	ext2_write_inode_struct(&ext2_mounted, new_entry->inode, &new_inode);
 
 	// TODO: directory size does not reflect how much is actually used, don't waste space
 	// and check for empty records.
 	ext2_read_inode_struct(&ext2_mounted, parent_inode_nr, &dir_inode);
 	if (ext2_write_inode_contents(parent_inode_nr, dir_inode.base.size, (const unsigned char *) new_entry, new_entry->entry_size) != new_entry->entry_size)
 		kernel_panic("couldn't write new directory entry", 0);
-	ext2_write_inode_struct(&ext2_mounted, new_entry->inode, &new_inode);
-	// TODO: create . and .. entries in the newly created directory
+
+	new_entry->name_length = 1;
+	memcpy(new_entry->name, ".", 1);
+	new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
+	new_entry->type_indicator = EXT2_DIR;
+
+	new_entry = (struct ext2_direntry *)((char *)new_entry + new_entry->entry_size);
+	new_entry->name_length = 2;
+	memcpy(new_entry->name, "..", 2);
+	new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
+	new_entry->type_indicator = EXT2_DIR;
+	new_entry->inode = parent_inode_nr;
+	int to_write = (char *)new_entry + new_entry->entry_size - entry_buf;
+	if (ext2_write_inode_contents(new_dir_inode, 0, (const unsigned char *) entry_buf, to_write) != to_write)
+		kernel_panic("couldn't write new directory entry", 0);
 	return 0;
 }
 
-int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset)
+int ext2_getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset)
 {
 	if (!ext2_mounted.mounted)
 		return -EBADF;
@@ -747,8 +773,7 @@ int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int cou
 	return written_count;
 }
 
-// TODO: this currently writes path in reverse order (better than nothing I guess)
-int getdirname(unsigned int inode_nr, char *buf, unsigned int size)
+int ext2_getdirname(unsigned int inode_nr, char *buf, unsigned int size)
 {
 	if (!ext2_mounted.mounted)
 		return -EBADF;

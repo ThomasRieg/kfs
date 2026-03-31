@@ -21,7 +21,7 @@ int ext2_write_inode_contents(unsigned int inode_nr, unsigned int offset, const 
 struct VecU8 read_full_file(const char *path);
 unsigned int path_to_inode(const char *path, unsigned int relative_dir_inode_nr);
 bool stat_inode(unsigned int inode_nr, struct stat *out);
-int getdirname(unsigned int inode_nr, char *buf, unsigned int size);
-int getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset);
-int unlink(const char *path, unsigned int relative_dir_inode_nr);
-int mkdir(const char *path, unsigned int relative_dir_inode_nr);
+int ext2_getdirname(unsigned int inode_nr, char *buf, unsigned int size);
+int ext2_getdents(unsigned int inode_nr, struct linux_dirent64 *ent, unsigned int count, unsigned int offset);
+int ext2_unlink(const char *path, unsigned int relative_dir_inode_nr);
+int ext2_mkdir(const char *path, unsigned int relative_dir_inode_nr);

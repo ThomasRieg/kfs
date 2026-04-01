@@ -131,7 +131,7 @@ typedef struct task
 	uint8_t k_stack[TASK_KERNEL_SIZE]; // stack tss will returns to on interrupt
 	t_sigaction_k sigact[NSIG];		   // index by sig (0 unused), memset to 0 creates correct behavior (handler SIG_DFL, mask and flag 0)
 	struct task *next;				   // circular linked list, NULL means task not in run queue
-	t_mm proc_memory;
+	t_mm *proc_memory;
 	t_waitq_node wq_node; // used when sleeping
 	t_waitq *sleep_q;	  // which queue we’re in (for removal)
 	t_waitq wait_child;	  // waitq owned by this struct,

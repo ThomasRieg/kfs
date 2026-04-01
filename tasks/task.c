@@ -237,9 +237,10 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	waitq_init(&task->wait_child);
 	if (!task->pd)
 		return (false);
-	task->proc_memory.heap_current = 0; // temporary
-	task->proc_memory.user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory);
-	if (task->proc_memory.user_stack_bot == MAP_FAILED)
+	task->proc_memory = vcalloc(1, sizeof(*task->proc_memory));
+	task->proc_memory->heap_current = 0; // temporary
+	task->proc_memory->user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, task->proc_memory);
+	if (task->proc_memory->user_stack_bot == MAP_FAILED)
 	{
 		pmm_free_frame(task->pd);
 		return (false);
@@ -252,7 +253,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 	task->next_all_task = task;
 	write_cr3(task->pd);
 	map_signal_trampoline();
-	task->proc_memory.user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
+	task->proc_memory->user_stack_top = (virt_ptr)((uintptr_t)task->proc_memory->user_stack_bot + TASK_STACK_SIZE);
 	{
 		struct elf_program_header *base = (struct elf_program_header *)(binary->data + header->program_hdrs_offset);
 		for (unsigned short i = 0; i < header->program_header_count; i++)
@@ -263,18 +264,18 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 				unsigned int to_add = base[i].virt_addr - (unsigned int)virt;
 
 				void *end = page_align_up((char *)virt + base[i].mem_size + to_add);
-				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &task->proc_memory) == MAP_FAILED)
+				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, task->proc_memory) == MAP_FAILED)
 				{
 					kernel_panic("couldn't map for first process", 0);
 				}
 				memcpy((void *)base[i].virt_addr, binary->data + base[i].file_offset, base[i].file_size);
-				if ((unsigned int)task->proc_memory.heap_current < (unsigned int)end)
-					task->proc_memory.heap_current = end;
+				if ((unsigned int)task->proc_memory->heap_current < (unsigned int)end)
+					task->proc_memory->heap_current = end;
 			}
 		}
 	}
 	struct process_strings empty_strs = {.string_count = 0};
-	unsigned int stacktop = build_user_stack((uintptr_t)(task->proc_memory.user_stack_top), empty_strs, empty_strs);
+	unsigned int stacktop = build_user_stack((uintptr_t)(task->proc_memory->user_stack_top), empty_strs, empty_strs);
 	build_initial_user_frame(task, header->entrypoint, stacktop);
 	task->status = STATUS_RUNNABLE;
 	task->cwd_inode_nr = 2;
@@ -456,8 +457,8 @@ static void free_vma_range_pages(virt_ptr start, virt_ptr end)
 
 		touched_pde[pdi] = 1;
 
-		// if (task && task->proc_memory.resident_pages)
-		//     task->proc_memory.resident_pages--;
+		// if (task && task->proc_memory->resident_pages)
+		//     task->proc_memory->resident_pages--;
 	}
 
 	volatile uint32_t *pd = (volatile uint32_t *)PD_VA;
@@ -558,14 +559,15 @@ void cleanup_task(t_task *task)
 	// disable_interrupts();
 	print_trace("started cleanup for task id %u\n", task->task_id);
 	if (task != g_curr_task)
-		free_vmas(&task->proc_memory);
+		free_vmas(task->proc_memory);
 	else
 	{
 		write_cr3(task->pd);
-		free_vmas(&task->proc_memory);
+		free_vmas(task->proc_memory);
 		write_cr3(g_curr_task->pd);
 	}
-	task->proc_memory.vma_list = NULL;
+	task->proc_memory->vma_list = NULL;
+	vfree(task->proc_memory);
 	for (uint32_t i = 0; i < MAX_OPEN_FILES; i++)
 	{
 		if (task->open_files[i])

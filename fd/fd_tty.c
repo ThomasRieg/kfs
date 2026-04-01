@@ -165,14 +165,14 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 		*(int *)val = KB_101;
 		return 0;
 	case KDGKBENT:
-		if (!user_range_ok((virt_ptr)val, sizeof(struct kbentry), true, &g_curr_task->proc_memory))
+		if (!user_range_ok((virt_ptr)val, sizeof(struct kbentry), true, g_curr_task->proc_memory))
 			return -EFAULT;
 		struct kbentry *kbe = (struct kbentry *)val;
 		print_trace("kdgkbent: tbl %u index %u\n", kbe->kb_table, kbe->kb_index);
 		kbe->kb_value = 0;
 		return 0;
 	case TIOCGWINSZ:
-		if (!user_range_ok((virt_ptr)val, sizeof(struct winsize), true, &g_curr_task->proc_memory))
+		if (!user_range_ok((virt_ptr)val, sizeof(struct winsize), true, g_curr_task->proc_memory))
 			return -EFAULT;
 		struct winsize *ws = (struct winsize *)val;
 		ws->ws_row = 25;
@@ -181,13 +181,13 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 		ws->ws_ypixel = 0;
 		return 0;
 	case TIOCGPGRP:
-		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), true, &g_curr_task->proc_memory))
+		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), true, g_curr_task->proc_memory))
 			return -EFAULT;
 		*(unsigned int *)val = tty->fg_pgid;
 		print_trace("TIOCGPGRP -> %u\n", tty->fg_pgid);
 		return 0;
 	case TIOCSPGRP:
-		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), false, &g_curr_task->proc_memory))
+		if (!user_range_ok((virt_ptr)val, sizeof(unsigned int), false, g_curr_task->proc_memory))
 			return -EFAULT;
 		uint32_t new = *(uint32_t *)val;
 		print_trace("TIOCSPGRP <- %u\n", new);
@@ -196,14 +196,14 @@ int32_t tty_ioctl(t_file *f, unsigned int op, unsigned int val)
 		tty->fg_pgid = new;
 		return 0;
 	case TCGETS:
-		if (!user_range_ok((virt_ptr)val, sizeof(struct termios), true, &g_curr_task->proc_memory))
+		if (!user_range_ok((virt_ptr)val, sizeof(struct termios), true, g_curr_task->proc_memory))
 			return -EFAULT;
 		*(struct termios *)val = tty->termios;
 		return 0;
 	case TCSETS:
 	case TCSETSW: // drain output before applying
 	case TCSETSF: // drain output before applying, flush input
-		if (!user_range_ok((virt_ptr)val, sizeof(struct termios), false, &g_curr_task->proc_memory))
+		if (!user_range_ok((virt_ptr)val, sizeof(struct termios), false, g_curr_task->proc_memory))
 			return -EFAULT;
 		tty->termios = *(struct termios *)val;
 		return 0;

@@ -26,10 +26,10 @@ uint32_t syscall_rt_sigaction(t_interrupt_data *r)
     uint32_t sigsetsize = r->esi;
     print_trace("rt_sigaction %u %x %x\n", sig, act_u, oact_u);
 
-    if (act_u && !user_range_ok((virt_ptr)act_u, sizeof(*act_u), false, &g_curr_task->proc_memory))
+    if (act_u && !user_range_ok((virt_ptr)act_u, sizeof(*act_u), false, g_curr_task->proc_memory))
         return (uint32_t)-EFAULT;
 
-    if (oact_u && !user_range_ok((virt_ptr)oact_u, sizeof(*oact_u), true, &g_curr_task->proc_memory))
+    if (oact_u && !user_range_ok((virt_ptr)oact_u, sizeof(*oact_u), true, g_curr_task->proc_memory))
         return (uint32_t)-EFAULT;
 
     if (!sig_valid(sig)) return (-EINVAL);
@@ -81,7 +81,7 @@ uint32_t syscall_sigreturn(t_interrupt_data *f)
 {
     uint32_t usp = f->useresp;
     print_trace("sigreturn from esp %u\n", usp);
-    if (!user_range_ok((virt_ptr)usp, sizeof(t_sigframe32), false, &g_curr_task->proc_memory))
+    if (!user_range_ok((virt_ptr)usp, sizeof(t_sigframe32), false, g_curr_task->proc_memory))
         return (-EFAULT);
 
     t_sigframe32 *uf = (t_sigframe32 *)((uintptr_t)usp - 4);
@@ -233,9 +233,9 @@ uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs)
     uint32_t *old_u   = (uint32_t *)(uintptr_t)regs->edx;  // can be NULL
     uint32_t sigsetsize = (uint32_t)regs->esi;
 
-    if (old_u && !user_range_ok((virt_ptr)old_u, sizeof(uint32_t), true, &g_curr_task->proc_memory))
+    if (old_u && !user_range_ok((virt_ptr)old_u, sizeof(uint32_t), true, g_curr_task->proc_memory))
         return (uint32_t)(-EFAULT);
-    if (set_u && !user_range_ok((virt_ptr)set_u, sizeof(uint32_t), false, &g_curr_task->proc_memory))
+    if (set_u && !user_range_ok((virt_ptr)set_u, sizeof(uint32_t), false, g_curr_task->proc_memory))
         return (uint32_t)(-EFAULT);
 
     print_trace("rt_sigprocmask new x%x old x%x how %d size %u\n", set_u ? *set_u : 0, old_u ? *old_u : 0, how, sigsetsize);

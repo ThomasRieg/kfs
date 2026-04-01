@@ -84,7 +84,7 @@ uint32_t do_socket(int domain, int type, int proto, int flags)
 // TODO implement
 uint32_t do_bind(int fd, const struct sockaddr_un *uaddr, uint32_t addrlen)
 {
-	/*if (!user_range_ok(uaddr, addrlen, 0, &g_curr_task->proc_memory))
+	/*if (!user_range_ok(uaddr, addrlen, 0, g_curr_task->proc_memory))
 		return (-EFAULT);
 	if (addrlen < sizeof(uint16_t))
 		return (-EINVAL);
@@ -128,7 +128,7 @@ uint32_t do_listen(int fd, int backlog)
 
 uint32_t do_connect(int fd, const struct sockaddr_un *uaddr, uint32_t addrlen)
 {
-	if (!user_range_ok((const virt_ptr)uaddr, addrlen, 0, &g_curr_task->proc_memory))
+	if (!user_range_ok((const virt_ptr)uaddr, addrlen, 0, g_curr_task->proc_memory))
 		return (-EFAULT);
 
 	t_unix_socket *cl = fd_get_unix_socket(fd);
@@ -201,7 +201,7 @@ uint32_t do_socketpair(int domain, int type, int proto, int *sv)
 	if (type != SOCK_STREAM)
 		return (-EOPNOTSUPP);
 
-	if (!user_range_ok(sv, 2 * sizeof(int), 1, &g_curr_task->proc_memory))
+	if (!user_range_ok(sv, 2 * sizeof(int), 1, g_curr_task->proc_memory))
 		return (-EFAULT);
 
 	// find 2 free fds
@@ -331,37 +331,37 @@ uint32_t syscall_socketcall(t_interrupt_data *regs)
 	switch (call)
 	{
 	case SYS_SOCKET:
-		if (!user_range_ok(args, 4 * sizeof(args), false, &g_curr_task->proc_memory))
+		if (!user_range_ok(args, 4 * sizeof(args), false, g_curr_task->proc_memory))
 			return (-ERANGE);
 		err = do_socket(args[0], args[1], args[2], args[3]);
 		break;
 	case SYS_BIND:
-		if (!user_range_ok(args, 3 * sizeof(args), false, &g_curr_task->proc_memory))
+		if (!user_range_ok(args, 3 * sizeof(args), false, g_curr_task->proc_memory))
 			return (-ERANGE);
 		err = do_bind(args[0], (const struct sockaddr_un *)args[1], args[2]);
 		break;
 	case SYS_CONNECT:
-		if (!user_range_ok(args, 3 * sizeof(args), false, &g_curr_task->proc_memory))
+		if (!user_range_ok(args, 3 * sizeof(args), false, g_curr_task->proc_memory))
 			return (-ERANGE);
 		err = do_connect(args[0], (const struct sockaddr_un *)args[1], args[2]);
 		break;
 	case SYS_LISTEN:
-		if (!user_range_ok(args, 2 * sizeof(args), false, &g_curr_task->proc_memory))
+		if (!user_range_ok(args, 2 * sizeof(args), false, g_curr_task->proc_memory))
 			return (-ERANGE);
 		err = do_listen(args[0], args[1]);
 		break;
 	case SYS_ACCEPT:
-		if (!user_range_ok(args, 2 * sizeof(args), false, &g_curr_task->proc_memory))
+		if (!user_range_ok(args, 2 * sizeof(args), false, g_curr_task->proc_memory))
 			return (-ERANGE);
 		err = do_accept(args[0], args[1]);
 		break;
 	case SYS_SOCKETPAIR:
-		if (!user_range_ok(args, 4 * sizeof(args), false, &g_curr_task->proc_memory))
+		if (!user_range_ok(args, 4 * sizeof(args), false, g_curr_task->proc_memory))
 			return (-ERANGE);
 		err = do_socketpair(args[0], args[1], args[2], (int *)args[3]);
 		break;
 	case SYS_ACCEPT4:
-		if (!user_range_ok(args, 2 * sizeof(args), false, &g_curr_task->proc_memory))
+		if (!user_range_ok(args, 2 * sizeof(args), false, g_curr_task->proc_memory))
 			return (-ERANGE);
 		err = do_accept(args[0], args[1]);
 		break;

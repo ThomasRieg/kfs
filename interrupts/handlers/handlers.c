@@ -195,7 +195,7 @@ void page_fault_handler(t_interrupt_data *regs)
 		print_interrupt_frame(regs);
 		kernel_panic("page faulted while g_curr_task was NULL", regs);
 	}
-	t_vma *vma = vma_for_address(&g_curr_task->proc_memory, virtual_address);
+	t_vma *vma = vma_for_address(g_curr_task->proc_memory, virtual_address);
 	uint32_t *pte = get_pte((virt_ptr)virtual_address);
 	uint32_t *pde = get_pde((virt_ptr)virtual_address);
 	if (vma)
@@ -215,7 +215,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			invalidate_cache(page_table);
 			memset(page_table, 0, PAGE_SIZE);
 			pte = get_pte((virt_ptr)virtual_address); // pte was null, because no pde, now we need to set it before the rest of the code
-			g_curr_task->proc_memory.physical_pages++;
+			g_curr_task->proc_memory->physical_pages++;
 		}
 	}
 	if (vma && (vma->flags & MAP_SHARED))
@@ -253,7 +253,7 @@ void page_fault_handler(t_interrupt_data *regs)
 				map_page(frame, pte, get_vma_flags(vma));
 				invalidate_cache(virtual_address_page_start);
 			}
-			g_curr_task->proc_memory.physical_pages++;
+			g_curr_task->proc_memory->physical_pages++;
 		}
 		else
 		{
@@ -285,7 +285,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			map_page(frame, pte, get_vma_flags(vma));
 			invalidate_cache(virtual_address_page_start);
 		}
-		g_curr_task->proc_memory.physical_pages++;
+		g_curr_task->proc_memory->physical_pages++;
 	}
 	else if (vma && (pte && (*pte & PTE_P) && (*pte & PTE_COW)) && (regs->err_code & 2) && (vma->prots & PROT_WRITE))
 	{
@@ -307,7 +307,7 @@ void page_fault_handler(t_interrupt_data *regs)
 			map_page(new_frame, pte, get_vma_flags(vma));
 			invalidate_cache(virtual_address_page_start);
 			memcpy(virtual_address_page_start, page_buff, PAGE_SIZE);
-			g_curr_task->proc_memory.physical_pages++;
+			g_curr_task->proc_memory->physical_pages++;
 			pmm_free_frame(frame); // will just decrease the refcount here
 		}
 		else

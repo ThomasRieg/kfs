@@ -36,7 +36,7 @@ void print_cpu_state(t_interrupt_data *regs)
 
 void print_vmas(t_task *task)
 {
-	t_vma *curr = task->proc_memory.vma_list;
+	t_vma *curr = task->proc_memory->vma_list;
 	printk("listing task's VMAs:\n");
 	while (curr)
 	{

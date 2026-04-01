@@ -26,9 +26,9 @@ uint32_t syscall_nanosleep(t_interrupt_data *regs)
 {
 	const struct timespec *req = (struct timespec *)regs->ebx;
 	struct timespec *rem = (struct timespec *)regs->ecx;
-	if (!user_range_ok((virt_ptr)req, sizeof(struct timespec), false, &g_curr_task->proc_memory))
+	if (!user_range_ok((virt_ptr)req, sizeof(struct timespec), false, g_curr_task->proc_memory))
 		return (-EFAULT);
-	if (rem && !user_range_ok((virt_ptr)rem, sizeof(struct timespec), true, &g_curr_task->proc_memory))
+	if (rem && !user_range_ok((virt_ptr)rem, sizeof(struct timespec), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	if ((int)req->tv_sec < 0)
 		return (-EINVAL);
@@ -173,7 +173,7 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 {
 	struct pollfd *fds = (struct pollfd *)regs->ebx;
 	int nfds = regs->ecx;
-	if (!user_range_ok((virt_ptr)fds, sizeof(struct pollfd) * nfds, true, &g_curr_task->proc_memory))
+	if (!user_range_ok((virt_ptr)fds, sizeof(struct pollfd) * nfds, true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	// void *tmo_p = (void *)regs->edx;
 	// void *sigmask = (void *)regs->esi;
@@ -190,19 +190,19 @@ uint32_t syscall_poll(t_interrupt_data *regs)
 uint32_t syscall_brk(t_interrupt_data *regs)
 {
 	print_trace("brk %x\n", regs->ebx);
-	unsigned int old_brk = (unsigned int)g_curr_task->proc_memory.heap_current;
+	unsigned int old_brk = (unsigned int)g_curr_task->proc_memory->heap_current;
 	if (regs->ebx == 0)
 		return old_brk;
 	unsigned int new_brk = (unsigned int)page_align_up((void *)regs->ebx);
 	if (new_brk < old_brk)
 		return -EINVAL; // TODO: support deallocation
 	unsigned int size = (unsigned int)page_align_up((void *)(new_brk - old_brk));
-	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED)
+	if (mmap((void *)old_brk, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, g_curr_task->proc_memory) == MAP_FAILED)
 	{
 		print_debug("couldn't allocate brk\n"); // debug because program gets -enomem anyway, that's the error report
 		return -ENOMEM;
 	}
-	g_curr_task->proc_memory.heap_current = (void *)new_brk;
+	g_curr_task->proc_memory->heap_current = (void *)new_brk;
 	return new_brk;
 }
 
@@ -220,7 +220,7 @@ uint32_t syscall_uname(t_interrupt_data *regs)
 {
 	// We be doppelgänging as Linux to get glibc to work :D
 	struct utsname *buf = (void *)regs->ebx;
-	if (!user_range_ok((virt_ptr)buf, sizeof(struct utsname), true, &g_curr_task->proc_memory))
+	if (!user_range_ok((virt_ptr)buf, sizeof(struct utsname), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	memcpy(buf->sysname, "Linux", 6);
 	memcpy(buf->nodename, "kfs", 4);
@@ -240,7 +240,7 @@ uint32_t syscall_mmap2(t_interrupt_data *regs)
 	unsigned int fd = regs->edi;
 	unsigned int offset = regs->ebp;
 	print_trace("mmap2: %x length=%u prot=%u flags=%u fd=%d offset=%u\n", addr, length, prot, flags, fd, offset);
-	return (unsigned int)mmap(addr, length, prot, flags, fd, offset, &g_curr_task->proc_memory);
+	return (unsigned int)mmap(addr, length, prot, flags, fd, offset, g_curr_task->proc_memory);
 }
 
 // 91
@@ -249,7 +249,7 @@ uint32_t syscall_munmap(t_interrupt_data *regs)
 	virt_ptr addr = (virt_ptr)regs->ebx;
 	unsigned int length = regs->ecx;
 	print_trace("munmap: %x length=%u\n", addr, length);
-	return munmap(&g_curr_task->proc_memory, addr, length);
+	return munmap(g_curr_task->proc_memory, addr, length);
 }
 
 uint32_t syscall_get_thread_area(t_interrupt_data *regs)
@@ -263,7 +263,7 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	// https://github.com/lattera/glibc/blob/895ef79e04a953cac1493863bcae29ad85657ee1/sysdeps/i386/nptl/tls.h#L217
 
 	struct user_desc *desc = (struct user_desc *)regs->ebx;
-	if (!user_range_ok((virt_ptr)desc, sizeof(struct user_desc), true, &g_curr_task->proc_memory))
+	if (!user_range_ok((virt_ptr)desc, sizeof(struct user_desc), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("set thread area base=%p\n", desc, desc->base_addr);
 
@@ -285,7 +285,7 @@ uint32_t syscall_mprotect(t_interrupt_data *regs)
 	unsigned int len = regs->ecx;
 	int prot = regs->edx;
 	print_trace("mprotect: %p %u %d\n", addr, len, prot);
-	t_vma *vma = vma_for_address(&g_curr_task->proc_memory, addr);
+	t_vma *vma = vma_for_address(g_curr_task->proc_memory, addr);
 	if (!vma)
 		return -ENOMEM;
 	// TODO: split the VMAs and update protection of current page table entries
@@ -426,7 +426,7 @@ uint32_t syscall_wait4(t_interrupt_data *regs)
 			// write status to user if requested
 			if (stat_uaddr)
 			{
-				if (!user_range_ok((virt_ptr)stat_uaddr, sizeof(uint32_t), true, &g_curr_task->proc_memory))
+				if (!user_range_ok((virt_ptr)stat_uaddr, sizeof(uint32_t), true, g_curr_task->proc_memory))
 					return (uint32_t)(-EFAULT);
 				print_debug("wait4 writes %u at %p\n", z->exit_code, stat_uaddr);
 				*(uint32_t *)(uintptr_t)stat_uaddr = z->exit_code;
@@ -471,8 +471,9 @@ static t_vma *dup_vma(t_vma *src)
 
 // returns 0 on success, or negative error code on error
 // sets new_mm->physical_pages = 0;
-static uint32_t copy_mm(t_mm *new_mm, t_mm *to_copy)
+static uint32_t copy_mm(t_mm **new_mmp, t_mm *to_copy)
 {
+	t_mm *new_mm = *new_mmp = vcalloc(1, sizeof(**new_mmp));
 	if (!to_copy->vma_list)
 		return (0);
 	new_mm->vma_list = dup_vma(to_copy->vma_list);
@@ -645,18 +646,18 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->pd = copy_current_pd(); // shallow copy of the kernel address space
 	if (!task->pd)
 		return (vfree(task), -1);
-	uint32_t ret = copy_mm(&task->proc_memory, &g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
+	uint32_t ret = copy_mm(&task->proc_memory, g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
 	if (ret)
 		return (pmm_free_frame(task->pd), cleanup_task(task), ret); // enable interrupts
 	uint32_t saved_pd = g_curr_task->pd;
 	write_cr3(task->pd);
-	ret = copy_current_user_memory(saved_pd, &task->proc_memory); // deep copy of the process's address space
+	ret = copy_current_user_memory(saved_pd, task->proc_memory); // deep copy of the process's address space
 	write_cr3(saved_pd);
 	if (ret)
 		return (pmm_free_frame(task->pd), cleanup_task(task), ret);			// enable interrupts
-	task->proc_memory.heap_current = g_curr_task->proc_memory.heap_current; // temporary
-	task->proc_memory.user_stack_bot = g_curr_task->proc_memory.user_stack_bot;
-	task->proc_memory.user_stack_top = g_curr_task->proc_memory.user_stack_top;
+	task->proc_memory->heap_current = g_curr_task->proc_memory->heap_current; // temporary
+	task->proc_memory->user_stack_bot = g_curr_task->proc_memory->user_stack_bot;
+	task->proc_memory->user_stack_top = g_curr_task->proc_memory->user_stack_top;
 	memcpy(task->k_stack, g_curr_task->k_stack, sizeof(g_curr_task->k_stack)); // TODO copy only until k_esp to save instruction?
 	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
 	((t_interrupt_data *)task->k_esp)->eax = 0;
@@ -741,23 +742,24 @@ uint32_t syscall_clone(t_interrupt_data *regs)
 	}
 	if (flags & CLONE_VM) {
 		task->pd = g_curr_task->pd;
+		task->proc_memory = g_curr_task->proc_memory;
 	} else {
 		extern phys_ptr copy_current_pd();
 		task->pd = copy_current_pd(); // shallow copy of the kernel address space
 		if (!task->pd)
 			return (vfree(task), -1);
-		uint32_t ret = copy_mm(&task->proc_memory, &g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
+		uint32_t ret = copy_mm(&task->proc_memory, g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
 		if (ret)
 			return (pmm_free_frame(task->pd), cleanup_task(task), ret); // enable interrupts
 		uint32_t saved_pd = g_curr_task->pd;
 		write_cr3(task->pd);
-		ret = copy_current_user_memory(saved_pd, &task->proc_memory); // deep copy of the process's address space
+		ret = copy_current_user_memory(saved_pd, task->proc_memory); // deep copy of the process's address space
 		write_cr3(saved_pd);
 		if (ret)
 			return (pmm_free_frame(task->pd), cleanup_task(task), ret);			// enable interrupts
-		task->proc_memory.heap_current = g_curr_task->proc_memory.heap_current; // temporary
-		task->proc_memory.user_stack_bot = g_curr_task->proc_memory.user_stack_bot;
-		task->proc_memory.user_stack_top = g_curr_task->proc_memory.user_stack_top;
+		task->proc_memory->heap_current = g_curr_task->proc_memory->heap_current; // temporary
+		task->proc_memory->user_stack_bot = g_curr_task->proc_memory->user_stack_bot;
+		task->proc_memory->user_stack_top = g_curr_task->proc_memory->user_stack_top;
 	}
 	memcpy(task->k_stack, g_curr_task->k_stack, sizeof(g_curr_task->k_stack)); // TODO copy only until k_esp to save instruction?
 	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
@@ -856,15 +858,16 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	const char *const *argv = (const char *const *)regs->ecx;
 	const char *const *envp = (const char *const *)regs->edx;
 	print_trace("execve: %s %p %p\n", filename, argv, envp);
-	if (!user_str_ok(filename, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(filename, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
+	// TODO: check that argv and envp are valid in user address space before accessing the string pointers
 	if (argv)
 		for (uint32_t i = 0; argv[i]; i++)
-			if (!user_str_ok(argv[i], false, 2000000, &g_curr_task->proc_memory))
+			if (!user_str_ok(argv[i], false, 2000000, g_curr_task->proc_memory))
 				return (-EFAULT);
 	if (envp)
 		for (uint32_t i = 0; envp[i]; i++)
-			if (!user_str_ok(envp[i], false, 2000000, &g_curr_task->proc_memory))
+			if (!user_str_ok(envp[i], false, 2000000, g_curr_task->proc_memory))
 				return (-EFAULT);
 
 	extern struct VecU8 read_full_file(const char *path);
@@ -890,10 +893,10 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	struct process_strings argv_s = strings_collect(argv);
 	struct process_strings envp_s = strings_collect(envp);
 
-	free_vmas(&g_curr_task->proc_memory);
-	g_curr_task->proc_memory.vma_list = NULL;
+	free_vmas(g_curr_task->proc_memory);
+	g_curr_task->proc_memory->vma_list = NULL;
 
-	virt_ptr user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory);
+	virt_ptr user_stack_bot = mmap((void *)(TASK_STACK_TOP - TASK_STACK_SIZE), TASK_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, g_curr_task->proc_memory);
 	if (user_stack_bot == MAP_FAILED)
 	{
 		VecU8_destruct(&binary);
@@ -905,11 +908,11 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 	// g_curr_task->pending_signals = 0;
 	// g_curr_task->blocked_signals = 0;
 	g_curr_task->in_signal = false;			   // should be false anyway but this is important
-	g_curr_task->proc_memory.heap_current = 0; // temporary
-	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory.user_stack_bot + TASK_STACK_SIZE);
+	g_curr_task->proc_memory->heap_current = 0; // temporary
+	virt_ptr user_stack_top = (virt_ptr)((uintptr_t)g_curr_task->proc_memory->user_stack_bot + TASK_STACK_SIZE);
 
-	g_curr_task->proc_memory.user_stack_bot = user_stack_bot;
-	g_curr_task->proc_memory.user_stack_top = user_stack_top;
+	g_curr_task->proc_memory->user_stack_bot = user_stack_bot;
+	g_curr_task->proc_memory->user_stack_top = user_stack_top;
 	pmm_free_frame(g_curr_task->pd);
 	g_curr_task->pd = new_pd;
 	write_cr3(g_curr_task->pd);
@@ -933,15 +936,15 @@ uint32_t syscall_execve(t_interrupt_data *regs)
 				unsigned int to_add = base[i].virt_addr - (unsigned int)virt;
 
 				void *end = page_align_up((char *)virt + base[i].mem_size + to_add);
-				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, &g_curr_task->proc_memory) == MAP_FAILED)
+				if (mmap(virt, base[i].mem_size + to_add, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, -1, 0, g_curr_task->proc_memory) == MAP_FAILED)
 				{
 					pmm_free_frame(g_curr_task->pd);
 					VecU8_destruct(&binary);
 					return (-ENOMEM);
 				}
 				memcpy((void *)base[i].virt_addr, binary.data + base[i].file_offset, base[i].file_size);
-				if ((unsigned int)g_curr_task->proc_memory.heap_current < (unsigned int)end)
-					g_curr_task->proc_memory.heap_current = end;
+				if ((unsigned int)g_curr_task->proc_memory->heap_current < (unsigned int)end)
+					g_curr_task->proc_memory->heap_current = end;
 			}
 		}
 	}

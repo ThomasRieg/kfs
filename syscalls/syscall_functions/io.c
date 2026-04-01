@@ -122,9 +122,9 @@ uint32_t syscall_statx(t_interrupt_data *regs)
 	unsigned int flags = regs->edx;
 	unsigned int mask = regs->esi;
 	struct statx *buffer = (struct statx *)regs->edi;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
-	if (!user_range_ok(buffer, sizeof(*buffer), true, &g_curr_task->proc_memory))
+	if (!user_range_ok(buffer, sizeof(*buffer), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("statx at eip %p: %u %s %u %u %p\n", regs->eip, dirfd, path, flags, mask, buffer);
 	if (path[0] == 0)
@@ -173,9 +173,9 @@ uint32_t syscall_fstatat(t_interrupt_data *regs)
 	struct stat *buf = (struct stat *)regs->edx;
 	unsigned int flags = regs->esi;
 	print_trace("fstatat at eip %p: %u %s %p %u\n", regs->eip, dirfd, path, buf, flags);
-	if (!user_range_ok(buf, sizeof(*buf), true, &g_curr_task->proc_memory))
+	if (!user_range_ok(buf, sizeof(*buf), true, g_curr_task->proc_memory))
 		return (-EFAULT);
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	if (path[0] == 0 && !(flags & AT_EMPTY_PATH))
 		return (-ENOENT);
@@ -188,7 +188,7 @@ uint32_t syscall_fstat64(t_interrupt_data *regs)
 	int fd = regs->ebx;
 	struct stat64 *buf = (struct stat64 *)regs->ecx;
 	print_trace("fstat64: %u %p\n", fd, buf);
-	if (!user_range_ok(buf, sizeof(*buf), true, &g_curr_task->proc_memory))
+	if (!user_range_ok(buf, sizeof(*buf), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	t_file *file = get_file_from_fd(fd);
 	if (!file || file->type != FILE_REGULAR)
@@ -216,7 +216,7 @@ uint32_t syscall_readlink(t_interrupt_data *regs)
 	const char *path = (char *)regs->ebx;
 	char *buf = (char *)regs->ecx;
 	unsigned int buf_size = regs->edx;
-	if (!user_range_ok(buf, buf_size, true, &g_curr_task->proc_memory))
+	if (!user_range_ok(buf, buf_size, true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("readlink: %s %p %u\n", path, buf, buf_size);
 	int inode_nr = path_to_inode(path, g_curr_task->cwd_inode_nr);
@@ -234,7 +234,7 @@ uint32_t syscall_readlink(t_interrupt_data *regs)
 uint32_t syscall_unlink(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("unlink: %s\n", path);
 	return ext2_unlink(path, g_curr_task->cwd_inode_nr);
@@ -244,7 +244,7 @@ uint32_t syscall_mkdir(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;
 	const unsigned int mode = regs->ecx;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("mkdir: %s %u\n", path, mode);
 	return ext2_mkdir(path, mode, g_curr_task->cwd_inode_nr);
@@ -253,7 +253,7 @@ uint32_t syscall_mkdir(t_interrupt_data *regs)
 uint32_t syscall_rmdir(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("rmdir: %s\n", path);
 	// TODO: check that it's a directory and that it's empty
@@ -301,7 +301,7 @@ uint32_t syscall_open(t_interrupt_data *regs)
 	print_trace("open: %s %d %u\n", path, flags, mode);
 	if (!path)
 		return -EFAULT;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	return do_open(path, g_curr_task->cwd_inode_nr, flags, mode);
 }
@@ -315,7 +315,7 @@ uint32_t syscall_openat(t_interrupt_data *regs)
 	print_trace("openat: %u %s %u %u\n", dirfd, path, open_flag, mode);
 	if (!path)
 		return -EFAULT;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	unsigned int dir_inode;
 	if (dirfd == AT_FDCWD)
@@ -336,7 +336,7 @@ uint32_t syscall_unlinkat(t_interrupt_data *regs)
 	const char *path = (char *)regs->ecx;
 	int flags = regs->edx;
 	print_trace("unlinkat: %u %s %u\n", dirfd, path, flags);
-	if (!path || !user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!path || !user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	unsigned int dir_inode;
 	if (dirfd == AT_FDCWD)
@@ -358,9 +358,9 @@ uint32_t syscall_renameat(t_interrupt_data *regs)
 	int newdirfd = regs->edx;
 	const char *newpath = (char *)regs->esi;
 	print_trace("renameat: %u %s %u %s\n", olddirfd, oldpath, newdirfd, newpath);
-	if (!oldpath || !user_str_ok(oldpath, false, 20000, &g_curr_task->proc_memory))
+	if (!oldpath || !user_str_ok(oldpath, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
-	if (!newpath || !user_str_ok(oldpath, false, 20000, &g_curr_task->proc_memory))
+	if (!newpath || !user_str_ok(oldpath, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	t_file *olddirf = get_file_from_fd(olddirfd);
 	t_file *newdirf = get_file_from_fd(olddirfd);
@@ -479,7 +479,7 @@ uint32_t syscall_read(t_interrupt_data *regs)
 	unsigned int fd = regs->ebx;
 	char *buf = (char *)regs->ecx;
 	unsigned int count = regs->edx;
-	if (!user_range_ok(buf, count, true, &g_curr_task->proc_memory))
+	if (!user_range_ok(buf, count, true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("read: %u %p %u\n", fd, buf, count);
 	t_file *file = get_file_from_fd(fd);
@@ -495,7 +495,7 @@ uint32_t syscall_write(t_interrupt_data *regs)
 	int32_t fd = regs->ebx;
 	const char *buf = (char *)regs->ecx;
 	uint32_t count = regs->edx;
-	if (!user_range_ok((const virt_ptr)buf, count, false, &g_curr_task->proc_memory))
+	if (!user_range_ok((const virt_ptr)buf, count, false, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("write %u %p %u\n", fd, buf, count);
 	t_file *file = get_file_from_fd(fd);
@@ -519,7 +519,7 @@ uint32_t syscall_readv(t_interrupt_data *regs)
 	unsigned int vec_count = regs->edx;
 	print_trace("readv %u %p %u\n", fd, iovecs, vec_count);
 	uint32_t read = 0;
-	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * vec_count, true, &g_curr_task->proc_memory))
+	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * vec_count, true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	t_file *file = get_file_from_fd(fd);
 	if (!file)
@@ -541,7 +541,7 @@ uint32_t syscall_writev(t_interrupt_data *regs)
 	unsigned int vec_count = regs->edx;
 	print_trace("writev %u %p %u\n", fd, iovecs, vec_count);
 	uint32_t written = 0;
-	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * vec_count, true, &g_curr_task->proc_memory))
+	if (!user_range_ok((virt_ptr)iovecs, sizeof(struct iovec) * vec_count, true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	t_file *file = get_file_from_fd(fd);
 	if (!file)
@@ -557,7 +557,7 @@ uint32_t syscall_writev(t_interrupt_data *regs)
 }
 
 uint32_t do_pipe(int32_t *pipe_fd, uint32_t flags) {
-	if (!user_range_ok(pipe_fd, 2 * sizeof(int32_t), true, &g_curr_task->proc_memory))
+	if (!user_range_ok(pipe_fd, 2 * sizeof(int32_t), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	uint32_t i;
 	uint32_t j;
@@ -630,7 +630,7 @@ uint32_t syscall_chmod(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;
 	unsigned int mode = regs->ecx;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("chmod: %s %u\n", path, mode);
 	return 0;
@@ -639,7 +639,7 @@ uint32_t syscall_chmod(t_interrupt_data *regs)
 uint32_t syscall_chdir(t_interrupt_data *regs)
 {
 	const char *path = (char *)regs->ebx;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
 	print_trace("chdir: %s\n", path);
 	unsigned int inode_nr = path_to_inode(path, g_curr_task->cwd_inode_nr);
@@ -685,7 +685,7 @@ uint32_t syscall_getdents64(t_interrupt_data *regs)
 	int fd = regs->ebx;
 	struct linux_dirent64 *ent = (struct linux_dirent64 *)regs->ecx;
 	unsigned int count = regs->edx;
-	if (!user_range_ok(ent, count, true, &g_curr_task->proc_memory))
+	if (!user_range_ok(ent, count, true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	t_file *file = get_file_from_fd(fd);
 	print_trace("getdents64: %d %p %u\n", fd, ent, count);
@@ -702,7 +702,7 @@ uint32_t syscall_getcwd(t_interrupt_data *regs) {
 	char *buf = (char *)regs->ebx;
 	unsigned int size = regs->ecx;
 	print_trace("getcwd: %p %u\n", buf, size);
-	if (!user_range_ok(buf, size, true, &g_curr_task->proc_memory))
+	if (!user_range_ok(buf, size, true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	return ext2_getdirname(g_curr_task->cwd_inode_nr, buf, size);
 }
@@ -732,9 +732,9 @@ uint32_t syscall_statfs64(t_interrupt_data *regs) {
 	struct statfs64 *out = (struct statfs64 *)regs->edx;
 	if (size != sizeof(*out))
 		return -EINVAL;
-	if (!user_str_ok(path, false, 20000, &g_curr_task->proc_memory))
+	if (!user_str_ok(path, false, 20000, g_curr_task->proc_memory))
 		return (-EFAULT);
-	if (!user_range_ok(out, sizeof(struct statfs64), true, &g_curr_task->proc_memory))
+	if (!user_range_ok(out, sizeof(struct statfs64), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	*out = (struct statfs64){
 		.f_type = EXT2_SUPER_MAGIC
@@ -755,7 +755,7 @@ uint32_t syscall_llseek(t_interrupt_data *regs) {
 	unsigned int whence = regs->edi;
 	print_trace("llseek: %u %u %p %u\n", fd, (unsigned int)offset, result, whence);
 
-	if (result && !user_range_ok(result, sizeof(*result), true, &g_curr_task->proc_memory))
+	if (result && !user_range_ok(result, sizeof(*result), true, g_curr_task->proc_memory))
 		return (-EFAULT);
 	t_file *file = get_file_from_fd(fd);
 	if (!file)

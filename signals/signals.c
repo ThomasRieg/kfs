@@ -54,7 +54,7 @@ bool map_signal_trampoline(void)
 		invalidate_cache(page_table);
 		memset(page_table, 0, PAGE_SIZE);
 		pte = get_pte(SIGNAL_TRAMPOLINE_VA); // pte was null, because no pde, now we need to set it before the rest of the code
-		g_curr_task->proc_memory.physical_pages++;
+		g_curr_task->proc_memory->physical_pages++;
 	}
 	map_page(PAGE_ALIGN_DOWN(SIGNAL_TRAMPOLINE_PHYS), pte, PTE_P | PTE_US);
 	return (true);
@@ -181,7 +181,7 @@ void signal_deliver_if_needed(t_interrupt_data *f)
 	uint32_t old_esp = f->useresp;
 	uint32_t new_esp = old_esp - (uint32_t)sizeof(t_sigframe32);
 
-	if (!user_range_ok((virt_ptr)new_esp, sizeof(t_sigframe32), true, &t->proc_memory))
+	if (!user_range_ok((virt_ptr)new_esp, sizeof(t_sigframe32), true, t->proc_memory))
 	{
 		// can't deliver
 		task_terminate_by_signal(t, SIGSEGV);

@@ -76,6 +76,24 @@ uint32_t syscall_rt_sigaction(t_interrupt_data *r)
     return (0);
 }
 
+typedef struct {
+	void *ss_sp; /* base address of stack */
+	int ss_flags;
+	size_t ss_size;
+} stack_t;
+
+uint32_t syscall_sigaltstack(t_interrupt_data *f)
+{
+	stack_t *ss = (stack_t *)f->ebx;;
+	stack_t *old_ss = (stack_t *)f->ecx;;
+	print_trace("sigaltstack: %p %p\n", ss, old_ss);
+	if (ss && !user_range_ok(ss, sizeof(*ss), false, g_curr_task->proc_memory))
+		return (-EFAULT);
+	if (old_ss && !user_range_ok(old_ss, sizeof(*old_ss), true, g_curr_task->proc_memory))
+		return (-EFAULT);
+	return (0);
+}
+
 //119
 uint32_t syscall_sigreturn(t_interrupt_data *f)
 {

@@ -282,6 +282,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(174, syscall_rt_sigaction);
 	add_syscall(175, syscall_rt_sigprocmask);
 	add_syscall(183, syscall_getcwd);
+	add_syscall(186, syscall_sigaltstack);
 	// add_syscall(191, syscall_set_tid_address); // TODO: implement
 	add_syscall(192, syscall_mmap2);
 	add_syscall(197, syscall_fstat64);

@@ -48,6 +48,7 @@ __attribute__((noreturn)) uint32_t syscall_exit(t_interrupt_data *regs);
 uint32_t syscall_rt_sigprocmask(t_interrupt_data *regs);
 uint32_t syscall_rt_sigaction(t_interrupt_data *regs);
 uint32_t syscall_sigreturn(t_interrupt_data *f);
+uint32_t syscall_sigaltstack(t_interrupt_data *regs);
 uint32_t syscall_rt_sigreturn(t_interrupt_data *f);
 uint32_t syscall_signal(t_interrupt_data *r);
 

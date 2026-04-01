@@ -229,6 +229,7 @@ bool setup_process(t_task *task, t_task *parent, uint32_t user_id, struct VecU8 
 
 	task->pending_signals = 0;
 	task->task_id = g_next_pid++;
+	task->task_group_id = task->task_id;
 	task->parent_task = parent;
 	task->uid = task->euid = task->suid = user_id;
 	task->gid = task->egid = user_id;

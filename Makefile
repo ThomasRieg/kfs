@@ -48,7 +48,7 @@ debug: $(ISO) $(DISK_FILE)
 $(DISK_FILE):
 	$(MAKE) -C userspace
 	mkdir -vp root root/{bin,etc,usr,srv,var,home,root,proc,dev,mnt,run,sys}
-	cp userspace/{init,socketpair,sigchld} root/bin
+	cp userspace/{init,socketpair,sigchld,threadtest,tglexit} root/bin
 	if [[ ! -x root/bin/busybox ]]; then\
 		curl -o root/bin/busybox https://www.lier.link/busybox;\
 	fi
@@ -60,11 +60,11 @@ $(DISK_FILE):
 	done
 	ln -f root/bin/{ash,sh}
 	chmod +x root/bin/*
-	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 10M $(DISK_FILE) &&\
+	rm -f $(DISK_FILE) && touch $(DISK_FILE) && fallocate -l 15M $(DISK_FILE) &&\
 		parted -s $(DISK_FILE) mklabel msdos mkpart primary ext2 1MiB 100% &&\
 		OFFSET=$$(parted -s $(DISK_FILE) unit B print \
   | awk '/^ 1/ { gsub("B","",$$2); print $$2 }') &&\
-	  mkfs.ext2 -d root -F -E offset=$$OFFSET $(DISK_FILE) 9M
+	  mkfs.ext2 -d root -F -E offset=$$OFFSET $(DISK_FILE) 14M
 
 all: $(ISO)
 

@@ -114,7 +114,7 @@ uint32_t syscall_setpgid(__attribute__((unused)) t_interrupt_data *regs)
 
 uint32_t syscall_getpid(__attribute__((unused)) t_interrupt_data *regs)
 {
-	return (g_curr_task->task_id);
+	return (g_curr_task->task_group_id);
 }
 
 uint32_t syscall_gettid(__attribute__((unused)) t_interrupt_data *regs)
@@ -624,6 +624,7 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	task->in_signal = false;
 	memcpy(task->sigact, g_curr_task->sigact, sizeof(task->sigact));
 	task->task_id = g_next_pid++;
+	task->task_group_id = task->task_id;
 	task->parent_task = g_curr_task;
 	task->cwd_inode_nr = g_curr_task->cwd_inode_nr;
 	add_child(g_curr_task, task);
@@ -712,9 +713,16 @@ uint32_t syscall_clone(t_interrupt_data *regs)
 	task->in_signal = false;
 	memcpy(task->sigact, g_curr_task->sigact, sizeof(task->sigact));
 	task->task_id = g_next_pid++;
-	task->parent_task = g_curr_task;
+	if (flags & CLONE_THREAD) {
+		task->task_group_id = g_curr_task->task_group_id;
+		task->parent_task = g_curr_task->parent_task;
+		add_child(g_curr_task->parent_task, task);
+	} else {
+		task->task_group_id = task->task_id;
+		task->parent_task = g_curr_task;
+		add_child(g_curr_task, task);
+	}
 	task->cwd_inode_nr = g_curr_task->cwd_inode_nr;
-	add_child(g_curr_task, task);
 	task->uid = g_curr_task->uid;
 	task->euid = g_curr_task->euid;
 	task->suid = g_curr_task->suid;
@@ -728,6 +736,9 @@ uint32_t syscall_clone(t_interrupt_data *regs)
 		if (task->open_files[i])
 			task->open_files[i]->refcnt += 1;
 	disable_interrupts();
+	if (flags & CLONE_PARENT_SETTID) {
+		*parent_tid = task->task_id;
+	}
 	if (flags & CLONE_VM) {
 		task->pd = g_curr_task->pd;
 	} else {

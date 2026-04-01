@@ -103,6 +103,7 @@ typedef struct task
 	enum task_status status;
 	enum wait_reason wait_reason;
 	unsigned int task_id;
+	unsigned int task_group_id;
 	struct task *parent_task;	  // should NEVER be null, put init if parent dies (except for init)
 	struct task *children;		  // head of linked list
 	struct task *next_sibling;	  // link in parent list

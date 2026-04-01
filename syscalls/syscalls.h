@@ -36,6 +36,7 @@ uint32_t syscall_uname(t_interrupt_data *regs);
 uint32_t syscall_wait4(t_interrupt_data *regs);
 uint32_t syscall_kill(t_interrupt_data *regs);
 uint32_t syscall_fork(t_interrupt_data *regs);
+uint32_t syscall_clone(t_interrupt_data *regs);
 uint32_t syscall_execve(t_interrupt_data *regs);
 uint32_t syscall_archprctl(t_interrupt_data *regs);
 uint32_t syscall_tkill(t_interrupt_data *regs);

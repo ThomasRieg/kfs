@@ -670,6 +670,99 @@ uint32_t syscall_fork(__attribute__((unused)) t_interrupt_data *regs)
 	return (task->task_id);
 }
 
+#define CLONE_VM	0x00000100	/* set if VM shared between processes */
+#define CLONE_FS	0x00000200	/* set if fs info shared between processes */
+#define CLONE_FILES	0x00000400	/* set if open files shared between processes */
+#define CLONE_SIGHAND	0x00000800	/* set if signal handlers and blocked signals shared */
+#define CLONE_PIDFD	0x00001000	/* set if a pidfd should be placed in parent */
+#define CLONE_PTRACE	0x00002000	/* set if we want to let tracing continue on the child too */
+#define CLONE_VFORK	0x00004000	/* set if the parent wants the child to wake it up on mm_release */
+#define CLONE_PARENT	0x00008000	/* set if we want to have the same parent as the cloner */
+#define CLONE_THREAD	0x00010000	/* Same thread group? */
+#define CLONE_NEWNS	0x00020000	/* New mount namespace group */
+#define CLONE_SYSVSEM	0x00040000	/* share system V SEM_UNDO semantics */
+#define CLONE_SETTLS	0x00080000	/* create a new TLS for the child */
+#define CLONE_PARENT_SETTID	0x00100000	/* set the TID in the parent */
+#define CLONE_CHILD_CLEARTID	0x00200000	/* clear the TID in the child */
+#define CLONE_DETACHED		0x00400000	/* Unused, ignored */
+#define CLONE_UNTRACED		0x00800000	/* set if the tracing process can't force CLONE_PTRACE on this clone */
+#define CLONE_CHILD_SETTID	0x01000000	/* set the TID in the child */
+#define CLONE_NEWCGROUP		0x02000000	/* New cgroup namespace */
+#define CLONE_NEWUTS		0x04000000	/* New utsname namespace */
+#define CLONE_NEWIPC		0x08000000	/* New ipc namespace */
+#define CLONE_NEWUSER		0x10000000	/* New user namespace */
+#define CLONE_NEWPID		0x20000000	/* New pid namespace */
+#define CLONE_NEWNET		0x40000000	/* New network namespace */
+#define CLONE_IO		0x80000000	/* Clone io context */
+
+uint32_t syscall_clone(t_interrupt_data *regs)
+{
+	unsigned int flags = regs->ebx;
+	void *stack = (void *)regs->ecx;
+	int *parent_tid = (int *)regs->edx;
+	int *child_tid = (int *)regs->esi;
+	unsigned int tls = regs->edi;
+	print_trace("clone: flags=0x%x stack=%p parent_tid=%p child_tid=%p tls=%p\n", flags, stack, parent_tid, child_tid, tls);
+	t_task *task = vcalloc(1, sizeof(*task));
+	if (!task)
+		return (-ENOMEM);
+
+	task->pending_signals = 0;
+	task->blocked_signals = g_curr_task->blocked_signals;
+	task->in_signal = false;
+	memcpy(task->sigact, g_curr_task->sigact, sizeof(task->sigact));
+	task->task_id = g_next_pid++;
+	task->parent_task = g_curr_task;
+	task->cwd_inode_nr = g_curr_task->cwd_inode_nr;
+	add_child(g_curr_task, task);
+	task->uid = g_curr_task->uid;
+	task->euid = g_curr_task->euid;
+	task->suid = g_curr_task->suid;
+	task->gid = g_curr_task->gid;
+	task->egid = g_curr_task->egid;
+	task->pgid = g_curr_task->pgid;
+	task->user_gdt_segment = g_curr_task->user_gdt_segment;
+	waitq_init(&task->wait_child);
+	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
+	for (unsigned short i = 0; i < sizeof(task->open_files) / sizeof(task->open_files[0]); i++)
+		if (task->open_files[i])
+			task->open_files[i]->refcnt += 1;
+	disable_interrupts();
+	if (flags & CLONE_VM) {
+		task->pd = g_curr_task->pd;
+	} else {
+		extern phys_ptr copy_current_pd();
+		task->pd = copy_current_pd(); // shallow copy of the kernel address space
+		if (!task->pd)
+			return (vfree(task), -1);
+		uint32_t ret = copy_mm(&task->proc_memory, &g_curr_task->proc_memory); // copy the reserved zones allocated with mmap
+		if (ret)
+			return (pmm_free_frame(task->pd), cleanup_task(task), ret); // enable interrupts
+		uint32_t saved_pd = g_curr_task->pd;
+		write_cr3(task->pd);
+		ret = copy_current_user_memory(saved_pd, &task->proc_memory); // deep copy of the process's address space
+		write_cr3(saved_pd);
+		if (ret)
+			return (pmm_free_frame(task->pd), cleanup_task(task), ret);			// enable interrupts
+		task->proc_memory.heap_current = g_curr_task->proc_memory.heap_current; // temporary
+		task->proc_memory.user_stack_bot = g_curr_task->proc_memory.user_stack_bot;
+		task->proc_memory.user_stack_top = g_curr_task->proc_memory.user_stack_top;
+	}
+	memcpy(task->k_stack, g_curr_task->k_stack, sizeof(g_curr_task->k_stack)); // TODO copy only until k_esp to save instruction?
+	task->k_esp = (uint32_t)(((uintptr_t)&task->k_stack[0]) + (((uintptr_t)g_curr_task->k_esp) - ((uintptr_t)&g_curr_task->k_stack[0])));
+	((t_interrupt_data *)task->k_esp)->eax = 0;
+	((t_interrupt_data *)task->k_esp)->useresp = (unsigned int)stack;
+	task->next_all_task = g_curr_task->next_all_task;
+	g_curr_task->next_all_task = task;
+	add_task_to_runq(task);
+	task_init_kernel_context(task);
+	task->status = STATUS_RUNNABLE;
+	// enable_interrupts();
+	print_trace("cloned pid %u\n", task->task_id);
+
+	return (task->task_id);
+}
+
 // does not clear parent's list
 void adopt_children_list(t_task *adopter, t_task *children)
 {

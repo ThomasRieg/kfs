@@ -268,6 +268,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(114, syscall_wait4);
 	add_syscall(118, syscall_fsync);
 	add_syscall(119, syscall_sigreturn);
+	add_syscall(120, syscall_clone);
 	add_syscall(122, syscall_uname);
 	add_syscall(125, syscall_mprotect);
 	add_syscall(128, syscall_init_module);

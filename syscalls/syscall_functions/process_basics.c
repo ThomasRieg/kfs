@@ -703,8 +703,8 @@ uint32_t syscall_clone(t_interrupt_data *regs)
 	void *stack = (void *)regs->ecx;
 	int *parent_tid = (int *)regs->edx;
 	int *child_tid = (int *)regs->esi;
-	unsigned int tls = regs->edi;
-	print_trace("clone: flags=0x%x stack=%p parent_tid=%p child_tid=%p tls=%p\n", flags, stack, parent_tid, child_tid, tls);
+	struct user_desc *tls_desc = (struct user_desc *)regs->edi;
+	print_trace("clone: flags=0x%x stack=%p parent_tid=%p child_tid=%p tls=%p\n", flags, stack, parent_tid, child_tid, tls_desc);
 	t_task *task = vcalloc(1, sizeof(*task));
 	if (!task)
 		return (-ENOMEM);
@@ -730,7 +730,15 @@ uint32_t syscall_clone(t_interrupt_data *regs)
 	task->gid = g_curr_task->gid;
 	task->egid = g_curr_task->egid;
 	task->pgid = g_curr_task->pgid;
-	task->user_gdt_segment = g_curr_task->user_gdt_segment;
+	if (flags & CLONE_SETTLS) {
+		if (!user_range_ok((virt_ptr)tls_desc, sizeof(struct user_desc), true, g_curr_task->proc_memory))
+			return (-EFAULT);
+		tls_desc->entry_number = 8; // entry #8 in GDT
+		task->user_gdt_segment = *tls_desc;
+	} else {
+		task->user_gdt_segment = g_curr_task->user_gdt_segment;
+	}
+
 	waitq_init(&task->wait_child);
 	memcpy(task->open_files, g_curr_task->open_files, sizeof(task->open_files));
 	for (unsigned short i = 0; i < sizeof(task->open_files) / sizeof(task->open_files[0]); i++)

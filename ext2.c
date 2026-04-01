@@ -129,15 +129,15 @@ static unsigned int block_to_lba(unsigned int block, unsigned int block_size)
 
 static void ext2_print_sb(union ext2_super_block *sb)
 {
-	printk("ext2 header: version %u.%u, SB block %u, total inodes %u, total blocks %u, blocks reserved for SU %u, last mount time %u, block size %u bytes, blocks in group %u, required features %u, ro features %u, optional features %u, inode size %u, inodes in group %u\n",
+	printk("ext2 header: version %u.%u, SB block %u, total inodes %u (%u free), total blocks %u (%u free), blocks reserved for SU %u, last mount time %u, block size %u bytes, blocks in group %u, required features %u, ro features %u, optional features %u, inode size %u, inodes in group %u\n",
 		   sb->major_ver, sb->minor_ver,
-		   sb->starting_block, sb->total_inodes,
-		   sb->total_blocks, sb->reserved_blocks, sb->last_mount, sb->block_size, sb->blocks_in_group,
+		   sb->starting_block, sb->total_inodes, sb->free_inodes,
+		   sb->total_blocks, sb->free_blocks, sb->reserved_blocks, sb->last_mount, sb->block_size, sb->blocks_in_group,
 		   sb->required_features, sb->ro_features, sb->optional_features, sb->inode_size,
 		   sb->inodes_in_group);
 }
 
-static void ext2_read_block(struct ext2_fs *fs, unsigned char *buffer, unsigned int block)
+static void ext2_read_block(struct ext2_fs *fs, unsigned char buffer[static 4096], unsigned int block)
 {
 	for (unsigned int i = 0, j = 0; i < fs->sb.block_size; i += 512, j += 1)
 	{
@@ -147,11 +147,13 @@ static void ext2_read_block(struct ext2_fs *fs, unsigned char *buffer, unsigned 
 	}
 }
 
-static void ext2_read_group_descriptor_block(struct ext2_fs *fs, unsigned char *buffer, unsigned int group)
+static void ext2_read_group_descriptor(struct ext2_fs *fs, unsigned char buffer[static 4096], unsigned int group, struct ext2_block_group_descriptor *descriptor)
 {
 	// when blocks are 1024 octets, padding will be block 0, super block block 1 (just fits) and group desc table starts at block 2
 	// otherwise, padding and SB are in one block and group desc table starts at block 1
-	ext2_read_block(fs, buffer, group * fs->sb.blocks_in_group + (fs->sb.block_size == 1024 ? 2 : 1));
+	ext2_read_block(fs, buffer, (fs->sb.block_size == 1024 ? 2 : 1) + group * sizeof(struct ext2_block_group_descriptor) / fs->sb.block_size);
+	unsigned int index_in_block = group % (fs->sb.block_size / sizeof(struct ext2_block_group_descriptor));
+	*descriptor = ((struct ext2_block_group_descriptor *)buffer)[index_in_block];
 }
 
 static void ext2_write_block(struct ext2_fs *fs, unsigned char *buffer, unsigned int block)
@@ -286,13 +288,13 @@ static bool ext2_read_inode_struct(struct ext2_fs *fs, unsigned int inode, struc
 	// reused for all three reads
 	unsigned char block[4096];
 
-	ext2_read_group_descriptor_block(fs, block, group);
-	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
+	struct ext2_block_group_descriptor descriptor;
+	ext2_read_group_descriptor(fs, block, group, &descriptor);
 	// print_block_group_descriptor(descriptor);
 
 	// read these now because we're overwriting the same block array
-	unsigned int ba_start_inode_table = descriptor->ba_start_inode_table;
-	unsigned int ba_inode_usage_bitmap = descriptor->ba_inode_usage_bitmap;
+	unsigned int ba_start_inode_table = descriptor.ba_start_inode_table;
+	unsigned int ba_inode_usage_bitmap = descriptor.ba_inode_usage_bitmap;
 
 	ext2_read_block(fs, block, ba_inode_usage_bitmap);
 	if ((block[index_in_group / 8] & (1 << ((inode - 1) % 8))) == 0)
@@ -317,13 +319,13 @@ static bool ext2_write_inode_struct(struct ext2_fs *fs, unsigned int inode, stru
 	// reused for all three reads
 	unsigned char block[4096];
 
-	ext2_read_group_descriptor_block(fs, block, group);
-	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
+	struct ext2_block_group_descriptor descriptor;
+	ext2_read_group_descriptor(fs, block, group, &descriptor);
 	// print_block_group_descriptor(descriptor);
 
 	// read these now because we're overwriting the same block array
-	unsigned int ba_start_inode_table = descriptor->ba_start_inode_table;
-	unsigned int ba_inode_usage_bitmap = descriptor->ba_inode_usage_bitmap;
+	unsigned int ba_start_inode_table = descriptor.ba_start_inode_table;
+	unsigned int ba_inode_usage_bitmap = descriptor.ba_inode_usage_bitmap;
 
 	ext2_read_block(fs, block, ba_inode_usage_bitmap);
 	if ((block[index_in_group / 8] & (1 << ((inode - 1) % 8))) == 0)
@@ -491,20 +493,14 @@ bool stat_inode(unsigned int inode_nr, struct stat *out)
 	return 0;
 }
 
-static unsigned ext2_allocate_block(struct ext2_fs *fs, unsigned int inode_nr)
-{
-	if (!fs->sb.free_blocks)
-		return 0;
-
-	// First we look into the same block group as the inode for any free blocks
-	unsigned int group = (inode_nr - 1) / fs->sb.inodes_in_group;
+static unsigned ext2_allocate_block_in_group(struct ext2_fs *fs, unsigned int group) {
 	unsigned char block[4096];
 
-	ext2_read_group_descriptor_block(fs, block, group);
-	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
+	struct ext2_block_group_descriptor descriptor;
+	ext2_read_group_descriptor(fs, block, group, &descriptor);
 	// print_block_group_descriptor(descriptor);
 
-	unsigned int ba_block_usage_bitmap = descriptor->ba_block_usage_bitmap;
+	unsigned int ba_block_usage_bitmap = descriptor.ba_block_usage_bitmap;
 	ext2_read_block(fs, block, ba_block_usage_bitmap);
 	for (unsigned int i = 0; i < fs->sb.blocks_in_group; i++)
 	{
@@ -519,6 +515,24 @@ static unsigned ext2_allocate_block(struct ext2_fs *fs, unsigned int inode_nr)
 	return 0;
 }
 
+static unsigned ext2_allocate_block(struct ext2_fs *fs, unsigned int inode_nr)
+{
+	if (!fs->sb.free_blocks)
+		return 0;
+
+	// First we look into the same block group as the inode for any free blocks
+	unsigned int inode_group = (inode_nr - 1) / fs->sb.inodes_in_group;
+	unsigned int block = ext2_allocate_block_in_group(fs, inode_group);
+
+	// Check all other groups in sequence for available blocks
+	unsigned int group_count = (fs->sb.total_blocks + fs->sb.blocks_in_group - 1) / fs->sb.blocks_in_group;
+	for (unsigned int i = 0; !block && i < group_count; i++) {
+		if (i == inode_group) continue; // already checked above
+		block = ext2_allocate_block_in_group(fs, i);
+	}
+	return block;
+}
+
 static unsigned ext2_allocate_inode(struct ext2_fs *fs)
 {
 	if (!fs->sb.free_inodes)
@@ -528,11 +542,11 @@ static unsigned ext2_allocate_inode(struct ext2_fs *fs)
 	unsigned int group = 0;
 	unsigned char block[4096];
 
-	ext2_read_group_descriptor_block(fs, block, group);
-	struct ext2_block_group_descriptor *descriptor = (struct ext2_block_group_descriptor *)block;
+	struct ext2_block_group_descriptor descriptor;
+	ext2_read_group_descriptor(fs, block, group, &descriptor);
 	// print_block_group_descriptor(descriptor);
 
-	unsigned int ba_inode_usage_bitmap = descriptor->ba_inode_usage_bitmap;
+	unsigned int ba_inode_usage_bitmap = descriptor.ba_inode_usage_bitmap;
 	ext2_read_block(fs, block, ba_inode_usage_bitmap);
 	for (unsigned int i = 0; i < fs->sb.inodes_in_group; i++)
 	{
@@ -571,6 +585,7 @@ int ext2_write_inode_contents(unsigned int inode_nr, unsigned int offset, const 
 			inode.base.block_pointers[i] = ext2_allocate_block(fs, inode_nr);
 			if (!inode.base.block_pointers[i])
 			{
+				print_err("couldn't allocate new block when writing file\n");
 				break;
 			}
 			inode.base.disk_sector_count += fs->sb.block_size / 512;
@@ -696,25 +711,19 @@ int ext2_mkdir(const char *path, unsigned int mode, unsigned int relative_dir_in
 		.access_time = ts.tv_sec,
 		.modification_time = ts.tv_sec,
 	}};
+	unsigned int new_dir_inode = ext2_allocate_inode(&ext2_mounted);
+	if (!new_dir_inode) {
+		print_err("couldn't allocate new directory inode\n");
+		vfree(dup_path);
+		return -ENOSPC;
+	}
+
+	ext2_write_inode_struct(&ext2_mounted, new_dir_inode, &new_inode);
+
 	char entry_buf[300] = {0};
 	struct ext2_direntry *new_entry = (struct ext2_direntry *)&entry_buf[0];
-	new_entry->name_length = strlen(name);
-	memcpy(new_entry->name, name, new_entry->name_length);
-	vfree((char *)dup_path);
-	unsigned int new_dir_inode = ext2_allocate_inode(&ext2_mounted);
-	new_entry->inode = new_dir_inode;
-	new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
-	new_entry->type_indicator = EXT2_DIR;
-
-	ext2_write_inode_struct(&ext2_mounted, new_entry->inode, &new_inode);
-
-	// TODO: directory size does not reflect how much is actually used, don't waste space
-	// and check for empty records.
-	ext2_read_inode_struct(&ext2_mounted, parent_inode_nr, &dir_inode);
-	if (ext2_write_inode_contents(parent_inode_nr, dir_inode.base.size, (const unsigned char *) new_entry, new_entry->entry_size) != new_entry->entry_size)
-		kernel_panic("couldn't write new directory entry", 0);
-
 	new_entry->name_length = 1;
+	new_entry->inode = new_dir_inode;
 	memcpy(new_entry->name, ".", 1);
 	new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
 	new_entry->type_indicator = EXT2_DIR;
@@ -726,8 +735,26 @@ int ext2_mkdir(const char *path, unsigned int mode, unsigned int relative_dir_in
 	new_entry->type_indicator = EXT2_DIR;
 	new_entry->inode = parent_inode_nr;
 	int to_write = (char *)new_entry + new_entry->entry_size - entry_buf;
-	if (ext2_write_inode_contents(new_dir_inode, 0, (const unsigned char *) entry_buf, to_write) != to_write)
-		kernel_panic("couldn't write new directory entry", 0);
+	if (ext2_write_inode_contents(new_dir_inode, 0, (const unsigned char *) entry_buf, to_write) != to_write) {
+		print_err("couldn't write new directory entry: no room for . and ..", 0);
+		vfree(dup_path);
+		return -ENOSPC;
+	}
+
+	// TODO: directory size does not reflect how much is actually used, don't waste space
+	// and check for empty records.
+	ext2_read_inode_struct(&ext2_mounted, parent_inode_nr, &dir_inode);
+	new_entry->inode = new_dir_inode;
+	new_entry->name_length = strlen(name);
+	memcpy(new_entry->name, name, new_entry->name_length);
+	vfree((char *)dup_path);
+	new_entry->entry_size = (sizeof(*new_entry) + new_entry->name_length + 3) & 0xfffffffc;
+	new_entry->type_indicator = EXT2_DIR;
+	if (ext2_write_inode_contents(parent_inode_nr, dir_inode.base.size, (const unsigned char *) new_entry, new_entry->entry_size) != new_entry->entry_size) {
+		print_err("couldn't write new directory entry: no room in parent directory\n", 0);
+		return -ENOSPC;
+	}
+
 	return 0;
 }
 

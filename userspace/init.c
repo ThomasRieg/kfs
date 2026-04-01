@@ -130,7 +130,7 @@ int main(void)
     }
 	int forkr = syscall(2);
 	if (forkr == 0) {
-		char *const argv[] = {"/bin/sh", 0};
+		char *const argv[] = {"-/bin/sh", 0};
 		char *const envp[] = {0};
 		execve("/bin/sh", argv, envp);
 	} else {

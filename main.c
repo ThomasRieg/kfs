@@ -296,6 +296,7 @@ void kernel_main(struct s_mb2_info *multi)
 	add_syscall(221, syscall_fcntl64);
 	add_syscall(224, syscall_gettid);
 	add_syscall(238, syscall_tkill);
+	add_syscall(240, syscall_futex);
 	add_syscall(243, syscall_set_thread_area);
 	add_syscall(244, syscall_get_thread_area);
 	add_syscall(252, syscall_exit);

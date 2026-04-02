@@ -273,6 +273,15 @@ uint32_t syscall_set_thread_area(t_interrupt_data *regs)
 	return (0);
 }
 
+uint32_t syscall_futex(t_interrupt_data *regs)
+{
+	void *addr = (void *)regs->ebx;
+	unsigned int op = regs->ecx;
+	unsigned int val = regs->edx;
+	print_trace("futex: %p %u %u\n", addr, op, val);
+	return (-EAGAIN);
+}
+
 uint32_t syscall_set_tid_address(t_interrupt_data *regs)
 {
 	print_trace("set tid address: %p\n", regs->ebx);
@@ -702,8 +711,8 @@ uint32_t syscall_clone(t_interrupt_data *regs)
 	unsigned int flags = regs->ebx;
 	void *stack = (void *)regs->ecx;
 	int *parent_tid = (int *)regs->edx;
-	int *child_tid = (int *)regs->esi;
-	struct user_desc *tls_desc = (struct user_desc *)regs->edi;
+	struct user_desc *tls_desc = (struct user_desc *)regs->esi;
+	int *child_tid = (int *)regs->edi;
 	print_trace("clone: flags=0x%x stack=%p parent_tid=%p child_tid=%p tls=%p\n", flags, stack, parent_tid, child_tid, tls_desc);
 	t_task *task = vcalloc(1, sizeof(*task));
 	if (!task)
@@ -735,6 +744,7 @@ uint32_t syscall_clone(t_interrupt_data *regs)
 			return (-EFAULT);
 		tls_desc->entry_number = 8; // entry #8 in GDT
 		task->user_gdt_segment = *tls_desc;
+		print_trace("clone settls: %p, %x\n", tls_desc->base_addr, tls_desc->limit);
 	} else {
 		task->user_gdt_segment = g_curr_task->user_gdt_segment;
 	}

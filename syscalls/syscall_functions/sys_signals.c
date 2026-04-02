@@ -76,6 +76,9 @@ uint32_t syscall_rt_sigaction(t_interrupt_data *r)
     return (0);
 }
 
+#define SS_ONSTACK	1
+#define SS_DISABLE	2
+
 typedef struct {
 	void *ss_sp; /* base address of stack */
 	int ss_flags;
@@ -91,6 +94,12 @@ uint32_t syscall_sigaltstack(t_interrupt_data *f)
 		return (-EFAULT);
 	if (old_ss && !user_range_ok(old_ss, sizeof(*old_ss), true, g_curr_task->proc_memory))
 		return (-EFAULT);
+	if (old_ss) {
+		old_ss->ss_flags = SS_DISABLE;
+	}
+	if (ss) {
+		print_trace("new signal stack: %p, size=%u, flags=%u\n", ss->ss_sp, ss->ss_size, ss->ss_flags);
+	}
 	return (0);
 }
 
